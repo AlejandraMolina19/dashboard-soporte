@@ -4,422 +4,587 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Supervisor — Santi Soluciones</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root{
-  --bg:#0d1117;--sur:#161b22;--sur2:#1c2330;--bdr:#2d333b;
-  --txt:#e6edf3;--txt2:#8b949e;--txt3:#6e7681;
-  --blue:#388bfd;--blue2:#1f3455;
-  --green:#3fb950;--orange:#d29922;--orange2:#3a2a0a;
-  --red:#f85149;--red2:#3d1a1a;--purple:#a371f7;
-  --acc:#58a6ff;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
-  --r:8px;--rl:12px;
+  --bg:#f0f2f7;
+  --sur:#ffffff;
+  --sur2:#f7f8fc;
+  --sur3:#eef0f6;
+  --bdr:#e2e5ef;
+  --bdr2:#d0d4e8;
+  --txt:#111827;
+  --txt2:#4b5568;
+  --txt3:#9ca3af;
+  --acc:#2563eb;
+  --acc2:#eff4ff;
+  --acc3:#dbeafe;
+  --grn:#16a34a;
+  --grn2:#f0fdf4;
+  --red:#dc2626;
+  --red2:#fef2f2;
+  --red3:#fee2e2;
+  --org:#d97706;
+  --org2:#fffbeb;
+  --org3:#fde68a;
+  --pur:#7c3aed;
+  --pur2:#f5f3ff;
+  --r:8px;--rl:12px;--rxl:16px;
+  --font:'Plus Jakarta Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.1);
+  --shadow:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -2px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -4px rgba(0,0,0,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px}
-body{display:flex;flex-direction:column}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;min-height:100vh}
 
-/* topbar */
-.tb{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:20;gap:8px;flex-wrap:wrap}
-.logo{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
-.chips{display:flex;gap:5px;flex-wrap:wrap}
-.chip{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:4px;background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2)}
-.rbtn{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);border:1px solid var(--blue);background:var(--blue2);color:var(--blue);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
-.rbtn:hover{background:var(--blue);color:#fff}
-.rbtn:disabled{opacity:.4;cursor:not-allowed}
-.rbtn.spin svg{animation:rot .7s linear infinite}
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;
+  background:var(--sur);border-bottom:1px solid var(--bdr);
+  position:sticky;top:0;z-index:30;gap:12px;flex-wrap:wrap;
+  box-shadow:var(--shadow-sm);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--acc);display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:16px;font-weight:700;
+  font-family:var(--mono);box-shadow:0 2px 8px rgba(37,99,235,.3);
+}
+.brand-name{font-size:15px;font-weight:700;color:var(--txt);letter-spacing:-.01em}
+.brand-sep{width:1px;height:20px;background:var(--bdr);margin:0 4px}
+.brand-sub{font-size:12px;color:var(--txt3);font-weight:500}
+.chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chip{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;
+  background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2);
+  font-family:var(--mono);letter-spacing:.01em;
+}
+.chip.live{color:var(--grn);background:var(--grn2);border-color:#bbf7d0}
+.upd-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 18px;border-radius:var(--r);
+  border:none;background:var(--acc);
+  color:#fff;font-family:var(--font);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 2px 8px rgba(37,99,235,.25);
+}
+.upd-btn:hover{background:#1d4ed8;box-shadow:0 4px 12px rgba(37,99,235,.35)}
+.upd-btn:disabled{opacity:.5;cursor:not-allowed}
+.upd-btn.spin svg{animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
 
-/* tabs */
-.tabs{display:flex;padding:0 20px;background:var(--sur);border-bottom:1px solid var(--bdr);gap:2px;overflow-x:auto}
-.tab{padding:10px 15px;font-size:13px;font-weight:500;color:var(--txt2);border:none;background:none;cursor:pointer;font-family:var(--font);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
-.tab:hover{color:var(--txt)}
-.tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+/* NAV */
+.nav{
+  display:flex;padding:0 24px;
+  background:var(--sur);border-bottom:1px solid var(--bdr);
+  overflow-x:auto;gap:0;
+}
+.nav-tab{
+  padding:0 18px;height:46px;
+  font-size:13px;font-weight:600;font-family:var(--font);
+  color:var(--txt3);border:none;background:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;
+  white-space:nowrap;display:flex;align-items:center;gap:7px;
+  letter-spacing:-.01em;
+}
+.nav-tab:hover{color:var(--txt2)}
+.nav-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.nb{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:var(--sur3);color:var(--txt3);font-family:var(--mono);
+  transition:all .15s;
+}
+.nav-tab.on .nb{background:var(--acc3);color:var(--acc)}
 
-/* layout */
-.main{flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
+/* MAIN */
+.main{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.view{display:none;flex-direction:column;gap:16px}
+.view.on{display:flex}
 
-/* card */
-.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden}
-.ch{padding:10px 14px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
-.ct{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--txt2)}
-.cb{padding:13px}
+/* SECTION LABEL */
+.slbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);margin-bottom:4px}
 
-/* kpi */
-.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:7px}
-.kpi{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:12px}
-.kl{font-size:11px;color:var(--txt2);margin-bottom:4px;font-weight:500}
-.kv{font-size:25px;font-weight:300;font-family:var(--mono)}
-.ks{font-size:10px;color:var(--txt3);margin-top:2px}
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.kpi-card{
+  background:var(--sur);border:1.5px solid var(--bdr);border-radius:var(--rl);
+  padding:16px 18px;cursor:pointer;transition:all .18s;
+  box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
+}
+.kpi-card:hover{border-color:var(--bdr2);box-shadow:var(--shadow);transform:translateY(-1px)}
+.kpi-card.active{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3),var(--shadow)}
+.kpi-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 
-/* charts row */
-.crow{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
-@media(max-width:820px){.crow{grid-template-columns:1fr 1fr}}
-.cbox{position:relative;height:170px}
+.kpi-trend{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;font-family:var(--mono)}
+.kpi-val{font-size:34px;font-weight:700;line-height:1;letter-spacing:-.03em;margin-bottom:4px;font-family:var(--mono)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--txt2);letter-spacing:-.01em}
+.kpi-sub{font-size:10px;color:var(--txt3);margin-top:2px;font-weight:500}
+.kpi-bar{height:3px;border-radius:2px;margin-top:14px;background:var(--sur3);overflow:hidden}
+.kpi-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.kpi-hint{font-size:10px;color:var(--txt3);margin-top:5px;display:flex;align-items:center;gap:3px;font-weight:500}
 
-/* area kpis */
-.akrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
-.ak{border-radius:var(--r);padding:10px;text-align:center;border:1px solid}
-.an{font-size:23px;font-weight:300;font-family:var(--mono)}
-.al{font-size:10px;margin-top:2px;font-weight:500}
+/* KPI PANEL */
+.kpi-panel{
+  background:var(--sur);border:1.5px solid var(--acc);border-radius:var(--rl);
+  box-shadow:0 0 0 3px var(--acc3),var(--shadow-lg);
+  overflow:hidden;animation:panelIn .2s ease;
+}
+@keyframes panelIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.panel-head{
+  padding:12px 18px;background:var(--acc2);
+  border-bottom:1px solid var(--acc3);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.panel-title{font-size:13px;font-weight:700;color:var(--acc)}
+.panel-count{font-size:11px;font-weight:600;color:var(--txt3);font-family:var(--mono)}
+.panel-close{
+  background:none;border:none;cursor:pointer;
+  width:26px;height:26px;border-radius:6px;
+  color:var(--txt3);font-size:16px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.panel-close:hover{background:var(--acc3);color:var(--acc)}
 
-/* score guide */
-.sg{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px}
-.si{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid}
+/* CHART CARD */
+.chart-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow-sm)}
+.chart-head{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.chart-title{font-size:12px;font-weight:700;color:var(--txt);letter-spacing:-.01em}
+.chart-body{padding:16px}
+.cbox{position:relative;height:165px}
+.charts-row{display:grid;grid-template-columns:220px 1fr 1.4fr;gap:12px}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr 1fr}}
 
-/* table */
+/* TABLE */
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:660px}
-thead th{padding:6px 8px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);background:var(--sur2);border-bottom:1px solid var(--bdr);white-space:nowrap}
-tbody td{padding:6px 8px;border-bottom:1px solid var(--bdr);font-size:11px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+table{width:100%;border-collapse:collapse;min-width:480px}
+thead th{
+  padding:9px 14px;text-align:left;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--txt3);background:var(--sur2);border-bottom:1px solid var(--bdr);
+  white-space:nowrap;
+}
+tbody td{
+  padding:10px 14px;border-bottom:1px solid var(--bdr);
+  font-size:12px;color:var(--txt);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:220px;
+}
 tbody tr{cursor:pointer;transition:background .1s}
-tbody tr:hover td{background:var(--sur2)!important}
-tr.rc td{background:rgba(248,81,73,.07)}
-tr.rw td{background:rgba(210,153,34,.06)}
-tr.rm td{background:rgba(56,139,253,.04)}
+tbody tr:hover td{background:var(--sur2)}
+tr.rc td{background:#fff5f5}
+tr.rw td{background:#fffbf0}
+tr.rm td{background:#f0f6ff}
+tbody tr:last-child td{border-bottom:none}
 
-/* badge */
-.b{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;font-family:var(--mono)}
+/* BADGES */
+.b{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.02em;font-family:var(--mono)}
 
-/* loader */
-.ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px}
-.ring{width:32px;height:32px;border:2px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite}
+/* AREA KPIS */
+.akrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.ak{border-radius:var(--rl);padding:16px;text-align:center;border:1px solid}
+.an{font-size:30px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em}
+.al{font-size:10px;font-weight:700;margin-top:5px;letter-spacing:.05em;text-transform:uppercase}
 
-/* select */
-.sel{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);padding:3px 7px;border-radius:var(--r);font-size:11px;font-family:var(--font)}
+/* SCORE GUIDE */
+.sg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.si{font-size:11px;font-weight:600;padding:4px 11px;border-radius:4px;border:1px solid}
 
-/* modal */
-.msk{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:none;align-items:flex-start;justify-content:center;padding-top:36px}
+/* SEL */
+.sel{
+  background:var(--sur);border:1px solid var(--bdr);color:var(--txt);
+  padding:4px 9px;border-radius:6px;font-size:11px;font-weight:500;
+  font-family:var(--font);cursor:pointer;
+}
+.sel:focus{outline:none;border-color:var(--acc)}
+
+/* LOADER */
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl)}
+.ring{width:36px;height:36px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite}
+.ltxt{font-size:12px;color:var(--txt3);font-weight:500}
+
+/* MODAL */
+.msk{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;padding-top:48px;backdrop-filter:blur(4px)}
 .msk.on{display:flex}
-.mbox{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);padding:18px;max-width:490px;width:92%;max-height:82vh;overflow-y:auto}
-.mh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px}
-.mt{font-size:14px;font-weight:500;line-height:1.4;flex:1;margin-right:9px}
-.mx{background:none;border:none;cursor:pointer;font-size:21px;color:var(--txt2);line-height:1;font-family:var(--font)}
-.md{height:1px;background:var(--bdr);margin:9px 0}
-.mr{display:flex;gap:7px;margin-bottom:6px;font-size:12px}
-.ml{color:var(--txt3);min-width:135px;flex-shrink:0;font-size:11px}
-.mv{color:var(--txt)}
-.tbox{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 13px;margin-bottom:11px;display:flex;align-items:center;gap:12px}
+.mbox{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rxl);padding:22px;max-width:520px;width:92%;max-height:82vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .2s ease}
+@keyframes mIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.mhdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.mtitle{font-size:15px;font-weight:700;line-height:1.4;flex:1;margin-right:10px;letter-spacing:-.01em}
+.mx{background:none;border:none;cursor:pointer;width:28px;height:28px;border-radius:6px;color:var(--txt3);font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mx:hover{background:var(--sur3);color:var(--txt)}
+.mdv{height:1px;background:var(--bdr);margin:14px 0}
+.mr{display:flex;gap:8px;margin-bottom:9px;font-size:13px}
+.ml{color:var(--txt3);min-width:145px;flex-shrink:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+.mv{color:var(--txt);font-weight:500}
+.score-block{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--rl);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
+.score-num{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1}
+.tbox{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+
+/* EMPTY */
+.empty{padding:36px;text-align:center;color:var(--txt3);font-size:13px;font-weight:500}
 </style>
 </head>
 <body>
 
-<div class="tb">
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div class="logo"><div class="dot"></div>Dashboard Supervisor — Santi Soluciones</div>
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div class="brand">
+      <div class="brand-icon">SS</div>
+      <span class="brand-name">Santi Soluciones</span>
+      <div class="brand-sep"></div>
+      <span class="brand-sub">Dashboard Supervisor</span>
+    </div>
     <div class="chips">
-      <span class="chip" id="c-fecha">–</span>
-      <span class="chip" id="c-sem">–</span>
-      <span class="chip" id="c-tot">– tickets</span>
-      <span class="chip" id="c-upd" style="color:var(--txt3)">Sin actualizar</span>
+      <span class="chip live">● En línea</span>
+      <span class="chip" id="cf">–</span>
+      <span class="chip" id="cs">–</span>
+      <span class="chip" id="ct">–</span>
+      <span class="chip" id="cu" style="color:var(--txt3)">Sin actualizar</span>
     </div>
   </div>
-  <button class="rbtn" id="rbtn" onclick="loadData()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  <button class="upd-btn" id="ubtn" onclick="loadData()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     Actualizar datos
   </button>
 </div>
 
-<div class="tabs">
-  <button class="tab on"  onclick="go('general')">Operación general</button>
-  <button class="tab"     onclick="go('soporte')">Soporte</button>
-  <button class="tab"     onclick="go('desarrollo')">Desarrollo</button>
-  <button class="tab"     onclick="go('ant')">Antigüedad</button>
-  <button class="tab"     onclick="go('todos')">Todos los tickets</button>
+<div class="nav">
+  <button class="nav-tab on" onclick="go('g')">Operación general <span class="nb" id="nb-g">–</span></button>
+  <button class="nav-tab" onclick="go('s')">Soporte <span class="nb" id="nb-s">–</span></button>
+  <button class="nav-tab" onclick="go('d')">Desarrollo <span class="nb" id="nb-d">–</span></button>
+  <button class="nav-tab" onclick="go('a')">Antigüedad</button>
+  <button class="nav-tab" onclick="go('t')">Todos los tickets <span class="nb" id="nb-t">–</span></button>
 </div>
 
-<div class="main" id="main">
-  <!-- loader -->
-  <div class="ldr" id="ldr">
-    <div class="ring"></div>
-    <div style="font-size:12px;color:var(--txt2)" id="lstep">Conectando con Google Sheets…</div>
-  </div>
-
-  <!-- views rendered dynamically -->
-  <div id="v-general" style="display:none;flex-direction:column;gap:12px"></div>
-  <div id="v-soporte"  style="display:none;flex-direction:column;gap:12px"></div>
-  <div id="v-desarrollo" style="display:none;flex-direction:column;gap:12px"></div>
-  <div id="v-ant"     style="display:none;flex-direction:column;gap:12px"></div>
-  <div id="v-todos"   style="display:none;flex-direction:column;gap:12px"></div>
+<div class="main">
+  <div id="ldr" class="loader"><div class="ring"></div><div class="ltxt" id="ls">Conectando con Google Sheets…</div></div>
+  <div class="view" id="vg"></div>
+  <div class="view" id="vs"></div>
+  <div class="view" id="vd"></div>
+  <div class="view" id="va"></div>
+  <div class="view" id="vt"></div>
 </div>
 
-<div class="msk" id="msk" onclick="if(event.target===this)cm()">
-  <div class="mbox" id="mbox"></div>
-</div>
+<div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 
 <script>
 const API='https://script.google.com/macros/s/AKfycbySvHkMhKE-bY7NHKY2LXKSJ65xbx62Zo10Mbzlm7EbBb-EyIa6CrIv6Siojpq0gfy-0g/exec';
-const ST=[{d:0,s:0,l:'Corriente'},{d:1,s:1,l:'1 día'},{d:2,s:2,l:'2 días'},{d:3,s:3,l:'3 días'},{d:4,s:5,l:'4 días'},{d:5,s:7,l:'5 días'},{d:6,s:9,l:'6 días'},{d:7,s:12,l:'7 días'},{d:15,s:20,l:'15 días'},{d:30,s:30,l:'30 días'},{d:45,s:40,l:'45 días'},{d:60,s:50,l:'60 días'},{d:90,s:60,l:'90 días'},{d:120,s:68,l:'120 días'},{d:180,s:75,l:'180 días'},{d:240,s:80,l:'240 días'},{d:300,s:84,l:'300 días'},{d:360,s:88,l:'360 días'},{d:540,s:92,l:'540 días'},{d:560,s:93,l:'560 días'},{d:620,s:95,l:'620 días'},{d:640,s:96,l:'640 días'},{d:700,s:98,l:'700 días'},{d:720,s:99,l:'720+ días'}];
+const ST=[{d:0,s:0,l:'Corriente'},{d:1,s:1,l:'1d'},{d:2,s:2,l:'2d'},{d:3,s:3,l:'3d'},{d:4,s:5,l:'4d'},{d:5,s:7,l:'5d'},{d:6,s:9,l:'6d'},{d:7,s:12,l:'7d'},{d:15,s:20,l:'15d'},{d:30,s:30,l:'30d'},{d:45,s:40,l:'45d'},{d:60,s:50,l:'60d'},{d:90,s:60,l:'90d'},{d:120,s:68,l:'120d'},{d:180,s:75,l:'180d'},{d:240,s:80,l:'240d'},{d:300,s:84,l:'300d'},{d:360,s:88,l:'360d'},{d:720,s:99,l:'720d+'}];
 const PS={urgent:400,high:300,normal:200,low:100,'':0};
-const PC={urgent:{t:'Urgente',c:'#f85149'},high:{t:'Alto',c:'#d29922'},normal:{t:'Normal',c:'#388bfd'},low:{t:'Bajo',c:'#6e7681'},'':{t:'—',c:'#6e7681'}};
-const SC={open:{t:'Abierto',c:'#f85149'},pending:{t:'Pendiente',c:'#d29922'},'':{t:'—',c:'#6e7681'}};
+const PC={urgent:{t:'Urgente',c:'#dc2626',bg:'#fef2f2'},high:{t:'Alto',c:'#d97706',bg:'#fffbeb'},normal:{t:'Normal',c:'#2563eb',bg:'#eff4ff'},low:{t:'Bajo',c:'#6b7280',bg:'#f9fafb'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
+const SC={open:{t:'Abierto',c:'#dc2626',bg:'#fef2f2'},pending:{t:'Pendiente',c:'#d97706',bg:'#fffbeb'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
 const MN=['','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-const AB=[{k:'n',t:'≤7d',c:'#3fb950',x:7},{k:'r',t:'8-30d',c:'#388bfd',x:30},{k:'s',t:'31-90d',c:'#d29922',x:90},{k:'c',t:'91-365d',c:'#f85149',x:365},{k:'p',t:'+365d',c:'#8b949e',x:99999}];
-
-let T=[],CH={},TAB='general';
-
-function br(d){let b=ST[0];for(const e of ST){if(d>=e.d)b=e;else break;}return b;}
-function ag(d){return AB.find(b=>d<=b.x)||AB[4];}
+const AB=[{k:'n',t:'≤7d',c:'#16a34a',bg:'#f0fdf4',x:7},{k:'r',t:'8-30d',c:'#2563eb',bg:'#eff4ff',x:30},{k:'s',t:'31-90d',c:'#d97706',bg:'#fffbeb',x:90},{k:'c',t:'91-365d',c:'#dc2626',bg:'#fef2f2',x:365},{k:'p',t:'+365d',c:'#6b7280',bg:'#f9fafb',x:99999}];
+let T=[],CH={},TAB='g',AKPI=null;
+const el=id=>document.getElementById(id);
+const bdg=(t,c,bg)=>`<span class="b" style="background:${bg};color:${c}">${t}</span>`;
+function brk(d){let b=ST[0];for(const e of ST){if(d>=e.d)b=e;else break;}return b;}
+function age(d){return AB.find(b=>d<=b.x)||AB[4];}
 function act(s){if(s>=350)return{i:'🚨',t:'Resolver hoy',c:'rc'};if(s>=220)return{i:'⚠️',t:'Atender hoy',c:'rw'};if(s>=200)return{i:'📋',t:'Mañana',c:'rm'};if(s>=100)return{i:'',t:'Esta semana',c:''};return{i:'',t:'—',c:''};}
 function wk(d){const s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
-function bdg(t,c){return`<span class="b" style="background:${c}20;color:${c}">${t}</span>`;}
-function el(id){return document.getElementById(id);}
 function fk(keys,pats){return keys.find(k=>pats.some(p=>new RegExp(p,'i').test(k)))||null;}
 
-// ── Map Ant_Tickets rows → TICKETS ─────────────────────────────────────
 function mapRows(rows){
   if(!rows.length)return[];
   const keys=Object.keys(rows[0]);
-  const kId   =fk(keys,['^Id$','^ID$','^id$']);
-  const kSt   =fk(keys,['^Status$','estado']);
-  const kPr   =fk(keys,['^Priority$','prioridad']);
-  const kOrg  =fk(keys,['Organization Name','Org','empresa','cliente']);
-  const kSub  =fk(keys,['Subject','Asunto','subject']);
-  const kSR   =fk(keys,['S-Responsable','s-responsable','Responsable']);
-  const kCr   =fk(keys,['Created At','Created_At','Creado','Fecha']);
-  const kAs   =fk(keys,['Assignee Name','Assignee','Asignado','Área']);
-  const kDR   =fk(keys,['D-Responsable','d-responsable']);
-  const kCa   =fk(keys,['S-CAUSA','Causa','causa']);
-  const kMo   =fk(keys,['S-MODULO','Modulo','modulo']);
-  const kSI   =fk(keys,['S-INTERNA','sinterna']);
-  const kRa   =fk(keys,['Rango','rango','Días','dias','Bracket']);
-  const kTi   =fk(keys,['Tipo','tipo','Customer','Implementa','Clasificacion']);
-  const kMe   =fk(keys,['^Mes$','^mes$','Month']);
+  const kId=fk(keys,['^Id$','^ID$']);const kSt=fk(keys,['^Status$']);const kPr=fk(keys,['^Priority$']);
+  const kOr=fk(keys,['Organization Name','Org','empresa']);const kSu=fk(keys,['Subject','Asunto']);
+  const kSR=fk(keys,['S-Responsable']);const kCr=fk(keys,['Created At','Created_At']);
+  const kAs=fk(keys,['Assignee Name','Assignee']);const kDR=fk(keys,['D-Responsable']);
+  const kCa=fk(keys,['S-CAUSA','Causa']);const kMo=fk(keys,['S-MODULO','Modulo']);
+  const kSI=fk(keys,['S-INTERNA']);const kRa=fk(keys,['Rango','rango','Días']);
+  const kTi=fk(keys,['Tipo','tipo','Customer','Implementa']);const kMe=fk(keys,['^Mes$','^mes$']);
   const now=new Date();
   return rows.map(r=>{
-    const id=parseInt(kId?r[kId]:'');
-    if(!id||isNaN(id))return null;
+    const id=parseInt(kId?r[kId]:'');if(!id||isNaN(id))return null;
     const cr=(kCr?r[kCr]||'':'').split(' ')[0];
     const days=cr?Math.max(0,Math.floor((now-new Date(cr))/86400000)):0;
-    const b=br(days);
-    const pri=(kPr?r[kPr]||'':'').toLowerCase().trim();
+    const b=brk(days);const pri=(kPr?r[kPr]||'':'').toLowerCase().trim();
     const sc=(PS[pri]||0)+b.s;
-    // find tiempo: any value matching hh:mm:ss pattern
-    let tiempo='';
-    for(const v of Object.values(r)){if(/^\d{1,4}:\d{2}:\d{2}$/.test((v||'').trim())){tiempo=v.trim();break;}}
-    return{
-      id,
-      status:(kSt?r[kSt]||'':'').toLowerCase().trim(),
-      priority:pri,
-      org:kOrg?r[kOrg]||'':'',
-      subject:kSub?r[kSub]||'':'',
-      sResp:kSR?r[kSR]||'':'',
-      created:cr,
-      assignee:kAs?r[kAs]||'':'',
-      dResp:kDR?r[kDR]||'':'',
-      causa:kCa?r[kCa]||'':'',
-      modulo:kMo?r[kMo]||'':'',
-      sinterna:kSI?r[kSI]||'':'',
-      days,bracket:b.l,score:sc,action:act(sc),age:ag(days),
-      mes:cr?MN[new Date(cr).getMonth()+1]||'—':'—',
-      tiempo,
-      rango:kRa?r[kRa]||'':'',
-      tipo:kTi?r[kTi]||'':'',
-      mesAnt:kMe?r[kMe]||'':''
-    };
+    let tiempo='';for(const v of Object.values(r)){if(/^\d{1,4}:\d{2}:\d{2}$/.test((v||'').trim())){tiempo=v.trim();break;}}
+    return{id,status:(kSt?r[kSt]||'':'').toLowerCase().trim(),priority:pri,
+      org:kOr?r[kOr]||'':'',subject:kSu?r[kSu]||'':'',
+      sResp:kSR?r[kSR]||'':'',created:cr,assignee:kAs?r[kAs]||'':'',
+      dResp:kDR?r[kDR]||'':'',causa:kCa?r[kCa]||'':'',modulo:kMo?r[kMo]||'':'',
+      sinterna:kSI?r[kSI]||'':'',days,bracket:b.l,score:sc,action:act(sc),age:age(days),
+      mes:cr?MN[new Date(cr).getMonth()+1]||'—':'—',tiempo,
+      rango:kRa?r[kRa]||'':'',tipo:kTi?r[kTi]||'':'',mesAnt:kMe?r[kMe]||'':''};
   }).filter(Boolean);
 }
 
-// ── Charts ────────────────────────────────────────────────────────────────
 function mkChart(id,type,labels,data,colors,horiz){
-  if(CH[id])CH[id].destroy();
-  const ctx=el(id);if(!ctx)return;
+  if(CH[id])CH[id].destroy();const ctx=el(id);if(!ctx)return;
   CH[id]=new Chart(ctx,{type,
-    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:type==='doughnut'?2:0,borderColor:type==='doughnut'?'#161b22':undefined,borderRadius:type==='bar'?4:0}]},
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:type==='bar'?4:0,hoverBackgroundColor:colors.map(c=>c+'cc')}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`}}},
-      scales:type==='doughnut'?{}:{x:{ticks:{color:'#6e7681',font:{size:9}},grid:{color:'#2d333b40'}},y:{ticks:{color:'#6e7681',font:{size:9}},grid:{color:'#2d333b40'}}}}});
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',titleColor:'#9ca3af',bodyColor:'#f9fafb',cornerRadius:8,padding:10}},
+      scales:type==='doughnut'?{}:{x:{ticks:{color:'#9ca3af',font:{size:10,family:'Plus Jakarta Sans'}},grid:{color:'#f0f2f7',drawBorder:false}},y:{ticks:{color:'#9ca3af',font:{size:10,family:'Plus Jakarta Sans'}},grid:{color:'#f0f2f7'}}}}});
 }
 
-// ── Render general ────────────────────────────────────────────────────────
-function renderGeneral(){
-  const v=el('v-general');
-  const now=new Date();
-  const sinA=T.filter(t=>!t.sResp).length;
-  const urgA=T.filter(t=>t.priority==='urgent'||t.priority==='high').length;
-  const sla =T.filter(t=>t.days>7).length;
-  const open=T.filter(t=>t.status==='open').length;
-  const pen =T.filter(t=>t.status==='pending').length;
-  const crit=T.filter(t=>t.score>=350).length;
+// ── Filters map ──────────────────────────────────────────────────────────────
+const KDEF=[
+  {key:'total',label:'Total tickets',      icon:'',color:'#2563eb',bg:'#eff4ff',fn:()=>T},
+  {key:'open', label:'Abiertos',           icon:'',color:'#dc2626',bg:'#fef2f2',fn:()=>T.filter(t=>t.status==='open')},
+  {key:'pend', label:'Pendientes',         icon:'',color:'#d97706',bg:'#fffbeb',fn:()=>T.filter(t=>t.status==='pending')},
+  {key:'urgalto',label:'Urgente / Alto',   icon:'',color:'#ea580c',bg:'#fff7ed',fn:()=>T.filter(t=>t.priority==='urgent'||t.priority==='high')},
+  {key:'crit', label:'Score crítico ≥350', icon:'',color:'#dc2626',bg:'#fef2f2',fn:()=>T.filter(t=>t.score>=350),sub:'Acción requerida hoy'},
+  {key:'sla',  label:'Vencidos SLA +7d',   icon:'',color:'#d97706',bg:'#fffbeb',fn:()=>T.filter(t=>t.days>7)},
+  {key:'sinA', label:'Sin responsable',    icon:'',color:'#7c3aed',bg:'#f5f3ff',fn:()=>T.filter(t=>!t.sResp)},
+];
 
-  v.innerHTML=`
-    <div class="card"><div class="ch"><span class="ct">KPIs de operación</span></div><div class="cb">
-      <div class="kgrid">
-        <div class="kpi"><div class="kl">Total tickets</div><div class="kv" style="color:var(--acc)">${T.length}</div></div>
-        <div class="kpi"><div class="kl">Abiertos</div><div class="kv" style="color:var(--red)">${open}</div></div>
-        <div class="kpi"><div class="kl">Pendientes</div><div class="kv" style="color:var(--orange)">${pen}</div></div>
-        <div class="kpi"><div class="kl">Urgente / Alto</div><div class="kv" style="color:var(--orange)">${urgA}</div></div>
-        <div class="kpi"><div class="kl">Score crítico ≥350</div><div class="kv" style="color:var(--red)">${crit}</div><div class="ks">Acción hoy</div></div>
-        <div class="kpi"><div class="kl">Vencidos SLA +7d</div><div class="kv" style="color:var(--orange)">${sla}</div></div>
-        <div class="kpi"><div class="kl">Sin responsable</div><div class="kv" style="color:var(--red)">${sinA}</div></div>
-      </div>
-    </div></div>
-    <div class="crow">
-      <div class="card"><div class="ch"><span class="ct">Por prioridad</span></div><div class="cb"><div class="cbox"><canvas id="cp"></canvas></div></div></div>
-      <div class="card"><div class="ch"><span class="ct">Antigüedad</span></div><div class="cb"><div class="cbox"><canvas id="ca"></canvas></div></div></div>
-      <div class="card"><div class="ch"><span class="ct">Por agente</span></div><div class="cb"><div class="cbox"><canvas id="cag"></canvas></div></div></div>
+function kpiPanel(kd){
+  const tickets=kd.fn();
+  if(!tickets.length)return`<div class="kpi-panel"><div class="panel-head"><span class="panel-title">${kd.label}</span><button class="panel-close" onclick="AKPI=null;renderGeneral()">×</button></div><div class="empty">Sin tickets en esta categoría</div></div>`;
+  const rows=tickets.sort((a,b)=>b.score-a.score).map(t=>`
+    <tr onclick="om(${t.id})">
+      <td style="font-family:var(--mono);font-weight:600;"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="color:var(--acc);text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:260px">${t.subject}</td>
+      <td style="color:var(--txt2)">${t.org}</td>
+      <td>${bdg(t.age.t,t.age.c,t.age.bg)}</td>
+      <td>${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c,(PC[t.priority]||PC['']).bg)}</td>
+      <td style="color:var(--txt2);font-family:var(--mono)">${t.sResp||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:600;color:${t.score>=350?'#dc2626':t.score>=220?'#d97706':'#6b7280'}">${t.score}</td>
+    </tr>`).join('');
+  return`<div class="kpi-panel"><div class="panel-head">
+    <div><span class="panel-title" style="color:${kd.color}">${kd.label}</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="panel-count">${tickets.length} tickets</span>
+      <button class="panel-close" onclick="AKPI=null;renderGeneral()">×</button>
     </div>
-    <div class="card">
-      <div class="ch"><span class="ct">Sin responsable asignado</span>${bdg(sinA,'#f85149')}</div>
-      <div class="cb" id="sa-body"></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Antigüedad</th><th>Prioridad</th><th>Agente</th><th>Score</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div></div>`;
+}
+
+function renderGeneral(){
+  const kpis=KDEF.map(k=>{
+    const tickets=k.fn();
+    const pct=T.length?Math.round(tickets.length/T.length*100):0;
+    const isActive=AKPI===k.key;
+    return`<div class="kpi-card${isActive?' active':''}" onclick="AKPI=AKPI==='${k.key}'?null:'${k.key}';renderGeneral()">
+      <div class="kpi-card-top">
+        <span style="font-size:10px;font-weight:600;color:${k.color};opacity:${isActive?1:.5}">▼</span>
+      </div>
+      <div class="kpi-val" style="color:${k.color}">${tickets.length}</div>
+      <div class="kpi-lbl">${k.label}</div>
+      ${k.sub?`<div class="kpi-sub">${k.sub}</div>`:''}
+      <div class="kpi-bar"><div class="kpi-fill" style="width:${pct}%;background:${k.color}40"></div></div>
+      <div class="kpi-hint">Ver lista · ${pct}% del total</div>
+    </div>`;
+  }).join('');
+
+  const ak=AKPI?KDEF.find(k=>k.key===AKPI):null;
+  // agent map using col L (tradAgente)
+  const agMap={};T.forEach(t=>{const a=(t.tradAgente||t.sResp||'Sin asignar').trim()||'Sin asignar';agMap[a]=(agMap[a]||0)+1;});
+  const agS=Object.entries(agMap).filter(x=>x[0]&&x[0]!=='Sin asignar'||agMap['Sin asignar']>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  // etiqueta/area map using col M
+  const arMap={};T.forEach(t=>{const e=(t.etiqueta||'').trim();if(e)arMap[e]=(arMap[e]||0)+1;});
+  const arS=Object.entries(arMap).sort((a,b)=>b[1]-a[1]);
+  const arColors={'Customer':'#2563eb','Implementación':'#7c3aed','Desarrollo':'#16a34a','Soporte':'#d97706','publicaciones':'#dc2626'};
+
+  el('vg').innerHTML=`
+    <div>
+      <div class="slbl">Indicadores clave de operación</div>
+      <div class="kpi-grid">${kpis}</div>
+    </div>
+    ${ak?kpiPanel(ak):''}
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">Por prioridad</span></div>
+        <div class="chart-body"><div class="cbox"><canvas id="cp" role="img" aria-label="Distribución de tickets por prioridad"></canvas></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">Antigüedad de tickets</span></div>
+        <div class="chart-body"><div class="cbox"><canvas id="ca" role="img" aria-label="Distribución de tickets por antigüedad"></canvas></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head"><span class="chart-title">Tickets por agente</span><span style="font-size:10px;color:var(--txt3);font-weight:500">${T.length} total</span></div>
+        <div class="chart-body"><div style="position:relative;height:${Math.max(160,agS.length*36)}px"><canvas id="cag" role="img" aria-label="Tickets por agente"></canvas></div></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><span class="chart-title">Tickets por área (etiqueta)</span><span style="font-size:10px;color:var(--txt3);font-weight:500">${T.length} total</span></div>
+      <div class="chart-body"><div style="position:relative;height:${Math.max(120,arS.length*40+40)}px"><canvas id="car2" role="img" aria-label="Tickets por área"></canvas></div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head" style="background:#fef2f2;border-bottom:1px solid #fecaca">
+        <span class="chart-title" style="color:#dc2626">Sin responsable asignado</span>
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);background:#fee2e2;color:#dc2626;padding:2px 9px;border-radius:10px" id="sa-count">0</span>
+      </div>
+      <div id="sa-body"></div>
     </div>`;
 
-  // charts
   mkChart('cp','doughnut',['Urgente','Alto','Normal','Bajo'],
     ['urgent','high','normal','low'].map(k=>T.filter(t=>t.priority===k).length),
-    ['#f85149','#d29922','#388bfd','#6e7681']);
+    ['#dc2626','#d97706','#2563eb','#e5e7eb']);
   mkChart('ca','bar',AB.map(b=>b.t),AB.map(b=>T.filter(t=>t.age.k===b.k).length),AB.map(b=>b.c));
-  const am={};T.forEach(t=>{const a=t.sResp||'Sin asignar';am[a]=(am[a]||0)+1;});
-  const as=Object.entries(am).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkChart('cag','bar',as.map(x=>x[0]),as.map(x=>x[1]),as.map(()=>'#388bfd'),true);
-
-  // sin asignar
-  const sa=T.filter(t=>!t.sResp);
-  el('sa-body').innerHTML=sa.length
-    ?`<div class="tw"><table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th></tr></thead><tbody>${
-      sa.map(t=>`<tr onclick="om(${t.id})"><td style="font-family:var(--mono);color:var(--acc)">#${t.id}</td><td>${t.subject}</td><td>${t.org}</td><td>${bdg(SC[t.status]?.t||t.status,SC[t.status]?.c||'#6e7681')}</td><td>${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c)}</td><td>${bdg(t.age.t,t.age.c)}</td></tr>`).join('')
-    }</tbody></table></div>`
-    :`<div style="padding:14px;text-align:center;color:var(--txt3);font-size:13px">✓ Todos tienen responsable asignado</div>`;
+  mkChart('cag','bar',agS.map(x=>x[0]),agS.map(x=>x[1]),agS.map(()=>'#3b82f6'),true);
+  mkChart('car2','bar',arS.map(x=>x[0]),arS.map(x=>x[1]),arS.map(x=>arColors[x[0]]||'#6b7280'),true);
+  // Sin responsable — always visible
+  const saT=T.filter(t=>!t.sResp);
+  const saCount=el('sa-count');if(saCount)saCount.textContent=saT.length;
+  const saBody=el('sa-body');
+  if(saBody){
+    if(!saT.length){
+      saBody.innerHTML='<div class="empty" style="color:#16a34a">&#10003; Todos los tickets tienen responsable asignado</div>';
+    } else {
+      let saRows='';
+      saT.forEach(t=>{
+        const st=SC[t.status]||SC[''];
+        const pr=PC[t.priority]||PC[''];
+        saRows+=`<tr onclick="om(${t.id})"><td style="font-family:var(--mono);font-weight:600;"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td><td style="max-width:260px">${t.subject}</td><td style="color:var(--txt2)">${t.org}</td><td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td><td>${bdg(t.age.t,t.age.c,t.age.bg)}</td></tr>`;
+      });
+      saBody.innerHTML='<div class="tw"><table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th></tr></thead><tbody>'+saRows+'</tbody></table></div>';
+    }
+  }
 }
 
-// ── Render área ────────────────────────────────────────────────────────────
-function renderArea(area){
-  const v=el('v-'+area);
-  const key=area==='soporte'?'Soporte 1':'Desarrollo 1';
+function renderArea(area,vid){
+  const key=area==='s'?'Soporte 1':'Desarrollo 1',label=area==='s'?'Soporte':'Desarrollo';
   const list=[...T.filter(x=>x.assignee===key)].sort((a,b)=>b.score-a.score);
-  const crit=list.filter(x=>x.score>=350).length;
-  const ua=list.filter(x=>x.priority==='urgent'||x.priority==='high').length;
-  const sla=list.filter(x=>x.days>7).length;
+  const crit=list.filter(x=>x.score>=350).length,ua=list.filter(x=>x.priority==='urgent'||x.priority==='high').length,sla=list.filter(x=>x.days>7).length;
   const rows=list.map((x,i)=>{
-    const sc=x.score>=350?'var(--red)':x.score>=220?'var(--orange)':x.score>=200?'var(--blue)':'var(--txt3)';
+    const sc=x.score>=350?'#dc2626':x.score>=220?'#d97706':x.score>=200?'#2563eb':'#9ca3af';
     return`<tr class="${x.action.c}" onclick="om(${x.id})">
-      <td style="color:var(--txt3);font-family:var(--mono)">${i+1}</td>
-      <td style="font-family:var(--mono);font-size:10px">${x.bracket}</td>
-      <td style="font-family:var(--mono);font-size:10px;color:#3fb950">${x.tiempo||'—'}</td>
-      <td>${bdg((PC[x.priority]||PC['']).t,(PC[x.priority]||PC['']).c)}</td>
+      <td style="color:var(--txt3);font-weight:600;width:36px">${i+1}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${x.bracket}</td>
+      <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${x.tiempo||'—'}</td>
+      <td>${bdg((PC[x.priority]||PC['']).t,(PC[x.priority]||PC['']).c,(PC[x.priority]||PC['']).bg)}</td>
       <td style="color:var(--txt2)">${x.sResp||'—'}</td>
       <td style="color:var(--txt2)">${x.dResp||'—'}</td>
-      <td style="font-family:var(--mono);color:var(--acc)">#${x.id}</td>
-      <td>${x.subject}</td>
+      <td style="font-family:var(--mono);font-weight:600;"><a href="https://dual.zendesk.com/agent/tickets/${x.id}" target="_blank" style="color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${x.id}</a></td>
+      <td style="max-width:180px">${x.subject}</td>
       <td style="color:var(--txt2)">${x.org}</td>
-      <td>${bdg(x.score,sc)}</td>
-      <td style="font-size:10px;color:${sc}">${x.action.i} ${x.action.t}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${x.score}</td>
+      <td style="font-size:11px;color:${sc};white-space:nowrap">${x.action.t}</td>
     </tr>`;
   }).join('');
-  v.innerHTML=`<div class="card"><div class="ch"><span class="ct">${area==='soporte'?'Soporte':'Desarrollo'} — tickets activos</span></div><div class="cb">
-    <div class="akrow">
-      <div class="ak" style="background:var(--red2);border-color:var(--red)"><div class="an" style="color:var(--red)">${crit}</div><div class="al" style="color:var(--red)">🔴 Crítico ≥350</div></div>
-      <div class="ak" style="background:var(--orange2);border-color:var(--orange)"><div class="an" style="color:var(--orange)">${ua}</div><div class="al" style="color:var(--orange)">🟡 Urgente/Alto</div></div>
-      <div class="ak" style="background:var(--sur2);border-color:var(--bdr)"><div class="an" style="color:var(--txt2)">${sla}</div><div class="al" style="color:var(--txt2)">🕐 SLA +7d</div></div>
+  el(vid).innerHTML=`
+    <div>
+      <div class="slbl">${label} — resumen del área</div>
+      <div class="akrow">
+        <div class="ak" style="background:#fef2f2;border-color:#fecaca"><div class="an" style="color:#dc2626">${crit}</div><div class="al" style="color:#dc2626">Crítico ≥350</div></div>
+        <div class="ak" style="background:#fffbeb;border-color:#fde68a"><div class="an" style="color:#d97706">${ua}</div><div class="al" style="color:#d97706">Urgente / Alto</div></div>
+        <div class="ak" style="background:var(--sur2);border-color:var(--bdr)"><div class="an" style="color:var(--txt2)">${sla}</div><div class="al" style="color:var(--txt2)">Vencidos SLA +7d</div></div>
+      </div>
     </div>
-    <div class="sg">
-      <span class="si" style="background:var(--red2);border-color:var(--red);color:var(--red)">🚨 ≥350 Resolver hoy</span>
-      <span class="si" style="background:var(--orange2);border-color:var(--orange);color:var(--orange)">⚠️ 220-349 Atender hoy</span>
-      <span class="si" style="background:var(--blue2);border-color:var(--blue);color:var(--blue)">📋 200-219 Mañana</span>
-      <span class="si" style="background:var(--sur2);border-color:var(--bdr);color:var(--txt2)">100-199 Esta semana</span>
-    </div>
-    <div class="tw"><table><thead><tr><th>N.</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Prioridad</th><th>Agente</th><th>Desarrollador</th><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Score</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div>
-  </div></div>`;
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="chart-title">${label} — tickets por score</span>
+        <div class="sg">
+          <span class="si" style="background:#fef2f2;border-color:#fecaca;color:#dc2626">≥350 Hoy</span>
+          <span class="si" style="background:#fffbeb;border-color:#fde68a;color:#d97706">220–349 Hoy</span>
+          <span class="si" style="background:#eff4ff;border-color:#bfdbfe;color:#2563eb">200–219 Mañana</span>
+          <span class="si" style="background:var(--sur2);border-color:var(--bdr);color:var(--txt3)">Esta semana</span>
+        </div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>N.</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Prioridad</th><th>Agente</th><th>Desarrollador</th><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Score</th><th>Acción</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
 }
 
-// ── Render antigüedad ──────────────────────────────────────────────────────
 function renderAnt(){
-  const v=el('v-ant');
   const rangos=[...new Set(T.map(t=>t.rango).filter(Boolean))];
-  const tipos =[...new Set(T.map(t=>t.tipo).filter(Boolean))];
-  const meses =[...new Set(T.map(t=>t.mesAnt).filter(Boolean))];
-  v.innerHTML=`
-    <div class="crow">
-      <div class="card"><div class="ch"><span class="ct">Por rango de días</span></div><div class="cb"><div class="cbox"><canvas id="car"></canvas></div></div></div>
-      <div class="card"><div class="ch"><span class="ct">Por tipo de cliente</span></div><div class="cb"><div class="cbox"><canvas id="cat"></canvas></div></div></div>
-      <div class="card"><div class="ch"><span class="ct">Por mes</span></div><div class="cb"><div class="cbox"><canvas id="cam"></canvas></div></div></div>
+  const tipos=[...new Set(T.map(t=>t.tipo).filter(Boolean))];
+  const meses=[...new Set(T.map(t=>t.mesAnt).filter(Boolean))];
+  el('va').innerHTML=`
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Por rango</span></div><div class="chart-body"><div class="cbox"><canvas id="car" role="img" aria-label="tickets por rango de días"></canvas></div></div></div>
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Por tipo de cliente</span></div><div class="chart-body"><div class="cbox"><canvas id="cat" role="img" aria-label="tickets por tipo de cliente"></canvas></div></div></div>
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Por mes</span></div><div class="chart-body"><div class="cbox"><canvas id="cam" role="img" aria-label="tickets por mes"></canvas></div></div></div>
     </div>
-    <div class="card">
-      <div class="ch">
-        <span class="ct">Detalle de antigüedad</span>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="chart-title">Detalle de antigüedad</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <select class="sel" id="far" onchange="rafilt()"><option value="">Todos los rangos</option>${rangos.map(r=>`<option>${r}</option>`).join('')}</select>
           <select class="sel" id="fat" onchange="rafilt()"><option value="">Todos los tipos</option>${tipos.map(r=>`<option>${r}</option>`).join('')}</select>
           <select class="sel" id="fam" onchange="rafilt()"><option value="">Todos los meses</option>${meses.map(r=>`<option>${r}</option>`).join('')}</select>
         </div>
       </div>
-      <div class="tw" id="ant-tbl"></div>
+      <div class="tw" id="atbl"></div>
     </div>`;
-  mkChart('car','bar',rangos,rangos.map(r=>T.filter(t=>t.rango===r).length),['#3fb950','#388bfd','#d29922','#f85149','#8b949e','#a371f7']);
-  mkChart('cat','doughnut',tipos,tipos.map(tp=>T.filter(t=>t.tipo===tp).length),['#388bfd','#a371f7','#3fb950','#d29922','#f85149']);
-  mkChart('cam','bar',meses,meses.map(m=>T.filter(t=>t.mesAnt===m).length),meses.map(()=>'#a371f7'));
+  mkChart('car','bar',rangos,rangos.map(r=>T.filter(t=>t.rango===r).length),['#16a34a','#2563eb','#d97706','#dc2626','#6b7280','#7c3aed']);
+  mkChart('cat','doughnut',tipos,tipos.map(tp=>T.filter(t=>t.tipo===tp).length),['#2563eb','#7c3aed','#16a34a','#d97706','#dc2626']);
+  mkChart('cam','bar',meses,meses.map(m=>T.filter(t=>t.mesAnt===m).length),meses.map(()=>'#7c3aed'));
   rafilt();
 }
 function rafilt(){
   const fr=el('far')?.value||'',ft=el('fat')?.value||'',fm=el('fam')?.value||'';
-  const list=T.filter(t=>{
-    if(fr&&t.rango!==fr)return false;
-    if(ft&&t.tipo!==ft)return false;
-    if(fm&&t.mesAnt!==fm)return false;
-    return true;
-  });
+  const list=T.filter(t=>{if(fr&&t.rango!==fr)return false;if(ft&&t.tipo!==ft)return false;if(fm&&t.mesAnt!==fm)return false;return true;});
   const rows=list.map(t=>{
-    const sc=t.score>=350?'var(--red)':t.score>=220?'var(--orange)':t.score>=200?'var(--blue)':'var(--txt3)';
-    return`<tr onclick="om(${t.id})"><td style="font-family:var(--mono);color:var(--acc)">#${t.id}</td><td>${t.subject}</td><td style="color:var(--txt2)">${t.org}</td><td style="font-family:var(--mono);color:#3fb950">${t.tiempo||'—'}</td><td>${t.rango?bdg(t.rango,'#d29922'):''}</td><td>${t.tipo?bdg(t.tipo,'#388bfd'):''}</td><td style="color:var(--txt2)">${t.mesAnt||'—'}</td><td style="color:var(--txt2)">${t.sResp||'—'}</td><td>${bdg(t.score,sc)}</td></tr>`;
+    const sc=t.score>=350?'#dc2626':t.score>=220?'#d97706':t.score>=200?'#2563eb':'#9ca3af';
+    return`<tr onclick="om(${t.id})"><td style="font-family:var(--mono);font-weight:600;"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td><td>${t.subject}</td><td style="color:var(--txt2)">${t.org}</td><td style="font-family:var(--mono);color:#16a34a">${t.tiempo||'—'}</td><td>${t.rango?bdg(t.rango,'#d97706','#fffbeb'):''}</td><td>${t.tipo?bdg(t.tipo,'#2563eb','#eff4ff'):''}</td><td style="color:var(--txt2)">${t.mesAnt||'—'}</td><td style="color:var(--txt2)">${t.sResp||'—'}</td><td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td></tr>`;
   }).join('');
-  el('ant-tbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>⏱ Tiempo</th><th>Rango</th><th>Tipo</th><th>Mes</th><th>Agente</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--txt3)">Sin resultados</td></tr>'}</tbody></table>`;
+  if(el('atbl'))el('atbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>⏱ Tiempo</th><th>Rango</th><th>Tipo</th><th>Mes</th><th>Agente</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
 }
 
-// ── Render todos ───────────────────────────────────────────────────────────
 function renderTodos(){
-  const v=el('v-todos');
   const agents=[...new Set(T.map(t=>t.sResp).filter(Boolean))].sort();
-  v.innerHTML=`<div class="card">
-    <div class="ch">
-      <span class="ct">Todos los tickets</span>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <select class="sel" id="fs" onchange="tfilt()"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
-        <select class="sel" id="fp" onchange="tfilt()"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
-        <select class="sel" id="fa" onchange="tfilt()"><option value="">Todos los agentes</option>${agents.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
-        <select class="sel" id="farea" onchange="tfilt()"><option value="">Todas las áreas</option><option value="Soporte 1">Soporte</option><option value="Desarrollo 1">Desarrollo</option></select>
+  el('vt').innerHTML=`<div class="chart-card">
+    <div class="chart-head">
+      <span class="chart-title">Todos los tickets</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <select class="sel" id="fst" onchange="tfilt()"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
+        <select class="sel" id="fpr" onchange="tfilt()"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
+        <select class="sel" id="fag" onchange="tfilt()"><option value="">Todos los agentes</option>${agents.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+        <select class="sel" id="far2" onchange="tfilt()"><option value="">Todas las áreas</option><option value="Soporte 1">Soporte</option><option value="Desarrollo 1">Desarrollo</option></select>
       </div>
     </div>
-    <div class="tw" id="tod-tbl"></div>
+    <div class="tw" id="ttbl"></div>
   </div>`;
   tfilt();
 }
 function tfilt(){
-  const fs=el('fs')?.value||'',fp=el('fp')?.value||'',fa=el('fa')?.value||'',fr=el('farea')?.value||'';
-  const list=[...T].filter(t=>{
-    if(fs&&t.status!==fs)return false;
-    if(fp&&t.priority!==fp)return false;
-    if(fa&&t.sResp!==fa)return false;
-    if(fr&&t.assignee!==fr)return false;
-    return true;
-  }).sort((a,b)=>b.score-a.score);
+  const fs=el('fst')?.value||'',fp=el('fpr')?.value||'',fa=el('fag')?.value||'',fr=el('far2')?.value||'';
+  const list=[...T].filter(t=>{if(fs&&t.status!==fs)return false;if(fp&&t.priority!==fp)return false;if(fa&&t.sResp!==fa)return false;if(fr&&t.assignee!==fr)return false;return true;}).sort((a,b)=>b.score-a.score);
   const rows=list.map(t=>{
-    const sc=t.score>=350?'var(--red)':t.score>=220?'var(--orange)':t.score>=200?'var(--blue)':'var(--txt3)';
-    return`<tr class="${t.action.c}" onclick="om(${t.id})"><td style="font-family:var(--mono);color:var(--acc)">#${t.id}</td><td>${t.subject}</td><td style="color:var(--txt2)">${t.org}</td><td>${bdg(SC[t.status]?.t||t.status,SC[t.status]?.c||'#6e7681')}</td><td>${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c)}</td><td>${bdg(t.age.t,t.age.c)}</td><td style="font-family:var(--mono);font-size:10px;color:#3fb950">${t.tiempo||'—'}</td><td style="color:var(--txt2)">${t.sResp||'—'}</td><td style="color:var(--txt2)">${t.dResp||'—'}</td><td>${bdg(t.score,sc)}</td></tr>`;
+    const sc=t.score>=350?'#dc2626':t.score>=220?'#d97706':t.score>=200?'#2563eb':'#9ca3af';
+    return`<tr class="${t.action.c}" onclick="om(${t.id})">
+      <td style="font-family:var(--mono);font-weight:600;"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:200px">${t.subject}</td>
+      <td style="color:var(--txt2)">${t.org}</td>
+      <td>${bdg(SC[t.status]?.t||t.status,SC[t.status]?.c||'#9ca3af',SC[t.status]?.bg||'#f9fafb')}</td>
+      <td>${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c,(PC[t.priority]||PC['']).bg)}</td>
+      <td>${bdg(t.age.t,t.age.c,t.age.bg)}</td>
+      <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${t.tiempo||'—'}</td>
+      <td style="color:var(--txt2)">${t.sResp||'—'}</td>
+      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
   }).join('');
-  if(el('tod-tbl'))el('tod-tbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Agente</th><th>Desarrollador</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--txt3)">Sin resultados</td></tr>'}</tbody></table>`;
+  if(el('ttbl'))el('ttbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Cliente</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Agente</th><th>Desarrollador</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
 }
 
-// ── Modal ──────────────────────────────────────────────────────────────────
 function om(id){
   const t=T.find(x=>x.id===id);if(!t)return;
-  const sc=t.score>=350?'var(--red)':t.score>=220?'var(--orange)':t.score>=200?'var(--blue)':'var(--txt2)';
-  el('mbox').innerHTML=`
-    <div class="mh"><div class="mt">${t.subject}</div><button class="mx" onclick="cm()">×</button></div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px">
-      ${bdg(SC[t.status]?.t||t.status,SC[t.status]?.c||'#6e7681')}
-      ${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c)}
-      ${bdg(t.age.t,t.age.c)}
+  const sc=t.score>=350?'#dc2626':t.score>=220?'#d97706':t.score>=200?'#2563eb':'#6b7280';
+  const scbg=t.score>=350?'#fef2f2':t.score>=220?'#fffbeb':'#f0f6ff';
+  el('mb').innerHTML=`
+    <div class="mhdr"><div class="mtitle">${t.subject}</div><button class="mx" onclick="cm()">×</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      ${bdg(SC[t.status]?.t||t.status,SC[t.status]?.c||'#9ca3af',SC[t.status]?.bg||'#f9fafb')}
+      ${bdg((PC[t.priority]||PC['']).t,(PC[t.priority]||PC['']).c,(PC[t.priority]||PC['']).bg)}
+      ${bdg(t.age.t,t.age.c,t.age.bg)}
     </div>
-    <div style="font-family:var(--mono);font-size:21px;color:${sc};margin-bottom:2px">SCORE: ${t.score}</div>
-    <div style="font-size:12px;color:${sc};margin-bottom:9px">${t.action.i} ${t.action.t}</div>
-    ${t.tiempo?`<div class="tbox"><div><div style="font-family:var(--mono);font-size:18px;font-weight:500;color:#3fb950">${t.tiempo}</div><div style="font-size:11px;color:var(--txt2);margin-top:2px">Tiempo en espera</div></div>${t.rango?`<span>${bdg(t.rango,'#d29922')}</span>`:''} ${t.tipo?`<span>${bdg(t.tipo,'#388bfd')}</span>`:''}</div>`:''}
-    <div class="md"></div>
-    <div class="mr"><span class="ml">ID Ticket</span><span class="mv" style="font-family:var(--mono)">#${t.id}</span></div>
+    <div class="score-block" style="border-color:${sc}30">
+      <div class="score-num" style="color:${sc}">${t.score}</div>
+      <div><div style="font-size:11px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Score</div><div style="font-size:13px;font-weight:600;color:var(--txt2)">${t.action.t}</div></div>
+    </div>
+    ${t.tiempo?`<div class="tbox"><div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:#16a34a">${t.tiempo}</div><div style="font-size:11px;color:var(--txt3);margin-top:2px;font-weight:500">Tiempo en espera</div></div>${t.rango?`${bdg(t.rango,'#d97706','#fffbeb')}`:''} ${t.tipo?`${bdg(t.tipo,'#2563eb','#eff4ff')}`:''}</div>`:''}
+    <div class="mdv"></div>
+    <div class="mr"><span class="ml">ID Ticket</span><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);color:#2563eb;font-weight:600;text-decoration:none;border-bottom:1px solid #bfdbfe" onclick="event.stopPropagation()">#{t.id}</a></div>
     <div class="mr"><span class="ml">Cliente</span><span class="mv">${t.org}</span></div>
-    <div class="mr"><span class="ml">Creado</span><span class="mv" style="font-family:var(--mono)">${t.created} · ${t.days}d · ${t.bracket}</span></div>
-    <div class="mr"><span class="ml">Área</span><span class="mv">${t.assignee}</span></div>
+    <div class="mr"><span class="ml">Fecha creación</span><span class="mv" style="font-family:var(--mono)">${t.created} · ${t.days}d · ${t.bracket}</span></div>
+    <div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.assignee}</span></div>
     <div class="mr"><span class="ml">Agente</span><span class="mv">${t.sResp||'— Sin asignar'}</span></div>
     <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>
     <div class="mr"><span class="ml">Tipo cliente</span><span class="mv">${t.tipo||'—'}</span></div>
@@ -430,59 +595,55 @@ function om(id){
 function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 
-// ── Tabs ───────────────────────────────────────────────────────────────────
 function go(tab){
-  TAB=tab;
-  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['general','soporte','desarrollo','ant','todos'][i]===tab));
-  ['general','soporte','desarrollo','ant','todos'].forEach(id=>{
-    const v=el('v-'+id);if(v)v.style.display='none';
-  });
-  const v=el('v-'+tab);if(v)v.style.display='flex';
-  if(tab==='soporte')renderArea('soporte');
-  if(tab==='desarrollo')renderArea('desarrollo');
-  if(tab==='ant')renderAnt();
-  if(tab==='todos')renderTodos();
+  TAB=tab;AKPI=null;
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('on',['g','s','d','a','t'][i]===tab));
+  ['g','s','d','a','t'].forEach(id=>el('v'+id).classList.remove('on'));
+  el('v'+tab).classList.add('on');
+  if(tab==='g')renderGeneral();
+  else if(tab==='s')renderArea('s','vs');
+  else if(tab==='d')renderArea('d','vd');
+  else if(tab==='a')renderAnt();
+  else if(tab==='t')renderTodos();
 }
 
-// ── Load ───────────────────────────────────────────────────────────────────
 async function loadData(){
-  const btn=el('rbtn');
-  btn.disabled=true;btn.classList.add('spin');
+  const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
-  ['general','soporte','desarrollo','ant','todos'].forEach(id=>{const v=el('v-'+id);if(v)v.style.display='none';});
+  ['g','s','d','a','t'].forEach(id=>el('v'+id).classList.remove('on'));
+  AKPI=null;
   try{
-    el('lstep').textContent='Leyendo Ant_Tickets…';
+    el('ls').textContent='Leyendo Ant_Tickets…';
     const res=await fetch(`${API}?sheet=Ant_Tickets&t=${Date.now()}`);
-    if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     T=mapRows(data.rows||[]);
     const now=new Date();
-    el('c-fecha').textContent=now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-    el('c-sem').textContent='Semana '+wk(now);
-    el('c-tot').textContent=T.length+' tickets';
-    el('c-upd').textContent='Actualizado '+now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    el('cf').textContent=now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    el('cs').textContent='SEM '+wk(now);
+    el('ct').textContent=T.length+' tickets';
+    el('cu').textContent=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    el('nb-g').textContent=T.length;
+    el('nb-s').textContent=T.filter(t=>t.assignee==='Soporte 1').length;
+    el('nb-d').textContent=T.filter(t=>t.assignee==='Desarrollo 1').length;
+    el('nb-t').textContent=T.length;
     el('ldr').style.display='none';
-    // render current tab
-    const v=el('v-'+TAB);if(v)v.style.display='flex';
-    if(TAB==='general')renderGeneral();
-    else if(TAB==='soporte')renderArea('soporte');
-    else if(TAB==='desarrollo')renderArea('desarrollo');
-    else if(TAB==='ant')renderAnt();
-    else if(TAB==='todos')renderTodos();
-    // pre-render general if on another tab
-    if(TAB!=='general'){el('v-general').style.display='none';renderGeneral();el('v-general').style.display='none';}
+    el('v'+TAB).classList.add('on');
+    if(TAB==='g')renderGeneral();
+    else if(TAB==='s')renderArea('s','vs');
+    else if(TAB==='d')renderArea('d','vd');
+    else if(TAB==='a')renderAnt();
+    else if(TAB==='t')renderTodos();
   }catch(e){
     el('ldr').style.display='none';
-    const v=el('v-general');
-    if(v){v.style.display='flex';v.innerHTML=`<div style="background:var(--red2);border:1px solid var(--red);border-radius:var(--rl);padding:16px;font-size:13px;color:var(--red)"><strong>Error al cargar datos</strong><br>${e.message}<br><br><button onclick="loadData()" style="padding:4px 12px;border-radius:var(--r);border:1px solid var(--red);background:none;color:var(--red);cursor:pointer;font-size:12px;font-family:var(--font)">↺ Reintentar</button></div>`;}
-    TAB='general';
-    document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',i===0));
-  }finally{
-    btn.disabled=false;btn.classList.remove('spin');
-  }
+    el('vg').classList.add('on');
+    el('vg').innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div>
+      <button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button>
+    </div>`;
+  }finally{btn.disabled=false;btn.classList.remove('spin');}
 }
-
 loadData();
 </script>
 </body>
