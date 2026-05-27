@@ -724,6 +724,25 @@ function go(tab){
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
+function fetchJSONP(url, sheet){
+  return new Promise((resolve, reject)=>{
+    const cbName='_cb'+Date.now();
+    const script=document.createElement('script');
+    const timeout=setTimeout(()=>{
+      cleanup();reject(new Error('Timeout al conectar con Google Sheets'));
+    },15000);
+    window[cbName]=(data)=>{cleanup();resolve(data);};
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode)script.parentNode.removeChild(script);
+    }
+    script.onerror=()=>{cleanup();reject(new Error('Error de red al conectar con Apps Script'));};
+    script.src=url+'?sheet='+encodeURIComponent(sheet)+'&callback='+cbName+'&t='+Date.now();
+    document.head.appendChild(script);
+  });
+}
+
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
@@ -731,8 +750,7 @@ async function loadData(){
   AKPI=null;CHART_FILTER={type:null,value:null};
   try{
     el('ls').textContent='Leyendo Ant_Tickets…';
-    const res=await fetch(`${API}?sheet=Ant_Tickets&t=${Date.now()}`);
-    const data=await res.json();
+    const data = await fetchJSONP(API, 'Ant_Tickets');
     if(data.error)throw new Error(data.error);
     const hdrs=data.headers&&data.headers.length?data.headers:(data.rows&&data.rows.length?Object.keys(data.rows[0]):[]);
     T=mapRows(data.rows||[], hdrs);
