@@ -212,6 +212,15 @@ function getRangoColor(str){
   if(d<=365)return'#EF4444';return'#6B7280';
 }
 
+// ── Calcular sin seguimiento > 3 días ─────────────────────────────────────────
+function isSinSeguimiento(fechaStr, now){
+  if(!fechaStr||fechaStr.trim()==='')return false;
+  const d=new Date(fechaStr);
+  if(isNaN(d))return false;
+  const diffDays=(now-d)/86400000;
+  return diffDays>3;
+}
+
 // ── mapRows con acceso posicional ────────────────────────────────────────────
 // Columnas por posición (0-indexed A=0, B=1...):
 // E=4 → Último seguimiento/Actualización
@@ -225,7 +234,7 @@ function mapRows(rows, headers){
   HDR=headers||Object.keys(rows[0]);
 
   // Nombres de columna por posición
-  const colE  =HDR[4]  ||''; // Último seguimiento
+  const colE  =HDR[4]  ||''; // Último seguimiento (col E)
   const colG  =HDR[6]  ||''; // Empresa
   const colK  =HDR[10] ||''; // Creado
   const colM  =HDR[12] ||''; // Agente
@@ -259,7 +268,7 @@ function mapRows(rows, headers){
     const band=getBand(rangoStr);
 
     // Fecha creación desde col K
-    const crRaw=(colK&&r[colK]?r[colK]:'').trim();
+    const crRaw=(colK&&r[colK]?r[colK]:r[colE]||'').trim();
     const crDate=crRaw?new Date(crRaw):null;
     const created=crDate&&!isNaN(crDate)?crDate.toISOString().split('T')[0]:'';
     const days=created?Math.max(0,Math.floor((now-new Date(created))/86400000)):0;
@@ -281,14 +290,13 @@ function mapRows(rows, headers){
     const org=colG?r[colG]||'':'';
 
     // Último seguimiento desde col E
-    const ultimoSeg=(colE?r[colE]||'':'').trim();
-    // Formatear fecha si es date string
-    let ultimoSegFmt=ultimoSeg;
-    if(ultimoSeg){
-      const d=new Date(ultimoSeg);
-      if(!isNaN(d))ultimoSegFmt=d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const ultimoSegRaw=(colE?r[colE]||'':'').trim();
+    let ultimoSegFmt=ultimoSegRaw;
+    if(ultimoSegRaw){
+      const d=new Date(ultimoSegRaw);
+      if(!isNaN(d))ultimoSegFmt=d.toLocaleString('es-MX');
     }
-
+    
     return{
       id, status, priority,
       subject:kSub?r[kSub]||'':'',
@@ -301,6 +309,8 @@ function mapRows(rows, headers){
       created, days, band, rangoStr,
       isSla:isSlaVencido(rangoStr),
       isSinAsignar,
+      sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),
+      createdFmt:fmtDateShort(crRaw),
       score, action:act(score),
       mes:created?MN[new Date(created).getMonth()+1]||'—':'—',
       mesAnt:kMesAnt?r[kMesAnt]||'':'',
@@ -364,11 +374,12 @@ function mkChart(id,type,labels,data,colors,horiz,onClickFn){
 
 // ── KPI Definitions ──────────────────────────────────────────────────────────
 const KDEF=[
-  {key:'total', label:'Total tickets',    color:'#2563eb',borderColor:'#2563eb',fn:()=>T},
-  {key:'urgent',label:'Urgentes',         color:'#FF5C5C',borderColor:'#FF5C5C',fn:()=>T.filter(t=>t.priority==='urgent')},
-  {key:'high',  label:'Alta prioridad',   color:'#FF9A3C',borderColor:'#FF9A3C',fn:()=>T.filter(t=>t.priority==='high')},
-  {key:'sla',   label:'Vencidos SLA +7d', color:'#F59E0B',borderColor:'#F59E0B',fn:()=>T.filter(t=>t.isSla)},
-  {key:'sinA',  label:'Sin responsable',  color:'#7c3aed',borderColor:'#7c3aed',fn:()=>T.filter(t=>t.isSinAsignar)},
+  {key:'total',   label:'Total tickets',        color:'#2563eb', fn:()=>T},
+  {key:'urgent',  label:'Urgentes',             color:'#FF5C5C', fn:()=>T.filter(t=>t.priority==='urgent')},
+  {key:'high',    label:'Alta prioridad',       color:'#FF9A3C', fn:()=>T.filter(t=>t.priority==='high')},
+  {key:'sla',     label:'Vencidos SLA +7d',     color:'#F59E0B', fn:()=>T.filter(t=>t.isSla)},
+  {key:'sinSeg',  label:'Sin seguimiento +3d',  color:'#e11d48', fn:()=>T.filter(t=>t.sinSeguimiento)},
+  {key:'sinA',    label:'Sin responsable',      color:'#7c3aed', fn:()=>T.filter(t=>t.isSinAsignar)},
 ];
 
 // ── Render Indicadores ────────────────────────────────────────────────────────
@@ -412,7 +423,7 @@ function renderInd(){
       </div>
       <div class="ccard">
         <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">Col. R · clic para filtrar</span></div>
-        <div class="cb"><div style="position:relative;height:200px;width:100%"><canvas id="ca"></canvas></div></div>
+        <div class="cb"><div style="position:relative;height:220px;width:100%;overflow:hidden"><canvas id="ca"></canvas></div></div>
       </div>
       <div class="ccard">
         <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total · clic para filtrar</span></div>
@@ -481,6 +492,39 @@ function setKPI(key){
   renderDetail(AKPI, null, null);
 }
 
+function refilterDetail(){
+  const fa=el('df-area')?.value||'';
+  const fs=el('df-status')?.value||'';
+  const fp=el('df-pri')?.value||'';
+  const base=window._detailTickets||[];
+  const list=base.filter(t=>{
+    if(fa&&t.areaAsig!==fa)return false;
+    if(fs&&t.status!==fs)return false;
+    if(fp&&t.priority!==fp)return false;
+    return true;
+  }).sort((a,b)=>b.score-a.score);
+  const tbody=el('detail-tbl')?.querySelector('tbody');
+  if(tbody){
+    const sc2=(sc)=>sc>=350?'#EF4444':sc>=220?'#F59E0B':sc>=200?'#4B9BFF':'#9ca3af';
+    tbody.innerHTML=list.map(t=>{
+      const sc=sc2(t.score);const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+      return`<tr onclick="om(${t.id})">
+        <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+        <td style="max-width:220px">${t.subject||'—'}</td>
+        <td style="color:var(--txt2)">${t.org||'—'}</td>
+        <td>${bdg(st.t,st.c,st.bg)}</td>
+        <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+        <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+        <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+      </tr>`;
+    }).join('');
+  }
+  const cnt=el('df-count');if(cnt)cnt.textContent=list.length+' tickets';
+}
+
 function clearFilter(){
   AKPI=null;CHART_FILTER={type:null,value:null};
   document.querySelectorAll('.kc').forEach(c=>{c.classList.remove('active');c.style.borderColor='';c.style.boxShadow='';});
@@ -543,23 +587,35 @@ function renderDetail(kpiKey, chartType, chartValue){
     bodyEl.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';
     return;
   }
-  const sorted=[...tickets].sort((a,b)=>b.score-a.score);
-  const rows=sorted.map(t=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-    return`<tr onclick="om(${t.id})">
-      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-      <td style="max-width:240px">${t.subject||'—'}</td>
-      <td style="color:var(--txt2)">${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-      <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-    </tr>`;
-  }).join('');
-  bodyEl.innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Agente</th><th>Área</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+  // Filters
+  const filterBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)" id="detail-filters">
+    <select class="sel" id="df-area" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las áreas</option>${[...new Set(tickets.map(t=>t.areaAsig).filter(Boolean))].sort().map(a=>`<option>${a}</option>`).join('')}</select>
+    <select class="sel" id="df-status" onchange="refilterDetail()" style="font-size:11px"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
+    <select class="sel" id="df-pri" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
+    <span style="font-size:11px;color:var(--txt3);align-self:center" id="df-count">${tickets.length} tickets</span>
+  </div>`;
+
+  window._detailTickets=tickets;
+  function buildRows(list){
+    return list.map(t=>{
+      const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+      const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+      return`<tr onclick="om(${t.id})">
+        <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+        <td style="max-width:220px">${t.subject||'—'}</td>
+        <td style="color:var(--txt2)">${t.org||'—'}</td>
+        <td>${bdg(st.t,st.c,st.bg)}</td>
+        <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+        <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+        <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows([...tickets].sort((a,b)=>b.score-a.score))}</tbody></table></div>`;
 }
 
 // ── Render Soporte / Desarrollo ──────────────────────────────────────────────
@@ -747,6 +803,13 @@ function fmtDate(str){
   const d=new Date(str);
   if(isNaN(d))return str;
   return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+}
+
+function fmtDateShort(str){
+  if(!str)return'—';
+  const d=new Date(str);
+  if(isNaN(d))return str;
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
 }
 
 function downloadCSV(tickets, filename){
