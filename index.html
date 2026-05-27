@@ -382,7 +382,7 @@ function renderInd(){
       <div class="kc-val" style="color:${k.color}">${list.length}</div>
       <div class="kc-lbl">${k.label}</div>
       <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:linear-gradient(90deg,${k.color},${k.color}88)"></div></div>
-      <div class="kc-hint">Ver detalle · ${pct}%</div>
+      <div class="kc-hint">Ver detalle · ${pct}% del total</div>
     </div>`;
   }).join('');
 
@@ -412,7 +412,7 @@ function renderInd(){
       </div>
       <div class="ccard">
         <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">Col. R · clic para filtrar</span></div>
-        <div class="cb"><div style="position:relative;height:200px"><canvas id="ca"></canvas></div></div>
+        <div class="cb"><div style="position:relative;height:200px;width:100%"><canvas id="ca"></canvas></div></div>
       </div>
       <div class="ccard">
         <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total · clic para filtrar</span></div>
@@ -425,6 +425,7 @@ function renderInd(){
         <div class="detail-meta">
           <span class="detail-count" id="detail-count" style="background:#fee2e2;color:#dc2626">0</span>
           <button class="detail-clear" id="detail-clear" onclick="clearFilter()" style="display:none">✕ Limpiar filtro</button>
+          <button id="detail-dl" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font);display:none">⬇ CSV</button>
         </div>
       </div>
       <div class="tw" id="detail-body"></div>
@@ -530,6 +531,13 @@ function renderDetail(kpiKey, chartType, chartValue){
   countEl.style.cssText=countStyle+';font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';
   headEl.style.cssText=headStyle;
   if(clearEl)clearEl.style.display=showClear?'':'none';
+  // Update download button
+  const dlBtn=el('detail-dl');
+  if(dlBtn){
+    const fname=(kpiKey||chartValue||'tickets').replace(/[^a-zA-Z0-9]/g,'_');
+    dlBtn.onclick=()=>downloadCSV(tickets,fname);
+    dlBtn.style.display=tickets.length?'':'none';
+  }
 
   if(!tickets.length){
     bodyEl.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';
@@ -547,10 +555,11 @@ function renderDetail(kpiKey, chartType, chartValue){
       <td>${bdg(pr.t,pr.c,pr.bg)}</td>
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
     </tr>`;
   }).join('');
-  bodyEl.innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Agente</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+  bodyEl.innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Agente</th><th>Área</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // ── Render Soporte / Desarrollo ──────────────────────────────────────────────
@@ -671,6 +680,7 @@ function tfilt(){
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${t.tiempo||'—'}</td>
       <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
     </tr>`;
   }).join('');
@@ -700,8 +710,8 @@ function om(id){
     <div class="mdv"></div>
     <div class="mr"><span class="ml">ID Ticket</span><span class="mv"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none">#${t.id} ↗</a></span></div>
     <div class="mr"><span class="ml">Empresa</span><span class="mv">${t.org||'—'}</span></div>
-    <div class="mr"><span class="ml">Creado</span><span class="mv" style="font-family:var(--mono)">${t.created||'—'}</span></div>
-    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${t.ultimoSeg||'—'}</span></div>
+    <div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDate(t.created)}</span></div>
+    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||t.created)}</span></div>
     <div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||t.assignee||'—'}</span></div>
     <div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||t.sResp||'—'}</span></div>
     <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
@@ -729,14 +739,29 @@ async function fetchCSV(csvUrl){
   const res = await fetch(url);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
-  const result = parseCSV(text);
-  // DEBUG: show first lines and result count
-  const firstLines = text.split('\n').slice(0,5).map((l,i)=>`L${i+1}: ${l.substring(0,80)}`).join('\n');
-  console.log('CSV primeras líneas:\n'+firstLines);
-  console.log('Headers encontrados:', result.headers.slice(0,8));
-  console.log('Rows parseadas:', result.rows.length);
-  if(result.rows.length>0) console.log('Primera fila:', JSON.stringify(result.rows[0]).substring(0,200));
-  return result;
+  return parseCSV(text);
+}
+
+function fmtDate(str){
+  if(!str||str==='—')return'—';
+  const d=new Date(str);
+  if(isNaN(d))return str;
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+}
+
+function downloadCSV(tickets, filename){
+  if(!tickets.length)return;
+  const cols=['id','subject','org','status','priority','rangoStr','agente','dResp','areaAsig','score','created','ultimoSeg'];
+  const heads=['Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Área','Score','Creado','Último seguimiento'];
+  const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{
+    const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');
+    return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;
+  }).join(','))];
+  const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename+'.csv';
+  a.click();
 }
 
 function parseCSV(text){
