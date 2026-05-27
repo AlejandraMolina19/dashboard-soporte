@@ -236,7 +236,7 @@ function mapRows(rows, headers){
   const keys=HDR;
   function fkv(pats){return keys.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
 
-  const kId   =fkv(['^Id$','^ID$','\\bID\\b']);
+  const kId   =fkv(['^ID$','^Id$','^id$']);
   const kSt   =fkv(['^Estado$','^Status$']);
   const kPr   =fkv(['^Prioridad$','^Priority$']);
   const kSub  =fkv(['^Asunto$','^Subject$']);
@@ -733,36 +733,34 @@ async function fetchCSV(csvUrl){
 }
 
 function parseCSV(text){
-  const lines = text.split('\n').filter(l => l.trim());
-  // Find header row - look for row with 'Id' as first or second cell
+  const lines = text.split('\n');
+  function clean(v){return (v||'').replace(/^"|"$/g,'').trim();}
+
+  // Find header row: contains 'ID' and 'Estado'/'Status' in any column
   let hi = -1;
   for(let i = 0; i < Math.min(10, lines.length); i++){
-    const r = csvLine(lines[i]).map(v => v.toLowerCase().replace(/^"|"$/g,'').trim());
-    // Header row: has 'id' in first 3 cols AND has status/priority somewhere
-    if((r[0]==='id'||r[1]==='id'||r[2]==='id') && r.some(v=>['status','estado','priority','prioridad'].includes(v))){
+    const r = csvLine(lines[i]).map(v => clean(v).toLowerCase());
+    if(r.some(v=>v==='id') && r.some(v=>['estado','status','prioridad','priority'].includes(v))){
       hi = i; break;
     }
   }
-  if(hi < 0){
-    // Fallback: find row where first cell looks like a column name (not a number or date)
-    for(let i = 0; i < Math.min(10, lines.length); i++){
-      const r = csvLine(lines[i]).map(v => v.replace(/^"|"$/g,'').trim());
-      if(r[0] && !/^\d/.test(r[0]) && r.length > 5){
-        hi = i; break;
-      }
-    }
-  }
-  if(hi < 0) hi = 0;
-  const headers = csvLine(lines[hi]).map(h => h.replace(/^"|"$/g,'').trim());
+  if(hi < 0) return {rows:[], headers:[]};
+
+  const headers = csvLine(lines[hi]).map(v => clean(v));
+  // Find index of ID column
+  const idIdx = headers.findIndex(h => h.toLowerCase() === 'id');
+
   const rows = [];
   for(let i = hi + 1; i < lines.length; i++){
-    const vals = csvLine(lines[i]);
-    if(!vals[0] || !vals[0].replace(/^"|"$/g,'').trim()) continue;
+    const line = lines[i];
+    if(!line.trim()) continue;
+    const vals = csvLine(line);
+    const idVal = clean(vals[idIdx] || '');
+    // Only include rows where ID column is a 6-7 digit ticket number
+    if(!/^\d{5,7}$/.test(idVal)) continue;
     const row = {};
-    headers.forEach((h, j) => row[h] = (vals[j] || '').replace(/^"|"$/g,'').trim());
-    // Accept row if first column is a 5-7 digit number (ticket ID)
-    const firstVal = Object.values(row)[0] || '';
-    if(/^\d{5,7}$/.test(firstVal)) rows.push(row);
+    headers.forEach((h, j) => { if(h) row[h] = clean(vals[j]); });
+    rows.push(row);
   }
   return { rows, headers };
 }
