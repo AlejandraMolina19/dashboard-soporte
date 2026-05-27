@@ -734,7 +734,8 @@ async function loadData(){
     const res=await fetch(`${API}?sheet=Ant_Tickets&t=${Date.now()}`);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
-    T=mapRows(data.rows||[], data.headers||[]);
+    const hdrs=data.headers&&data.headers.length?data.headers:(data.rows&&data.rows.length?Object.keys(data.rows[0]):[]);
+    T=mapRows(data.rows||[], hdrs);
     const now=new Date();
     el('cf').textContent=now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
     el('cs').textContent='SEM '+wk(now);
