@@ -729,7 +729,14 @@ async function fetchCSV(csvUrl){
   const res = await fetch(url);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
-  return parseCSV(text);
+  const result = parseCSV(text);
+  // DEBUG: show first lines and result count
+  const firstLines = text.split('\n').slice(0,5).map((l,i)=>`L${i+1}: ${l.substring(0,80)}`).join('\n');
+  console.log('CSV primeras líneas:\n'+firstLines);
+  console.log('Headers encontrados:', result.headers.slice(0,8));
+  console.log('Rows parseadas:', result.rows.length);
+  if(result.rows.length>0) console.log('Primera fila:', JSON.stringify(result.rows[0]).substring(0,200));
+  return result;
 }
 
 function parseCSV(text){
