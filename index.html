@@ -158,7 +158,7 @@ canvas.clickable{cursor:pointer}
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 
 <script>
-const API='https://script.google.com/macros/s/AKfycbzsWLr5DcsvpvJaTHD5avwSSmWf6h2naUsIzWV0H33D7wV4zE1aTMRA-SjfY9z9_ouFMg/exec';
+const API='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?output=csv';
 const MN=['','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
 // ── Paleta de colores vibrante ────────────────────────────────────────────────
@@ -724,24 +724,47 @@ function go(tab){
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
-function fetchJSONP(url, sheet){
-  return new Promise((resolve, reject)=>{
-    const cbName='_cb'+Date.now();
-    const script=document.createElement('script');
-    const timeout=setTimeout(()=>{
-      cleanup();reject(new Error('Timeout al conectar con Google Sheets'));
-    },15000);
-    window[cbName]=(data)=>{cleanup();resolve(data);};
-    function cleanup(){
-      clearTimeout(timeout);
-      delete window[cbName];
-      if(script.parentNode)script.parentNode.removeChild(script);
-    }
-    script.onerror=()=>{cleanup();reject(new Error('Error de red al conectar con Apps Script'));};
-    script.src=url+'?sheet='+encodeURIComponent(sheet)+'&callback='+cbName+'&t='+Date.now();
-    document.head.appendChild(script);
-  });
+async function fetchCSV(csvUrl){
+  const res = await fetch(csvUrl + '&t=' + Date.now());
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  return parseCSV(text);
 }
+
+function parseCSV(text){
+  const lines = text.split('\n').filter(l => l.trim());
+  // Find header row - has 'Id' and 'Status' or 'Estado'
+  let hi = 0;
+  for(let i = 0; i < Math.min(6, lines.length); i++){
+    const r = csvLine(lines[i]).map(v => v.toLowerCase().trim());
+    if(r.some(v => v === 'id') && r.some(v => ['status','estado','prioridad','priority'].includes(v))){
+      hi = i; break;
+    }
+  }
+  const headers = csvLine(lines[hi]).map(h => h.trim());
+  const rows = [];
+  for(let i = hi + 1; i < lines.length; i++){
+    const vals = csvLine(lines[i]);
+    if(!vals[0] || !vals[0].trim()) continue;
+    const row = {};
+    headers.forEach((h, j) => row[h] = (vals[j] || '').trim());
+    if(/^\d{5,7}$/.test(row['Id'] || row['id'] || '')) rows.push(row);
+  }
+  return { rows, headers };
+}
+
+function csvLine(line){
+  const r = []; let cur = '', q = false;
+  for(let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if(ch === '"'){ if(q && line[i+1] === '"'){cur+='"';i++;}else q=!q; }
+    else if(ch === ',' && !q){ r.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  r.push(cur);
+  return r;
+}
+
 
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
@@ -750,10 +773,8 @@ async function loadData(){
   AKPI=null;CHART_FILTER={type:null,value:null};
   try{
     el('ls').textContent='Leyendo Ant_Tickets…';
-    const data = await fetchJSONP(API, 'Ant_Tickets');
-    if(data.error)throw new Error(data.error);
-    const hdrs=data.headers&&data.headers.length?data.headers:(data.rows&&data.rows.length?Object.keys(data.rows[0]):[]);
-    T=mapRows(data.rows||[], hdrs);
+    const {rows, headers: hdrs} = await fetchCSV(API);
+    T=mapRows(rows, hdrs);
     const now=new Date();
     el('cf').textContent=now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
     el('cs').textContent='SEM '+wk(now);
