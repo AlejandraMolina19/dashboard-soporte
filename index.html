@@ -36,8 +36,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ubtn:disabled{opacity:.5;cursor:not-allowed}
 .ubtn.spin svg{animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
-.nav{display:flex;padding:0 24px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto}
-.ntab{padding:0 18px;height:44px;font-size:12px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav::-webkit-scrollbar{display:none}
+.ntab{padding:0 12px;height:42px;font-size:11px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .ntab:hover{color:var(--txt2)}
 .ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
 .nb{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
@@ -138,7 +139,9 @@ canvas.clickable{cursor:pointer}
   </button>
 </div>
 
-<div class="nav">
+<div style="background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;position:relative">
+  <button onclick="document.querySelector('.nav').scrollBy({left:-120,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-right:1px solid var(--bdr);height:42px;padding:0 8px;cursor:pointer;color:var(--txt2);font-size:16px;z-index:2">‹</button>
+  <div class="nav" style="flex:1;border-bottom:none;padding:0 4px">
   <button class="ntab on" onclick="go('ind')">Indicadores <span class="nb" id="nb-ind">–</span></button>
   <button class="ntab" onclick="go('int')">Operación interna <span class="nb" id="nb-int">–</span></button>
   <button class="ntab" onclick="go('sop')">Soporte <span class="nb" id="nb-sop">–</span></button>
@@ -146,6 +149,8 @@ canvas.clickable{cursor:pointer}
   <button class="ntab" onclick="go('ant')">Antigüedad</button>
   <button class="ntab" onclick="go('tod')">Todos los tickets <span class="nb" id="nb-tod">–</span></button>
   <button class="ntab" onclick="go('op')">Operación por área</button>
+  </div>
+  <button onclick="document.querySelector('.nav').scrollBy({left:120,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-left:1px solid var(--bdr);height:42px;padding:0 8px;cursor:pointer;color:var(--txt2);font-size:16px;z-index:2">›</button>
 </div>
 
 <div class="main">
