@@ -618,8 +618,8 @@ function renderDetail(kpiKey, chartType, chartValue){
     tickets=T.filter(t=>t.isSinAsignar);
   }
 
-  titleEl.textContent=title;
-  countEl.textContent=tickets.length;
+  if(titleEl)titleEl.textContent=title;
+  if(countEl)countEl.textContent=tickets.length;
   countEl.style.cssText=countStyle+';font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';
   headEl.style.cssText=headStyle;
   if(clearEl)clearEl.style.display=showClear?'':'none';
@@ -1311,14 +1311,19 @@ async function loadData(){
     safe('nb-dev',T.filter(t=>t.assignee==='Desarrollo 1').length);
     safe('nb-tod',T.length);
     el('ldr').style.display='none';
+    // Show view first so elements exist when render functions run
+    ['ind','int','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
     const v=el('v-'+TAB);if(v)v.classList.add('on');
-    if(TAB==='ind')renderInd();
-    else if(TAB==='int')renderInt();
-    else if(TAB==='sop')renderArea('sop','v-sop');
-    else if(TAB==='dev')renderArea('dev','v-dev');
-    else if(TAB==='ant')renderAnt();
-    else if(TAB==='tod')renderTod();
-    else if(TAB==='op')renderOp();
+    // Use setTimeout to ensure DOM is updated before rendering
+    setTimeout(()=>{
+      if(TAB==='ind')renderInd();
+      else if(TAB==='int')renderInt();
+      else if(TAB==='sop')renderArea('sop','v-sop');
+      else if(TAB==='dev')renderArea('dev','v-dev');
+      else if(TAB==='ant')renderAnt();
+      else if(TAB==='tod')renderTod();
+      else if(TAB==='op')renderOp();
+    },10);
   }catch(e){
     el('ldr').style.display='none';
     const v=el('v-ind');if(v){v.classList.add('on');v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div><button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button></div>`;}
