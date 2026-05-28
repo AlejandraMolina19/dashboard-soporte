@@ -22,7 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
 body{display:flex;flex-direction:column;min-height:100vh}
-.tb{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
+.tb{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:50px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-icon{width:32px;height:32px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:var(--mono);box-shadow:0 2px 8px rgba(37,99,235,.3)}
 .brand-name{font-size:14px;font-weight:700;color:var(--txt)}
@@ -38,10 +38,10 @@ body{display:flex;flex-direction:column;min-height:100vh}
 @keyframes rot{to{transform:rotate(360deg)}}
 .nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
 .nav::-webkit-scrollbar{display:none}
-.ntab{padding:0 12px;height:42px;font-size:11px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.ntab{padding:0 10px;height:40px;font-size:11px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:4px;letter-spacing:-.01em}
 .ntab:hover{color:var(--txt2)}
 .ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
-.nb{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
+.nb{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
 .ntab.on .nb{background:var(--acc3);color:var(--acc)}
 .main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:14px}
 .view{display:none;flex-direction:column;gap:14px}
@@ -143,12 +143,12 @@ canvas.clickable{cursor:pointer}
   <button onclick="document.querySelector('.nav').scrollBy({left:-120,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-right:1px solid var(--bdr);height:42px;padding:0 8px;cursor:pointer;color:var(--txt2);font-size:16px;z-index:2">‹</button>
   <div class="nav" style="flex:1;border-bottom:none;padding:0 4px">
   <button class="ntab on" onclick="go('ind')">Indicadores <span class="nb" id="nb-ind">–</span></button>
-  <button class="ntab" onclick="go('int')">Operación interna <span class="nb" id="nb-int">–</span></button>
+  <button class="ntab" onclick="go('int')">Op. Interna <span class="nb" id="nb-int">–</span></button>
   <button class="ntab" onclick="go('sop')">Soporte <span class="nb" id="nb-sop">–</span></button>
   <button class="ntab" onclick="go('dev')">Desarrollo <span class="nb" id="nb-dev">–</span></button>
   <button class="ntab" onclick="go('ant')">Antigüedad</button>
-  <button class="ntab" onclick="go('tod')">Todos los tickets <span class="nb" id="nb-tod">–</span></button>
-  <button class="ntab" onclick="go('op')">Operación por área</button>
+  <button class="ntab" onclick="go('tod')">Todos <span class="nb" id="nb-tod">–</span></button>
+  <button class="ntab" onclick="go('op')">Op. por área</button>
   </div>
   <button onclick="document.querySelector('.nav').scrollBy({left:120,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-left:1px solid var(--bdr);height:42px;padding:0 8px;cursor:pointer;color:var(--txt2);font-size:16px;z-index:2">›</button>
 </div>
