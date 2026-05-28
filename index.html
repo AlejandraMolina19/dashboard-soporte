@@ -1290,7 +1290,7 @@ function csvLine(line){
 }
 
 
-function safe(id,v){const e=el(id);if(e)e.textContent=v;}
+function safeSet(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
@@ -1302,15 +1302,15 @@ async function loadData(){
     const {rows, headers: hdrs} = await fetchCSV(API);
     T=mapRows(rows, hdrs);
     const now=new Date();
-    safe('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
-    safe('cs','SEM '+wk(now));
-    safe('ct',T.length+' tickets');
-    safe('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
-    safe('nb-ind',T.length);
-    safe('nb-int',T.length);
-    safe('nb-sop',T.filter(t=>t.assignee==='Soporte 1').length);
-    safe('nb-dev',T.filter(t=>t.assignee==='Desarrollo 1').length);
-    safe('nb-tod',T.length);
+    safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
+    safeSet('cs','SEM '+wk(now));
+    safeSet('ct',T.length+' tickets');
+    safeSet('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
+    safeSet('nb-ind',T.length);
+    safeSet('nb-int',T.length);
+    safeSet('nb-sop',T.filter(t=>t.assignee==='Soporte 1').length);
+    safeSet('nb-dev',T.filter(t=>t.assignee==='Desarrollo 1').length);
+    safeSet('nb-tod',T.length);
     el('ldr').style.display='none';
     // Show view first so elements exist when render functions run
     ['ind','int','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
