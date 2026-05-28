@@ -22,7 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
 body{display:flex;flex-direction:column;min-height:100vh}
-.tb{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:50px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
+.tb{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-icon{width:32px;height:32px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:var(--mono);box-shadow:0 2px 8px rgba(37,99,235,.3)}
 .brand-name{font-size:14px;font-weight:700;color:var(--txt)}
@@ -36,12 +36,11 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ubtn:disabled{opacity:.5;cursor:not-allowed}
 .ubtn.spin svg{animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
-.nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
-.nav::-webkit-scrollbar{display:none}
-.ntab{padding:0 10px;height:40px;font-size:11px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:4px;letter-spacing:-.01em}
+.nav{display:flex;padding:0 24px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto}
+.ntab{padding:0 18px;height:44px;font-size:12px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .ntab:hover{color:var(--txt2)}
 .ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
-.nb{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
+.nb{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
 .ntab.on .nb{background:var(--acc3);color:var(--acc)}
 .main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:14px}
 .view{display:none;flex-direction:column;gap:14px}
@@ -139,18 +138,14 @@ canvas.clickable{cursor:pointer}
   </button>
 </div>
 
-<div style="background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;position:relative" id="nav-wrap">
-  <button onclick="document.getElementById('main-nav').scrollBy({left:-140,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-right:1px solid var(--bdr);height:40px;padding:0 10px;cursor:pointer;color:var(--txt2);font-size:18px;z-index:2;line-height:1">‹</button>
-  <div class="nav" id="main-nav" style="flex:1;border-bottom:none;padding:0 4px">
+<div class="nav">
   <button class="ntab on" onclick="go('ind')">Indicadores <span class="nb" id="nb-ind">–</span></button>
-  <button class="ntab" onclick="go('int')">Op. Interna <span class="nb" id="nb-int">–</span></button>
+  <button class="ntab" onclick="go('int')">Operación interna <span class="nb" id="nb-int">–</span></button>
   <button class="ntab" onclick="go('sop')">Soporte <span class="nb" id="nb-sop">–</span></button>
   <button class="ntab" onclick="go('dev')">Desarrollo <span class="nb" id="nb-dev">–</span></button>
   <button class="ntab" onclick="go('ant')">Antigüedad</button>
-  <button class="ntab" onclick="go('tod')">Todos <span class="nb" id="nb-tod">–</span></button>
-  <button class="ntab" onclick="go('op')">Op. por área</button>
-  </div>
-  <button onclick="document.getElementById('main-nav').scrollBy({left:140,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-left:1px solid var(--bdr);height:40px;padding:0 10px;cursor:pointer;color:var(--txt2);font-size:18px;z-index:2;line-height:1">›</button>
+  <button class="ntab" onclick="go('tod')">Todos los tickets <span class="nb" id="nb-tod">–</span></button>
+  <button class="ntab" onclick="go('op')">Operación por área</button>
 </div>
 
 <div class="main">
@@ -898,7 +893,6 @@ function renderInt(){
     </div>`;
 
   window._intSeg=false;
-  window._intActiveAgent=null;
   intFilt();
 }
 
@@ -925,11 +919,9 @@ function intFilt(){
   const fs=el('int-st')?.value||'';
   const fseg=window._intSeg||false;
 
-  const activeAg=window._intActiveAgent||'';
   let list=T.filter(t=>{
     if(fa&&t.areaAsig!==fa)return false;
-    if(activeAg&&t.agente!==activeAg)return false;
-    else if(!activeAg&&fag&&(t.agente||t.sResp)!==fag)return false;
+    if(fag&&(t.agente||t.sResp)!==fag)return false;
     if(fd&&t.dResp!==fd)return false;
     if(fp&&t.priority!==fp)return false;
     if(fs&&t.status!==fs)return false;
@@ -1000,46 +992,38 @@ function intFilt(){
     },100);
   }
 
-  // ── Agent cards (col M only, exclude No/empty)
+  // ── Agent cards
   const cardsEl=el('int-agent-cards');
   if(cardsEl){
-    const allAgents=[...new Set(list.map(t=>t.agente).filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!==''))].sort();
+    const allAgents=[...new Set(list.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
     cardsEl.innerHTML=allAgents.map(ag=>{
-      const atks=list.filter(t=>t.agente===ag);
+      const atks=list.filter(t=>(t.agente||t.sResp)===ag);
       const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
       const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
       const avgScore=atks.length?Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length):0;
       const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
-      const devs2=[...new Set(atks.map(t=>t.dResp).filter(d=>d&&d.toLowerCase()!=='no'))];
+      const devs2=[...new Set(atks.map(t=>t.dResp).filter(Boolean))];
       const pct=list.length?Math.round(atks.length/list.length*100):0;
       const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
       const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
-      const isActive=window._intActiveAgent===ag;
-      return`<div class="kc" style="cursor:pointer;padding:14px;${isActive?'border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe,var(--sh2)':''}" onclick="intAgentClick('${ag.replace(/'/g,"\'")}')">
+      return`<div class="kc" style="cursor:default;padding:14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div style="width:32px;height:32px;border-radius:50%;background:${isActive?'#2563eb':'#dbeafe'};color:${isActive?'#fff':'#1e40af'};font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
-          <div><div style="font-size:13px;font-weight:600">${ag}</div><div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}%</div></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+          <div><div style="font-size:13px;font-weight:600">${ag}</div><div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}% del total</div></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span><span style="font-size:11px;font-weight:600;color:${segColor}">${asinSeg}</span></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span><span style="font-size:11px;font-weight:600;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;color:var(--txt2)">Score promedio</span><span style="font-size:11px;font-weight:600">${avgScore}</span></div>
-        <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:${isActive?'#2563eb':'#4B9BFF'}"></div></div>
+        <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:#4B9BFF"></div></div>
         <div style="margin-top:7px;display:flex;gap:4px;flex-wrap:wrap">
           ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
-          ${devs2.length?`<span style="font-size:10px;color:var(--txt3)">Dev: ${devs2.slice(0,2).join(', ')}</span>`:''}
+          ${devs2.length?`<span style="font-size:10px;color:var(--txt3)">Dev: ${devs2.join(', ')}</span>`:''}
         </div>
-        <div style="margin-top:8px;font-size:10px;color:var(--acc);font-weight:500;text-align:center">${isActive?'▲ Ocultar tickets':'▼ Ver tickets'}</div>
       </div>`;
     }).join('');
   }
 
   // ── Table
-  // Update table title
-  const titleEl2=el('int-tbl-title');
-  if(titleEl2){
-    if(window._intActiveAgent) titleEl2.textContent='Tickets de '+window._intActiveAgent;
-    else titleEl2.textContent='Detalle de tickets';
-  }
   const tblEl=el('int-tbl');
   const cntEl=el('int-tbl-count');
   if(cntEl){cntEl.textContent=list.length;cntEl.style.cssText='background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';}
@@ -1074,25 +1058,6 @@ function intFilt(){
   // Diagnosis
   const diagEl=el('int-diag');
   if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="int-diag-box"');
-}
-
-function intAgentClick(ag){
-  if(window._intActiveAgent===ag){
-    window._intActiveAgent=null;
-  } else {
-    window._intActiveAgent=ag;
-    // Filter agent in selector
-    const sel=el('int-agent');
-    if(sel){sel.value=ag;}
-  }
-  intFilt();
-  if(window._intActiveAgent){
-    // Scroll to detail table
-    setTimeout(()=>{
-      const tbl=el('int-tbl');
-      if(tbl)tbl.closest('.ccard')?.scrollIntoView({behavior:'smooth',block:'start'});
-    },200);
-  }
 }
 
 function intDownload(){
