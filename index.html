@@ -1290,6 +1290,8 @@ function csvLine(line){
 }
 
 
+function safe(id,v){const e=el(id);if(e)e.textContent=v;}
+
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
@@ -1304,7 +1306,6 @@ async function loadData(){
     safe('cs','SEM '+wk(now));
     safe('ct',T.length+' tickets');
     safe('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
-    const safe=(id,v)=>{const e=el(id);if(e)e.textContent=v;};
     safe('nb-ind',T.length);
     safe('nb-int',T.length);
     safe('nb-sop',T.filter(t=>t.assignee==='Soporte 1').length);
