@@ -144,6 +144,7 @@ canvas.clickable{cursor:pointer}
   <button class="ntab" onclick="go('dev')">Desarrollo <span class="nb" id="nb-dev">–</span></button>
   <button class="ntab" onclick="go('ant')">Antigüedad</button>
   <button class="ntab" onclick="go('tod')">Todos los tickets <span class="nb" id="nb-tod">–</span></button>
+  <button class="ntab" onclick="go('op')">Operación por área</button>
 </div>
 
 <div class="main">
@@ -153,6 +154,7 @@ canvas.clickable{cursor:pointer}
   <div class="view" id="v-dev"></div>
   <div class="view" id="v-ant"></div>
   <div class="view" id="v-tod"></div>
+  <div class="view" id="v-op"></div>
 </div>
 
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
@@ -314,7 +316,7 @@ function mapRows(rows, headers){
       score, action:act(score),
       mes:created?MN[new Date(created).getMonth()+1]||'—':'—',
       mesAnt:kMesAnt?r[kMesAnt]||'':'',
-      tiempo, ultimoSeg:ultimoSegFmt,
+      tiempo, ultimoSeg:ultimoSegRaw,
     };
   }).filter(Boolean);
 }
@@ -370,6 +372,45 @@ function mkChart(id,type,labels,data,colors,horiz,onClickFn){
   }
 
   CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:bgColors,borderWidth:0,borderRadius:type==='bar'?4:0,hoverBackgroundColor:colors.map(c=>c+'CC')}]},options:opts});
+}
+
+
+// ── Diagnóstico inteligente ────────────────────────────────────────────────
+function getDiagnosis(tickets){
+  if(!tickets||!tickets.length)return'';
+  const total=tickets.length;
+  const urg=tickets.filter(t=>t.priority==='urgent').length;
+  const hi=tickets.filter(t=>t.priority==='high').length;
+  const norm=tickets.filter(t=>t.priority==='normal').length;
+  const sla=tickets.filter(t=>t.isSla).length;
+  const sinSeg=tickets.filter(t=>t.sinSeguimiento).length;
+  const sinResp=tickets.filter(t=>t.isSinAsignar).length;
+  const criticos=tickets.filter(t=>t.score>=350).length;
+  const abiertos=tickets.filter(t=>t.status==='open').length;
+  const pend=tickets.filter(t=>t.status==='pending').length;
+  // Área más afectada
+  const arMap={};tickets.forEach(t=>{const a=t.areaAsig||'Sin área';arMap[a]=(arMap[a]||0)+1;});
+  const topArea=Object.entries(arMap).sort((a,b)=>b[1]-a[1])[0];
+  // Antigüedad máxima
+  const maxDias=Math.max(...tickets.map(t=>parseDias(t.rangoStr)).filter(d=>d>=0));
+
+  const items=[];
+  if(criticos>0)items.push(`<span style="color:#EF4444;font-weight:600">🚨 ${criticos} ticket${criticos>1?'s':''} crítico${criticos>1?'s':''}</span> con score ≥350 requieren atención inmediata.`);
+  if(urg>0)items.push(`<span style="color:#FF5C5C;font-weight:600">⚡ ${urg} urgente${urg>1?'s':''}</span>${hi>0?` y <span style="color:#FF9A3C;font-weight:600">${hi} de alta prioridad</span>`:''}${urg+hi>0?' representan el '+Math.round((urg+hi)/total*100)+'% de esta vista.':''}`);
+  if(sla>0)items.push(`<span style="color:#F59E0B;font-weight:600">🕐 ${sla} ticket${sla>1?'s':''}</span> ${sla>1?'llevan':'lleva'} más de 7 días sin resolución — SLA vencido.`);
+  if(sinSeg>0)items.push(`<span style="color:#e11d48;font-weight:600">📭 ${sinSeg} ticket${sinSeg>1?'s':''}</span> sin seguimiento en más de 3 días.`);
+  if(sinResp>0)items.push(`<span style="color:#7c3aed;font-weight:600">👤 ${sinResp} ticket${sinResp>1?'s':''}</span> sin responsable asignado.`);
+  if(topArea&&topArea[1]>1)items.push(`El área con más carga es <strong>${topArea[0]}</strong> con ${topArea[1]} tickets (${Math.round(topArea[1]/total*100)}% del total visible).`);
+  if(maxDias>180)items.push(`El ticket más antiguo lleva <strong>${maxDias} días</strong> — considera revisión o cierre.`);
+  if(abiertos>0&&pend>0)items.push(`${abiertos} abierto${abiertos>1?'s':''} y ${pend} pendiente${pend>1?'s':''}.`);
+
+  if(!items.length)return'';
+  return`<div id="detail-diag" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:0 0 var(--rl) var(--rl);padding:14px 18px;border-top:none">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Diagnóstico</div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:5px">
+      ${items.map(item=>`<li style="font-size:12px;color:var(--txt2);line-height:1.5">• ${item}</li>`).join('')}
+    </ul>
+  </div>`;
 }
 
 // ── KPI Definitions ──────────────────────────────────────────────────────────
@@ -506,21 +547,27 @@ function refilterDetail(){
   const tbody=el('detail-tbl')?.querySelector('tbody');
   if(tbody){
     const sc2=(sc)=>sc>=350?'#EF4444':sc>=220?'#F59E0B':sc>=200?'#4B9BFF':'#9ca3af';
-    tbody.innerHTML=list.map(t=>{
+    const sorted=[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
+    tbody.innerHTML=sorted.map((t,i)=>{
       const sc=sc2(t.score);const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
       return`<tr onclick="om(${t.id})">
+        <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
         <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-        <td style="max-width:220px">${t.subject||'—'}</td>
+        <td style="max-width:200px">${t.subject||'—'}</td>
         <td style="color:var(--txt2)">${t.org||'—'}</td>
         <td>${bdg(st.t,st.c,st.bg)}</td>
         <td>${bdg(pr.t,pr.c,pr.bg)}</td>
         <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
         <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
         <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+        <td style="color:var(--txt2)">${t.dResp||'—'}</td>
         <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
         <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
       </tr>`;
     }).join('');
+    // Update diagnosis
+    const diagEl=el('detail-diag');
+    if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('<div id="detail-diag"','<div');
   }
   const cnt=el('df-count');if(cnt)cnt.textContent=list.length+' tickets';
 }
@@ -596,26 +643,37 @@ function renderDetail(kpiKey, chartType, chartValue){
   </div>`;
 
   window._detailTickets=tickets;
+  function sortByAge(list){
+    return [...list].sort((a,b)=>{
+      const da=parseDias(a.rangoStr);
+      const db=parseDias(b.rangoStr);
+      if(db!==da)return db-da; // mayor antigüedad primero
+      return b.score-a.score;  // desempate por score
+    });
+  }
   function buildRows(list){
-    return list.map(t=>{
+    return list.map((t,i)=>{
       const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
       const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
       return`<tr onclick="om(${t.id})">
+        <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
         <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-        <td style="max-width:220px">${t.subject||'—'}</td>
+        <td style="max-width:200px">${t.subject||'—'}</td>
         <td style="color:var(--txt2)">${t.org||'—'}</td>
         <td>${bdg(st.t,st.c,st.bg)}</td>
         <td>${bdg(pr.t,pr.c,pr.bg)}</td>
         <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
         <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
         <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+        <td style="color:var(--txt2)">${t.dResp||'—'}</td>
         <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
         <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
       </tr>`;
     }).join('');
   }
 
-  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows([...tickets].sort((a,b)=>b.score-a.score))}</tbody></table></div>`;
+  const diagHtml=getDiagnosis(tickets);
+  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows(sortByAge(tickets))}</tbody></table></div>`+diagHtml;
 }
 
 // ── Render Soporte / Desarrollo ──────────────────────────────────────────────
@@ -623,15 +681,20 @@ function renderArea(area,vid){
   const key=area==='sop'?'Soporte 1':'Desarrollo 1',label=area==='sop'?'Soporte':'Desarrollo';
   const list=[...T.filter(x=>x.assignee===key)].sort((a,b)=>b.score-a.score);
   const crit=list.filter(x=>x.score>=350).length,ua=list.filter(x=>x.priority==='urgent'||x.priority==='high').length,sla=list.filter(x=>x.isSla).length;
+  // Sort by antigüedad desc, then score
+  list=[...list].sort((a,b)=>{
+    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
+    return db!==da?db-da:b.score-a.score;
+  });
   const rows=list.map((x,i)=>{
     const sc=x.score>=350?'#EF4444':x.score>=220?'#F59E0B':x.score>=200?'#4B9BFF':'#9ca3af';
     const pr=PC[x.priority]||PC[''];
     return`<tr onclick="om(${x.id})">
-      <td style="color:var(--txt3);font-weight:600;width:34px">${i+1}</td>
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${x.rangoStr||'—'}</td>
       <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${x.tiempo||'—'}</td>
       <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td style="color:var(--txt2)">${x.agente||x.sResp||'—'}</td>
+      <td style="color:var(--txt2)">${x.agente||'—'}</td>
       <td style="color:var(--txt2)">${x.dResp||'—'}</td>
       <td><a href="https://dual.zendesk.com/agent/tickets/${x.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${x.id}</a></td>
       <td style="max-width:180px">${x.subject||'—'}</td>
@@ -657,8 +720,9 @@ function renderArea(area,vid){
           <span class="si" style="background:var(--sur2);border-color:var(--bdr);color:var(--txt3)">Esta semana</span>
         </div>
       </div>
-      <div class="tw"><table><thead><tr><th>N.</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Prioridad</th><th>Agente</th><th>Desarrollador</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Score</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div>
-    </div>`;
+      <div class="tw"><table><thead><tr><th style="width:30px">#</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Prioridad</th><th>Agente</th><th>Desarrollador</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Score</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>
+    ${getDiagnosis(list)}`;
 }
 
 // ── Render Antigüedad ────────────────────────────────────────────────────────
@@ -766,27 +830,148 @@ function om(id){
     <div class="mdv"></div>
     <div class="mr"><span class="ml">ID Ticket</span><span class="mv"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none">#${t.id} ↗</a></span></div>
     <div class="mr"><span class="ml">Empresa</span><span class="mv">${t.org||'—'}</span></div>
-    <div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDate(t.created)}</span></div>
-    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||t.created)}</span></div>
+    <div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDateShort(t.created)}</span></div>
+    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'—')}</span></div>
     <div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||t.assignee||'—'}</span></div>
-    <div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||t.sResp||'—'}</span></div>
+    <div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||'—'}</span></div>
     <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
   el('msk').classList.add('on');
 }
 function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 
+
+// ── Render Operación por Área ─────────────────────────────────────────────
+function renderOp(){
+  const areas=[...new Set(T.map(t=>t.areaAsig).filter(Boolean))].sort();
+  const agents=[...new Set(T.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
+  const meses=[...new Set(T.map(t=>t.mesAnt||t.mes).filter(Boolean))];
+
+  el('v-op').innerHTML=`
+    <div>
+      <div class="slbl">Operación por área — resumen detallado</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select class="sel" id="op-area" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
+          <option value="">Todas las áreas</option>
+          ${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
+        </select>
+        <select class="sel" id="op-agent" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
+          <option value="">Todos los agentes</option>
+          ${agents.map(a=>`<option value="${a}">${a}</option>`).join('')}
+        </select>
+        <select class="sel" id="op-seg" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
+          <option value="">Todos los seguimientos</option>
+          <option value="1">Sin seguimiento +3d</option>
+          <option value="0">Con seguimiento reciente</option>
+        </select>
+        <select class="sel" id="op-pri" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
+          <option value="">Todas las prioridades</option>
+          <option value="urgent">Urgente</option>
+          <option value="high">Alto</option>
+          <option value="normal">Normal</option>
+          <option value="low">Bajo</option>
+        </select>
+        <span style="font-size:12px;color:var(--txt3);align-self:center" id="op-count">${T.length} tickets</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="op-kpis"></div>
+    <div class="ccard">
+      <div class="ch"><span class="ct" id="op-title">Todos los tickets</span></div>
+      <div class="tw" id="op-tbl"></div>
+      <div id="op-diag"></div>
+    </div>`;
+  opFilt();
+}
+
+function opFilt(){
+  const fa=el('op-area')?.value||'';
+  const fag=el('op-agent')?.value||'';
+  const fs=el('op-seg')?.value||'';
+  const fp=el('op-pri')?.value||'';
+  let list=T.filter(t=>{
+    if(fa&&t.areaAsig!==fa)return false;
+    if(fag&&(t.agente||t.sResp)!==fag)return false;
+    if(fs==='1'&&!t.sinSeguimiento)return false;
+    if(fs==='0'&&t.sinSeguimiento)return false;
+    if(fp&&t.priority!==fp)return false;
+    return true;
+  });
+  // Sort by antigüedad desc
+  list=[...list].sort((a,b)=>{
+    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
+    return db!==da?db-da:b.score-a.score;
+  });
+
+  const cnt=el('op-count');if(cnt)cnt.textContent=list.length+' tickets';
+  const titleEl=el('op-title');if(titleEl)titleEl.textContent=(fa||'Todas las áreas')+(fag?' · '+fag:'');
+
+  // Mini KPIs
+  const kpisEl=el('op-kpis');
+  if(kpisEl){
+    const urg=list.filter(t=>t.priority==='urgent').length;
+    const hi=list.filter(t=>t.priority==='high').length;
+    const sinSeg=list.filter(t=>t.sinSeguimiento).length;
+    const criticos=list.filter(t=>t.score>=350).length;
+    const sinR=list.filter(t=>t.isSinAsignar).length;
+    kpisEl.innerHTML=[
+      {l:'Total',v:list.length,c:'#2563eb'},
+      {l:'Urgentes',v:urg,c:'#FF5C5C'},
+      {l:'Alta prioridad',v:hi,c:'#FF9A3C'},
+      {l:'Sin seguimiento +3d',v:sinSeg,c:'#e11d48'},
+      {l:'Score crítico ≥350',v:criticos,c:'#EF4444'},
+      {l:'Sin responsable',v:sinR,c:'#7c3aed'},
+    ].map(k=>`<div class="kc" style="cursor:default;padding:12px 14px">
+      <div class="kc-val" style="color:${k.c};font-size:26px">${k.v}</div>
+      <div class="kc-lbl" style="font-size:11px">${k.l}</div>
+    </div>`).join('');
+  }
+
+  // Table
+  const tblEl=el('op-tbl');
+  if(!tblEl)return;
+  const rows=list.map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    const segFlag=t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px">+3d</span>`:'';
+    return`<tr onclick="om(${t.id})">
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:200px">${t.subject||'—'}</td>
+      <td style="color:var(--txt2)">${t.org||'—'}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td>
+      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${fmtDate(t.ultimoSeg)||'—'} ${segFlag}</td>
+      <td style="color:var(--txt2)">${t.agente||'—'}</td>
+      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+
+  tblEl.innerHTML=`<table><thead><tr>
+    <th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th>
+    <th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th>
+    <th>Último seguimiento</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th>
+  </tr></thead><tbody>${rows||'<tr><td colspan="13" class="empty">Sin resultados con estos filtros</td></tr>'}</tbody></table>`;
+
+  const diagEl=el('op-diag');
+  if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="op-diag-inner"');
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','sop','dev','ant','tod'][i]===tab));
-  ['ind','sop','dev','ant','tod'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','sop','dev','ant','tod','op'][i]===tab));
+  ['ind','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='ind')renderInd();
   else if(tab==='sop')renderArea('sop','v-sop');
   else if(tab==='dev')renderArea('dev','v-dev');
   else if(tab==='ant')renderAnt();
   else if(tab==='tod')renderTod();
+  else if(tab==='op')renderOp();
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
@@ -802,14 +987,22 @@ function fmtDate(str){
   if(!str||str==='—')return'—';
   const d=new Date(str);
   if(isNaN(d))return str;
-  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const day=String(d.getDate()).padStart(2,'0');
+  const mon=months[d.getMonth()];
+  const yr=d.getFullYear();
+  const h=String(d.getHours()).padStart(2,'0');
+  const m=String(d.getMinutes()).padStart(2,'0');
+  return day+' '+mon+' '+yr+' '+h+':'+m;
 }
 
 function fmtDateShort(str){
   if(!str)return'—';
   const d=new Date(str);
   if(isNaN(d))return str;
-  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const day=String(d.getDate()).padStart(2,'0');
+  return day+' '+months[d.getMonth()]+' '+d.getFullYear();
 }
 
 function downloadCSV(tickets, filename){
@@ -898,6 +1091,7 @@ async function loadData(){
     else if(TAB==='dev')renderArea('dev','v-dev');
     else if(TAB==='ant')renderAnt();
     else if(TAB==='tod')renderTod();
+    else if(TAB==='op')renderOp();
   }catch(e){
     el('ldr').style.display='none';
     const v=el('v-ind');if(v){v.classList.add('on');v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div><button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button></div>`;}
