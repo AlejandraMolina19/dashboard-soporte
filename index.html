@@ -150,6 +150,7 @@ canvas.clickable{cursor:pointer}
 <div class="main">
   <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
   <div class="view" id="v-ind"></div>
+  <div class="view" id="v-int"></div>
   <div class="view" id="v-sop"></div>
   <div class="view" id="v-dev"></div>
   <div class="view" id="v-ant"></div>
@@ -841,6 +842,228 @@ function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 
 
+
+// ── Render Operación Interna ─────────────────────────────────────────────────
+function renderInt(){
+  const areas=[...new Set(T.map(t=>t.areaAsig).filter(Boolean))].sort();
+  const agents=[...new Set(T.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
+  const devs=[...new Set(T.map(t=>t.dResp).filter(Boolean))].sort();
+
+  el('v-int').innerHTML=`
+    <div>
+      <div class="slbl">KPIs de operación interna</div>
+      <div class="kpi-grid" id="int-kpis"></div>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px;background:var(--sur2);border-radius:var(--r);border:1px solid var(--bdr)" id="int-filters">
+      <select class="sel" id="int-area" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
+        <option value="">Todas las áreas</option>${areas.map(a=>`<option>${a}</option>`).join('')}
+      </select>
+      <select class="sel" id="int-agent" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
+        <option value="">Todos los agentes</option>${agents.map(a=>`<option>${a}</option>`).join('')}
+      </select>
+      <select class="sel" id="int-dev" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
+        <option value="">Todos los desarrolladores</option>${devs.map(d=>`<option>${d}</option>`).join('')}
+      </select>
+      <select class="sel" id="int-pri" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
+        <option value="">Todas las prioridades</option>
+        <option value="urgent">Urgente</option><option value="high">Alto</option>
+        <option value="normal">Normal</option><option value="low">Bajo</option>
+      </select>
+      <select class="sel" id="int-st" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
+        <option value="">Todos los estados</option>
+        <option value="open">Abierto</option><option value="pending">Pendiente</option>
+      </select>
+      <button onclick="intFiltSeg()" id="int-seg-btn" style="background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);padding:5px 12px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📭 Sin seguimiento +3d</button>
+      <button onclick="intClear()" style="background:none;border:1px solid var(--bdr);color:var(--txt3);padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:var(--font)">✕ Limpiar</button>
+      <span style="font-size:11px;color:var(--txt3);align-self:center" id="int-count">${T.length} tickets</span>
+    </div>
+    <div class="charts-row" id="int-charts"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px" id="int-agent-cards"></div>
+    <div class="ccard">
+      <div class="ch">
+        <span class="ct" id="int-tbl-title">Detalle de tickets</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="detail-count" id="int-tbl-count" style="background:#fee2e2;color:#dc2626">0</span>
+          <button id="int-dl" onclick="intDownload()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="tw" id="int-tbl"></div>
+      <div id="int-diag"></div>
+    </div>`;
+
+  window._intSeg=false;
+  intFilt();
+}
+
+function intFiltSeg(){
+  window._intSeg=!window._intSeg;
+  const btn=el('int-seg-btn');
+  if(btn){btn.style.background=window._intSeg?'var(--acc)':'var(--acc2)';btn.style.color=window._intSeg?'#fff':'var(--acc)';}
+  intFilt();
+}
+
+function intClear(){
+  ['int-area','int-agent','int-dev','int-pri','int-st'].forEach(id=>{const e=el(id);if(e)e.value='';});
+  window._intSeg=false;
+  const btn=el('int-seg-btn');
+  if(btn){btn.style.background='var(--acc2)';btn.style.color='var(--acc)';}
+  intFilt();
+}
+
+function intFilt(){
+  const fa=el('int-area')?.value||'';
+  const fag=el('int-agent')?.value||'';
+  const fd=el('int-dev')?.value||'';
+  const fp=el('int-pri')?.value||'';
+  const fs=el('int-st')?.value||'';
+  const fseg=window._intSeg||false;
+
+  let list=T.filter(t=>{
+    if(fa&&t.areaAsig!==fa)return false;
+    if(fag&&(t.agente||t.sResp)!==fag)return false;
+    if(fd&&t.dResp!==fd)return false;
+    if(fp&&t.priority!==fp)return false;
+    if(fs&&t.status!==fs)return false;
+    if(fseg&&!t.sinSeguimiento)return false;
+    return true;
+  });
+
+  // Sort by age desc
+  list=[...list].sort((a,b)=>{
+    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
+    return db!==da?db-da:b.score-a.score;
+  });
+
+  window._intList=list;
+  const cnt=el('int-count');if(cnt)cnt.textContent=list.length+' tickets';
+
+  // ── KPIs
+  const kpisEl=el('int-kpis');
+  if(kpisEl){
+    const urg=list.filter(t=>t.priority==='urgent').length;
+    const hi=list.filter(t=>t.priority==='high').length;
+    const sinSeg=list.filter(t=>t.sinSeguimiento).length;
+    const sla=list.filter(t=>t.isSla).length;
+    const criticos=list.filter(t=>t.score>=350).length;
+    const sinR=list.filter(t=>t.isSinAsignar).length;
+    const tot=list.length||1;
+    const kpis=[
+      {l:'Total tickets',v:list.length,c:'#2563eb',pct:100},
+      {l:'Sin seguimiento +3d',v:sinSeg,c:'#e11d48',pct:Math.round(sinSeg/tot*100)},
+      {l:'Vencidos SLA +7d',v:sla,c:'#d97706',pct:Math.round(sla/tot*100)},
+      {l:'Urgente / Alto',v:urg+hi,c:'#FF5C5C',pct:Math.round((urg+hi)/tot*100)},
+      {l:'Score crítico ≥350',v:criticos,c:'#EF4444',pct:Math.round(criticos/tot*100)},
+      {l:'Sin responsable',v:sinR,c:'#7c3aed',pct:Math.round(sinR/tot*100)},
+    ];
+    kpisEl.innerHTML=kpis.map(k=>`<div class="kc" style="cursor:default">
+      <div class="kc-val" style="color:${k.c}">${k.v}</div>
+      <div class="kc-lbl">${k.l}</div>
+      <div class="kc-bar"><div class="kc-fill" style="width:${k.pct}%;background:${k.c}40"></div></div>
+      <div class="kc-hint">${k.pct}% del total visible</div>
+    </div>`).join('');
+  }
+
+  // ── Charts
+  const chartsEl=el('int-charts');
+  if(chartsEl){
+    const areaMap={};list.forEach(t=>{const a=t.areaAsig||'Sin área';areaMap[a]=(areaMap[a]||0)+1;});
+    const areaS=Object.entries(areaMap).sort((a,b)=>b[1]-a[1]);
+    const agMap={};list.forEach(t=>{const a=t.agente||t.sResp||'Sin asignar';agMap[a]=(agMap[a]||0)+1;});
+    const agS=Object.entries(agMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const aH=Math.max(150,agS.length*32);
+    chartsEl.innerHTML=`
+      <div class="ccard">
+        <div class="ch"><span class="ct">Tickets por área</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div>
+        <div class="cb"><div style="position:relative;height:160px"><canvas id="int-ca"></canvas></div></div>
+      </div>
+      <div class="ccard">
+        <div class="ch"><span class="ct">Tickets por agente</span><span style="font-size:10px;color:var(--txt3)">${list.length} total</span></div>
+        <div class="cb"><div style="position:relative;height:${aH}px"><canvas id="int-cag"></canvas></div></div>
+      </div>`;
+    setTimeout(()=>{
+      const areaColors={'Customer':'#4B9BFF','Implementación':'#A855F7','Implementacion':'#A855F7','Desarrollo':'#22C55E','Soporte':'#F59E0B','publicaciones':'#EF4444','Sin área':'#9ca3af'};
+      if(CH['int-ca'])CH['int-ca'].destroy();
+      if(CH['int-cag'])CH['int-cag'].destroy();
+      const ca=el('int-ca');
+      if(ca)CH['int-ca']=new Chart(ca,{type:'bar',data:{labels:areaS.map(x=>x[0]),datasets:[{data:areaS.map(x=>x[1]),backgroundColor:areaS.map(x=>areaColors[x[0]]||'#6b7280'),borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,onClick:(e,els)=>{if(els.length){const v=areaS[els[0].index][0];el('int-area').value=v;intFilt();}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}}});
+      const cag=el('int-cag');
+      if(cag)CH['int-cag']=new Chart(cag,{type:'bar',data:{labels:agS.map(x=>x[0]),datasets:[{data:agS.map(x=>x[1]),backgroundColor:'#4B9BFF',borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(e,els)=>{if(els.length){const v=agS[els[0].index][0];el('int-agent').value=v;intFilt();}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}}});
+    },100);
+  }
+
+  // ── Agent cards
+  const cardsEl=el('int-agent-cards');
+  if(cardsEl){
+    const allAgents=[...new Set(list.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
+    cardsEl.innerHTML=allAgents.map(ag=>{
+      const atks=list.filter(t=>(t.agente||t.sResp)===ag);
+      const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
+      const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
+      const avgScore=atks.length?Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length):0;
+      const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
+      const devs2=[...new Set(atks.map(t=>t.dResp).filter(Boolean))];
+      const pct=list.length?Math.round(atks.length/list.length*100):0;
+      const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+      const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
+      return`<div class="kc" style="cursor:default;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+          <div><div style="font-size:13px;font-weight:600">${ag}</div><div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}% del total</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span><span style="font-size:11px;font-weight:600;color:${segColor}">${asinSeg}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span><span style="font-size:11px;font-weight:600;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;color:var(--txt2)">Score promedio</span><span style="font-size:11px;font-weight:600">${avgScore}</span></div>
+        <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:#4B9BFF"></div></div>
+        <div style="margin-top:7px;display:flex;gap:4px;flex-wrap:wrap">
+          ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
+          ${devs2.length?`<span style="font-size:10px;color:var(--txt3)">Dev: ${devs2.join(', ')}</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Table
+  const tblEl=el('int-tbl');
+  const cntEl=el('int-tbl-count');
+  if(cntEl){cntEl.textContent=list.length;cntEl.style.cssText='background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';}
+  if(!tblEl)return;
+  const rows=list.map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    const segFlag=t.sinSeguimiento?`<span class="b" style="background:#fef2f2;color:#e11d48;font-size:9px">+3d</span>`:'';
+    const ultSeg=t.ultimoSeg?fmtDate(t.ultimoSeg):'—';
+    return`<tr onclick="om(${t.id})">
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:180px">${t.subject||'—'}</td>
+      <td style="color:var(--txt2)">${t.org||'—'}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td>
+      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+      <td style="font-size:11px">${ultSeg} ${segFlag}</td>
+      <td style="color:var(--txt2)">${t.agente||'—'}</td>
+      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+  tblEl.innerHTML=`<table><thead><tr>
+    <th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th>
+    <th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th>
+    <th>Último seguimiento</th><th>Agente (col M)</th><th>Desarrollador (col U)</th><th>Área</th><th>Score</th>
+  </tr></thead><tbody>${rows||'<tr><td colspan="13" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
+
+  // Diagnosis
+  const diagEl=el('int-diag');
+  if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="int-diag-box"');
+}
+
+function intDownload(){
+  const list=window._intList||[];
+  downloadCSV(list,'operacion_interna');
+}
+
 // ── Render Operación por Área ─────────────────────────────────────────────
 function renderOp(){
   const areas=[...new Set(T.map(t=>t.areaAsig).filter(Boolean))].sort();
@@ -963,10 +1186,11 @@ function opFilt(){
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','sop','dev','ant','tod','op'][i]===tab));
-  ['ind','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','int','sop','dev','ant','tod','op'][i]===tab));
+  ['ind','int','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='ind')renderInd();
+  else if(tab==='int')renderInt();
   else if(tab==='sop')renderArea('sop','v-sop');
   else if(tab==='dev')renderArea('dev','v-dev');
   else if(tab==='ant')renderAnt();
@@ -1081,12 +1305,14 @@ async function loadData(){
     el('ct').textContent=T.length+' tickets';
     el('cu').textContent=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     el('nb-ind').textContent=T.length;
+    el('nb-int').textContent=T.length;
     el('nb-sop').textContent=T.filter(t=>t.assignee==='Soporte 1').length;
     el('nb-dev').textContent=T.filter(t=>t.assignee==='Desarrollo 1').length;
     el('nb-tod').textContent=T.length;
     el('ldr').style.display='none';
     const v=el('v-'+TAB);if(v)v.classList.add('on');
     if(TAB==='ind')renderInd();
+    else if(TAB==='int')renderInt();
     else if(TAB==='sop')renderArea('sop','v-sop');
     else if(TAB==='dev')renderArea('dev','v-dev');
     else if(TAB==='ant')renderAnt();
