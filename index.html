@@ -536,14 +536,43 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 // ── Render Op. Interna ───────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
 function renderInt(){
+  // Áreas únicas de col N (excluyendo sin asignar)
   const areas=[...new Set(T.map(t=>t.areaAsig).filter(a=>a&&!/sin\s+asignar|sin\s+clasificar/i.test(a)))].sort();
+
+  // Gráficas: mismas que Indicadores
+  const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
+  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const orgH=Math.max(180,orgS.length*32);
+  const rVals=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))];
+  rVals.sort((a,b)=>parseDias(a)-parseDias(b));
+  const rCounts=rVals.map(r=>T.filter(t=>t.rangoStr===r).length);
+  const rColors=rVals.map(r=>getRangoColor(r));
 
   el('v-int').innerHTML=`
     <div>
       <div class="slbl">KPIs de operación interna</div>
       <div class="kpi-grid" id="int-kpis"></div>
     </div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--sur);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh)" id="int-filters">
+    <!-- Gráficas iguales que Indicadores -->
+    <div class="charts-row" id="int-charts-row">
+      <div class="ccard">
+        <div class="ch"><span class="ct">Por prioridad</span></div>
+        <div class="cb">
+          <div style="position:relative;height:170px"><canvas id="int-cp"></canvas></div>
+          <div class="chart-legend" id="int-pri-legend"></div>
+        </div>
+      </div>
+      <div class="ccard">
+        <div class="ch"><span class="ct">Antigüedad de tickets</span></div>
+        <div class="cb"><div style="position:relative;height:220px;width:100%;overflow:hidden"><canvas id="int-ca"></canvas></div></div>
+      </div>
+      <div class="ccard">
+        <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)" id="int-org-total">${T.length} total</span></div>
+        <div class="cb"><div style="position:relative;height:${orgH}px" id="int-org-cb"><canvas id="int-cag"></canvas></div></div>
+      </div>
+    </div>
+    <!-- Filtros -->
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--sur);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh)">
       <select class="sel" id="int-area" onchange="intAreaChange()" style="font-size:12px;padding:6px 10px;font-weight:600">
         <option value="">Todas las áreas</option>
         ${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
@@ -553,12 +582,12 @@ function renderInt(){
       <span style="font-size:11px;color:var(--txt3);align-self:center" id="int-count">${T.length} tickets</span>
     </div>
 
-    <!-- Vista de tarjetas de agentes (se muestra cuando hay área seleccionada o todas) -->
-    <div id="int-agent-section">
+    <!-- Tarjetas de agentes: solo visible cuando hay área seleccionada -->
+    <div id="int-agent-section" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px" id="int-agent-cards"></div>
     </div>
 
-    <!-- Vista de detalle de un agente (oculta por defecto) -->
+    <!-- Detalle de agente: oculto por defecto -->
     <div id="int-detail-section" style="display:none">
       <div style="margin-bottom:12px">
         <button class="back-btn" onclick="intBackToCards()">← Regresar</button>
@@ -577,35 +606,78 @@ function renderInt(){
             <button onclick="intDownloadAgent()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
           </div>
         </div>
-        <!-- Mini KPIs del agente -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)" id="int-agent-kpis"></div>
         <div class="tw" id="int-detail-tbl"></div>
       </div>
     </div>
 
-    <!-- Tabla global (sin agente seleccionado, sin área filtrada) -->
-    <div class="ccard" id="int-global-tbl-card" style="display:none">
-      <div class="ch">
-        <span class="ct" id="int-tbl-title">Detalle de tickets</span>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span id="int-tbl-count" style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px">0</span>
-          <button onclick="intDownload()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+    <!-- Detalle global: igual que Indicadores, solo visible cuando se selecciona KPI -->
+    <div class="detail-card" id="int-detail-card" style="display:none">
+      <div class="detail-head" id="int-detail-kpi-head" style="background:#fef2f2;border-bottom:1px solid #fecaca">
+        <span class="detail-title" id="int-detail-kpi-title">–</span>
+        <div class="detail-meta">
+          <span class="detail-count" id="int-detail-kpi-count" style="background:#fee2e2;color:#dc2626">0</span>
+          <button onclick="intClearKpi()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Cerrar</button>
+          <button id="int-kpi-dl" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
         </div>
       </div>
-      <div class="tw" id="int-tbl"></div>
-      <div id="int-diag"></div>
+      <div class="tw" id="int-detail-kpi-body"></div>
     </div>`;
 
   window._intSeg=false;
   window._intActiveAgent=null;
   window._intCurrentArea='';
+  window._intActiveKpi=null;
+
+  // Render gráficas de prioridad (igual que Indicadores)
+  const priData=['urgent','high','normal','low'].map(k=>T.filter(t=>t.priority===k).length);
+  const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
+  const cpCtx=el('int-cp');
+  if(cpCtx){
+    if(CH['int-cp'])CH['int-cp'].destroy();
+    CH['int-cp']=new Chart(cpCtx,{type:'doughnut',
+      data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff',hoverBorderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});
+  }
+  const legEl=el('int-pri-legend');
+  if(legEl){
+    const priLabels=['Urgente','Alto','Normal','Bajo'];
+    legEl.innerHTML=priLabels.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
+  }
+  mkChart('int-ca','bar',rVals,rCounts,rColors,false,null);
+  mkChart('int-cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,null);
+
+  intFilt();
+}
+
+// KPIs de Int (clickeables igual que Indicadores)
+const INT_KDEF=[
+  {key:'total',  label:'Total tickets',       color:'#2563eb', fn:(list)=>list},
+  {key:'sinSeg', label:'Sin seguimiento +3d', color:'#e11d48', fn:(list)=>list.filter(t=>t.sinSeguimiento)},
+  {key:'sla',    label:'Vencidos SLA +7d',    color:'#d97706', fn:(list)=>list.filter(t=>t.isSla)},
+  {key:'urghi',  label:'Urgente / Alto',      color:'#FF5C5C', fn:(list)=>list.filter(t=>t.priority==='urgent'||t.priority==='high')},
+  {key:'crit',   label:'Score crítico ≥350',  color:'#EF4444', fn:(list)=>list.filter(t=>t.score>=350)},
+  {key:'sinR',   label:'Sin responsable',     color:'#7c3aed', fn:(list)=>list.filter(t=>t.isSinAsignar)},
+];
+
+function intSetKpi(key){
+  const fa=el('int-area')?.value||'';
+  if(!fa){return;} // Solo si hay área seleccionada no aplica; en modo sin área no mostramos detalle global
+  window._intActiveKpi=window._intActiveKpi===key?null:key;
+  intFilt();
+}
+
+function intClearKpi(){
+  window._intActiveKpi=null;
+  const dc=el('int-detail-card');if(dc)dc.style.display='none';
   intFilt();
 }
 
 function intAreaChange(){
   window._intActiveAgent=null;
+  window._intActiveKpi=null;
   el('int-detail-section').style.display='none';
-  el('int-agent-section').style.display='';
+  const dc=el('int-detail-card');if(dc)dc.style.display='none';
   intFilt();
 }
 
@@ -618,11 +690,12 @@ function intFiltSeg(){
 
 function intClear(){
   const a=el('int-area');if(a)a.value='';
-  window._intSeg=false;window._intActiveAgent=null;window._intCurrentArea='';
+  window._intSeg=false;window._intActiveAgent=null;window._intCurrentArea='';window._intActiveKpi=null;
   const btn=el('int-seg-btn');
   if(btn){btn.style.background='var(--acc2)';btn.style.color='var(--acc)';}
   el('int-detail-section').style.display='none';
-  el('int-agent-section').style.display='';
+  el('int-agent-section').style.display='none';
+  const dc=el('int-detail-card');if(dc)dc.style.display='none';
   intFilt();
 }
 
@@ -631,123 +704,179 @@ function intFilt(){
   const fseg=window._intSeg||false;
   window._intCurrentArea=fa;
 
-  // Lista base según filtros globales
+  // Lista base filtrada
   let baseList=T.filter(t=>{
     if(fa&&t.areaAsig!==fa)return false;
     if(fseg&&!t.sinSeguimiento)return false;
     return true;
   });
-
   window._intList=baseList;
+
   const cnt=el('int-count');if(cnt)cnt.textContent=baseList.length+' tickets';
 
-  // ── KPIs dinámicos (reflejan el área seleccionada) ──
+  // ── KPIs dinámicos (clickeables igual que Indicadores) ──
   const kpisEl=el('int-kpis');
   if(kpisEl){
     const tot=baseList.length||1;
-    const urg=baseList.filter(t=>t.priority==='urgent').length;
-    const hi=baseList.filter(t=>t.priority==='high').length;
-    const sinSeg=baseList.filter(t=>t.sinSeguimiento).length;
-    const sla=baseList.filter(t=>t.isSla).length;
-    const criticos=baseList.filter(t=>t.score>=350).length;
-    const sinR=baseList.filter(t=>t.isSinAsignar).length;
-    const kpis=[
-      {l:'Total tickets',      v:baseList.length, c:'#2563eb', pct:100},
-      {l:'Sin seguimiento +3d',v:sinSeg,          c:'#e11d48', pct:Math.round(sinSeg/tot*100)},
-      {l:'Vencidos SLA +7d',   v:sla,             c:'#d97706', pct:Math.round(sla/tot*100)},
-      {l:'Urgente / Alto',     v:urg+hi,          c:'#FF5C5C', pct:Math.round((urg+hi)/tot*100)},
-      {l:'Score crítico ≥350', v:criticos,        c:'#EF4444', pct:Math.round(criticos/tot*100)},
-      {l:'Sin responsable',    v:sinR,            c:'#7c3aed', pct:Math.round(sinR/tot*100)},
-    ];
-    kpisEl.innerHTML=kpis.map(k=>`<div class="kc" style="cursor:default">
-      <div class="kc-val" style="color:${k.c}">${k.v}</div>
-      <div class="kc-lbl">${k.l}</div>
-      <div class="kc-bar"><div class="kc-fill" style="width:${k.pct}%;background:${k.c}40"></div></div>
-      <div class="kc-hint">${k.pct}% del total visible</div>
-    </div>`).join('');
-  }
-
-  // ── Tarjetas de agentes ──────────────────────────────────────────────────
-  // Lógica:
-  //   - Si área = Desarrollo → agentes únicos de col M que tienen tickets en esa área
-  //   - Si área = otra (Soporte, Customer, Implementación, etc.) → col M, validado por col N === área
-  //   - Sin filtro de área → todos los agentes únicos de col M (excluyendo "No"/vacíos)
-
-  const cardsEl=el('int-agent-cards');
-  if(cardsEl){
-    let agentList=[];
-    if(fa){
-      // Agentes que tienen al menos 1 ticket en el área seleccionada (validado por col N)
-      agentList=[...new Set(
-        baseList
-          .filter(t=>t.areaAsig===fa)
-          .map(t=>t.agente)
-          .filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!=='')
-      )].sort();
-    } else {
-      // Sin filtro: todos los agentes de col M
-      agentList=[...new Set(
-        T.map(t=>t.agente).filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!=='')
-      )].sort();
-    }
-
-    cardsEl.innerHTML=agentList.map(ag=>{
-      // Tickets del agente dentro del filtro actual
-      const atks=baseList.filter(t=>t.agente===ag);
-      if(!atks.length)return'';
-      const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
-      const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
-      const avgScore=Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length);
-      const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
-      const devs2=[...new Set(atks.map(t=>t.dResp).filter(d=>d&&d.toLowerCase()!=='no'))];
-      const pct=baseList.length?Math.round(atks.length/baseList.length*100):0;
-      const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-      const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
-      const isActive=window._intActiveAgent===ag;
-      return`<div class="kc${isActive?' agent-card-active':''}" style="cursor:pointer;padding:16px" onclick="intAgentClick('${ag.replace(/'/g,"\\'")}')">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'#2563eb':'#dbeafe'};color:${isActive?'#fff':'#1e40af'};font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--txt)">${ag}</div>
-            <div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}%</div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span>
-          <span style="font-size:12px;font-weight:700;color:${segColor}">${asinSeg}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span>
-          <span style="font-size:12px;font-weight:700;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-          <span style="font-size:11px;color:var(--txt2)">Score promedio</span>
-          <span style="font-size:12px;font-weight:700">${avgScore}</span>
-        </div>
-        <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:${isActive?'#2563eb':'#4B9BFF'}"></div></div>
-        <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
-          ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
-          ${devs2.length?`<span style="font-size:10px;color:var(--txt3)">Dev: ${devs2.slice(0,2).join(', ')}</span>`:''}
-        </div>
-        <div style="margin-top:10px;text-align:center;font-size:10px;font-weight:600;color:var(--acc)">▼ Ver tickets</div>
+    kpisEl.innerHTML=INT_KDEF.map(k=>{
+      const list=k.fn(baseList);
+      const pct=Math.round(list.length/tot*100);
+      const isA=window._intActiveKpi===k.key;
+      return`<div class="kc${isA?' active':''}" style="${isA?`border-color:${k.color};box-shadow:0 0 0 3px ${k.color}20,var(--sh2)`:''}" onclick="intKpiClick('${k.key}')">
+        <div class="kc-top"><span class="kc-arrow" style="color:${k.color}">▼</span></div>
+        <div class="kc-val" style="color:${k.color}">${list.length}</div>
+        <div class="kc-lbl">${k.label}</div>
+        <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:linear-gradient(90deg,${k.color},${k.color}88)"></div></div>
+        <div class="kc-hint">Ver detalle · ${pct}% del total</div>
       </div>`;
     }).join('');
   }
 
-  // Si hay agente activo, renderizar su detalle
-  if(window._intActiveAgent){
-    intRenderAgentDetail(window._intActiveAgent,baseList);
+  // ── Sección de tarjetas: solo visible si hay área seleccionada ──
+  const agSection=el('int-agent-section');
+  if(agSection){
+    if(fa){
+      agSection.style.display='';
+      // Agentes operativos: col M de los tickets cuya col N === área seleccionada (coincidencia exacta)
+      const agentList=[...new Set(
+        T.filter(t=>t.areaAsig===fa)
+         .map(t=>t.agente)
+         .filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!=='')
+      )].sort();
+
+      const cardsEl=el('int-agent-cards');
+      if(cardsEl){
+        cardsEl.innerHTML=agentList.map(ag=>{
+          // Tickets del agente en el área seleccionada (con filtro sin seguimiento si aplica)
+          const atks=baseList.filter(t=>t.agente===ag);
+          if(!atks.length)return'';
+          const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
+          const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
+          const avgScore=Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length);
+          const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
+          const pct=baseList.length?Math.round(atks.length/baseList.length*100):0;
+          const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+          const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
+          const isActive=window._intActiveAgent===ag;
+          return`<div class="kc${isActive?' agent-card-active':''}" style="cursor:pointer;padding:16px" onclick="intAgentClick('${ag.replace(/'/g,"\\'")}')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'#2563eb':'#dbeafe'};color:${isActive?'#fff':'#1e40af'};font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--txt)">${ag}</div>
+                <div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}%</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span>
+              <span style="font-size:12px;font-weight:700;color:${segColor}">${asinSeg}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span>
+              <span style="font-size:12px;font-weight:700;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:11px;color:var(--txt2)">Score promedio</span>
+              <span style="font-size:12px;font-weight:700">${avgScore}</span>
+            </div>
+            <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:${isActive?'#2563eb':'#4B9BFF'}"></div></div>
+            <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
+              ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
+            </div>
+            <div style="margin-top:10px;text-align:center;font-size:10px;font-weight:600;color:var(--acc)">▼ Ver tickets</div>
+          </div>`;
+        }).filter(Boolean).join('');
+      }
+    } else {
+      // Sin área: ocultar tarjetas
+      agSection.style.display='none';
+    }
   }
+
+  // ── Detalle de agente activo ──
+  if(window._intActiveAgent && fa){
+    intRenderAgentDetail(window._intActiveAgent, baseList);
+  }
+
+  // ── Detalle KPI (como Indicadores): solo si hay KPI activo ──
+  intRenderKpiDetail(window._intActiveKpi, baseList);
+}
+
+function intKpiClick(key){
+  window._intActiveKpi=window._intActiveKpi===key?null:key;
+  // Actualizar estilos de KPIs
+  const kpisEl=el('int-kpis');
+  if(kpisEl){
+    kpisEl.querySelectorAll('.kc').forEach((c,i)=>{
+      const k=INT_KDEF[i];if(!k)return;
+      c.classList.toggle('active',window._intActiveKpi===k.key);
+      c.style.borderColor=window._intActiveKpi===k.key?k.color:'';
+      c.style.boxShadow=window._intActiveKpi===k.key?`0 0 0 3px ${k.color}20,var(--sh2)`:'';
+    });
+  }
+  const fa=el('int-area')?.value||'';
+  const fseg=window._intSeg||false;
+  let baseList=T.filter(t=>{
+    if(fa&&t.areaAsig!==fa)return false;
+    if(fseg&&!t.sinSeguimiento)return false;
+    return true;
+  });
+  intRenderKpiDetail(window._intActiveKpi, baseList);
+  // Si hay detalle de agente abierto, cerrarlo
+  if(window._intActiveKpi){
+    window._intActiveAgent=null;
+    el('int-detail-section').style.display='none';
+  }
+}
+
+function intRenderKpiDetail(kpiKey, baseList){
+  const dc=el('int-detail-card');
+  if(!kpiKey){if(dc)dc.style.display='none';return;}
+  const kd=INT_KDEF.find(k=>k.key===kpiKey);
+  if(!kd||!dc)return;
+  const tickets=kd.fn(baseList);
+  dc.style.display='';
+  const headEl=el('int-detail-kpi-head');
+  const titleEl=el('int-detail-kpi-title');
+  const countEl=el('int-detail-kpi-count');
+  if(headEl)headEl.style.cssText=`background:${kd.color}12;border-bottom:1px solid ${kd.color}30`;
+  if(titleEl)titleEl.textContent=kd.label;
+  if(countEl){countEl.textContent=tickets.length;countEl.style.cssText=`background:${kd.color}25;color:${kd.color};font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px`;}
+  const dlBtn=el('int-kpi-dl');
+  if(dlBtn)dlBtn.onclick=()=>downloadCSV(tickets,'int_'+kpiKey);
+  if(!tickets.length){
+    const b=el('int-detail-kpi-body');if(b)b.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';
+    return;
+  }
+  function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
+  const rows=sortByAge(tickets).map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    return`<tr onclick="om(${t.id})">
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:200px">${t.subject||'—'}</td>
+      <td style="color:var(--txt2)">${t.org||'—'}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+      <td style="color:var(--txt2)">${t.agente||'—'}</td>
+      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+  const b=el('int-detail-kpi-body');
+  if(b)b.innerHTML=`<div class="tw"><table><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`+getDiagnosis(tickets);
+  // Scroll al detalle
+  setTimeout(()=>dc.scrollIntoView({behavior:'smooth',block:'start'}),150);
 }
 
 function intAgentClick(ag){
   window._intActiveAgent=ag;
-  // Ocultar sección global, mostrar detalle
+  window._intActiveKpi=null;
+  const dc=el('int-detail-card');if(dc)dc.style.display='none';
   el('int-detail-section').style.display='';
-  el('int-global-tbl-card').style.display='none';
-  // Re-render cards para marcar activo
   intFilt();
-  // Scroll al detalle
   setTimeout(()=>{
     const d=el('int-detail-section');
     if(d)d.scrollIntoView({behavior:'smooth',block:'start'});
@@ -757,9 +886,7 @@ function intAgentClick(ag){
 function intBackToCards(){
   window._intActiveAgent=null;
   el('int-detail-section').style.display='none';
-  // Re-render para limpiar estado activo en tarjetas
   intFilt();
-  // Scroll a la sección de tarjetas
   setTimeout(()=>{
     const c=el('int-agent-cards');
     if(c)c.scrollIntoView({behavior:'smooth',block:'start'});
@@ -772,45 +899,31 @@ function intRenderAgentDetail(ag,baseList){
     return db!==da?db-da:b.score-a.score;
   });
   window._intAgentTickets=atks;
-
   const detailSection=el('int-detail-section');
   if(detailSection)detailSection.style.display='';
-
   const nameEl=el('int-detail-name');if(nameEl)nameEl.textContent=ag;
   const subEl=el('int-detail-sub');if(subEl)subEl.textContent=atks.length+' tickets';
   const cntEl=el('int-detail-count');if(cntEl)cntEl.textContent=atks.length;
   const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   const avEl=el('int-detail-avatar');if(avEl)avEl.textContent=initials;
-
-  // Mini KPIs del agente
   const kpisEl=el('int-agent-kpis');
   if(kpisEl){
-    const tot=atks.length||1;
     const sinSeg=atks.filter(t=>t.sinSeguimiento).length;
     const ug=atks.filter(t=>t.priority==='urgent').length;
     const hi=atks.filter(t=>t.priority==='high').length;
     const sla=atks.filter(t=>t.isSla).length;
     const crit=atks.filter(t=>t.score>=350).length;
-    [
-      {l:'Total',v:atks.length,c:'#2563eb'},
-      {l:'Sin seguimiento +3d',v:sinSeg,c:'#e11d48'},
-      {l:'SLA vencido',v:sla,c:'#d97706'},
-      {l:'Urgente / Alto',v:ug+hi,c:'#FF5C5C'},
-      {l:'Score crítico ≥350',v:crit,c:'#EF4444'},
-    ].forEach(k=>{/* built below */});
     kpisEl.innerHTML=[
-      {l:'Total',          v:atks.length, c:'#2563eb'},
-      {l:'Sin seguim. +3d',v:sinSeg,      c:'#e11d48'},
-      {l:'SLA vencido',    v:sla,         c:'#d97706'},
-      {l:'Urgente / Alto', v:ug+hi,       c:'#FF5C5C'},
-      {l:'Crítico ≥350',   v:crit,        c:'#EF4444'},
+      {l:'Total',          v:atks.length,c:'#2563eb'},
+      {l:'Sin seguim. +3d',v:sinSeg,     c:'#e11d48'},
+      {l:'SLA vencido',    v:sla,        c:'#d97706'},
+      {l:'Urgente / Alto', v:ug+hi,      c:'#FF5C5C'},
+      {l:'Crítico ≥350',   v:crit,       c:'#EF4444'},
     ].map(k=>`<div style="text-align:center;padding:6px 4px">
       <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${k.c}">${k.v}</div>
       <div style="font-size:10px;font-weight:600;color:var(--txt3);margin-top:2px">${k.l}</div>
     </div>`).join('');
   }
-
-  // Tabla de tickets del agente
   const tblEl=el('int-detail-tbl');
   if(!tblEl)return;
   const rows=atks.map((t,i)=>{
@@ -822,8 +935,7 @@ function intRenderAgentDetail(ag,baseList){
       <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
       <td style="max-width:200px">${t.subject||'—'}</td>
       <td style="color:var(--txt2)">${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
       <td style="font-size:11px">${fmtDate(t.ultimoSeg)||'—'} ${segFlag}</td>
@@ -840,8 +952,7 @@ function intRenderAgentDetail(ag,baseList){
 }
 
 function intDownload(){const list=window._intList||[];downloadCSV(list,'operacion_interna');}
-function intDownloadAgent(){const list=window._intAgentTickets||[];downloadCSV(list,'agente_'+( window._intActiveAgent||'').replace(/\s+/g,'_'));}
-
+function intDownloadAgent(){const list=window._intAgentTickets||[];downloadCSV(list,'agente_'+(window._intActiveAgent||'').replace(/\s+/g,'_'));}
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};
