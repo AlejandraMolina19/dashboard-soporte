@@ -36,13 +36,12 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ubtn:disabled{opacity:.5;cursor:not-allowed}
 .ubtn.spin svg{animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
-.nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
-.ntab{padding:0 9px;height:40px;font-size:11px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:3px;letter-spacing:-.02em}
+.ntab{padding:0 14px;height:40px;font-size:12px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:4px}
 .ntab:hover{color:var(--txt2)}
 .ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
-.nb{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:var(--sur3);color:var(--txt3);font-family:var(--mono);display:none}.ntab.on .nb{display:inline-flex}
-.ntab.on .nb{background:var(--acc3);color:var(--acc)}
+.nb{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--acc3);color:var(--acc);font-family:var(--mono)}
 .main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:14px}
 .view{display:none;flex-direction:column;gap:14px}
 .view.on{display:flex}
@@ -66,11 +65,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ch{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
 .ct{font-size:12px;font-weight:700;color:var(--txt)}
 .cb{padding:14px}
-/* Legend */
 .chart-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--txt2)}
 .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-/* Detail section */
 .detail-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}
 .detail-head{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--bdr);transition:background .2s}
 .detail-title{font-size:13px;font-weight:700;color:var(--txt)}
@@ -86,12 +83,6 @@ tbody tr{cursor:pointer;transition:background .1s}
 tbody tr:hover td{background:var(--sur2)}
 tbody tr:last-child td{border-bottom:none}
 .b{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono)}
-.akrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
-.ak{border-radius:var(--rl);padding:14px;text-align:center;border:1px solid}
-.an{font-size:28px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em}
-.al{font-size:10px;font-weight:700;margin-top:4px;letter-spacing:.05em;text-transform:uppercase}
-.sg{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px}
-.si{font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;border:1px solid}
 .sel{background:var(--sur);border:1px solid var(--bdr);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:500;font-family:var(--font);cursor:pointer}
 .ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl)}
 .ring{width:34px;height:34px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite}
@@ -111,8 +102,11 @@ tbody tr:last-child td{border-bottom:none}
 .score-num{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
 .tbox{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
 .empty{padding:32px;text-align:center;color:var(--txt3);font-size:13px;font-weight:500}
-/* Gradient chart bar cursor */
-canvas.clickable{cursor:pointer}
+/* Agent card active state */
+.agent-card-active{border-color:#2563eb !important;box-shadow:0 0 0 3px #dbeafe,var(--sh2) !important}
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s}
+.back-btn:hover{background:var(--sur2);border-color:var(--bdr2);color:var(--txt)}
 </style>
 </head>
 <body>
@@ -139,29 +133,16 @@ canvas.clickable{cursor:pointer}
   </button>
 </div>
 
-<div style="background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;position:relative" id="nav-wrap">
-  <button onclick="document.getElementById('main-nav').scrollBy({left:-140,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-right:1px solid var(--bdr);height:40px;padding:0 10px;cursor:pointer;color:var(--txt2);font-size:18px;z-index:2;line-height:1">‹</button>
-  <div class="nav" id="main-nav" style="flex:1;border-bottom:none;padding:0 4px">
+<!-- Solo 2 pestañas: Indicadores y Op. Interna -->
+<div class="nav" id="main-nav">
   <button class="ntab on" onclick="go('ind')">Indicadores <span class="nb" id="nb-ind">–</span></button>
   <button class="ntab" onclick="go('int')">Op. Interna <span class="nb" id="nb-int">–</span></button>
-  <button class="ntab" onclick="go('sop')">Soporte <span class="nb" id="nb-sop">–</span></button>
-  <button class="ntab" onclick="go('dev')">Desarro. <span class="nb" id="nb-dev">–</span></button>
-  <button class="ntab" onclick="go('ant')">Antigüedad</button>
-  <button class="ntab" onclick="go('tod')">Todos <span class="nb" id="nb-tod">–</span></button>
-  <button class="ntab" onclick="go('op')">Por área</button>
-  </div>
-  <button onclick="document.getElementById('main-nav').scrollBy({left:140,behavior:'smooth'})" style="flex-shrink:0;background:var(--sur);border:none;border-left:1px solid var(--bdr);height:40px;padding:0 10px;cursor:pointer;color:var(--txt2);font-size:18px;z-index:2;line-height:1">›</button>
 </div>
 
 <div class="main">
   <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
   <div class="view" id="v-ind"></div>
   <div class="view" id="v-int"></div>
-  <div class="view" id="v-sop"></div>
-  <div class="view" id="v-dev"></div>
-  <div class="view" id="v-ant"></div>
-  <div class="view" id="v-tod"></div>
-  <div class="view" id="v-op"></div>
 </div>
 
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
@@ -170,10 +151,7 @@ canvas.clickable{cursor:pointer}
 const API='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv';
 const MN=['','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
-// ── Paleta de colores vibrante ────────────────────────────────────────────────
-const PCOLORS={
-  urgent:'#FF5C5C', high:'#FF9A3C', normal:'#4B9BFF', low:'#8BC4FF'
-};
+const PCOLORS={urgent:'#FF5C5C',high:'#FF9A3C',normal:'#4B9BFF',low:'#8BC4FF'};
 const PC={
   urgent:{t:'Urgente',c:'#FF5C5C',bg:'#FFF0F0'},
   high:{t:'Alto',c:'#FF9A3C',bg:'#FFF8EF'},
@@ -202,68 +180,48 @@ const bdg=(t,c,bg)=>`<span class="b" style="background:${bg};color:${c}">${t}</s
 function wk(d){const s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
 
 function parseDias(str){
-  if(!str)return-1;
+  if(!str)return -1;
   const s=str.trim().toLowerCase();
   if(s==='corriente')return 0;
   const m=s.match(/(\d+)/);
   return m?parseInt(m[1]):-1;
 }
 function isSlaVencido(str){return parseDias(str)>=7;}
-function getBand(str){
-  const d=parseDias(str);
-  if(d<0)return SLA_BANDS[0];
-  return SLA_BANDS.find(b=>d<=b.max)||SLA_BANDS[4];
-}
 function getRangoColor(str){
   const d=parseDias(str);
   if(d<=0)return'#22C55E';if(d<=7)return'#22C55E';
   if(d<=30)return'#3B82F6';if(d<=90)return'#F59E0B';
   if(d<=365)return'#EF4444';return'#6B7280';
 }
-
-// ── Calcular sin seguimiento > 3 días ─────────────────────────────────────────
-function isSinSeguimiento(fechaStr, now){
+function isSinSeguimiento(fechaStr,now){
   if(!fechaStr||fechaStr.trim()==='')return false;
   const d=new Date(fechaStr);
   if(isNaN(d))return false;
-  const diffDays=(now-d)/86400000;
-  return diffDays>3;
+  return(now-d)/86400000>3;
 }
 
-// ── mapRows con acceso posicional ────────────────────────────────────────────
-// Columnas por posición (0-indexed A=0, B=1...):
-// E=4 → Último seguimiento/Actualización
-// G=6 → Empresa/Organización
-// K=10 → Creado
-// M=12 → Agente (traducción)
-// N=13 → Área asignada / sin clasificar
-// U=20 → Desarrollador
-function mapRows(rows, headers){
+// ── mapRows — Agente siempre de col M (posición 12), Área de col N (posición 13) ──
+function mapRows(rows,headers){
   if(!rows.length)return[];
   HDR=headers||Object.keys(rows[0]);
+  const colE=HDR[4]||'';   // Último seguimiento
+  const colG=HDR[6]||'';   // Empresa
+  const colK=HDR[10]||'';  // Creado
+  const colM=HDR[12]||'';  // Agente (SIEMPRE col M)
+  const colN=HDR[13]||'';  // Área asignada (col N)
+  const colU=HDR[20]||'';  // Desarrollador
 
-  // Nombres de columna por posición
-  const colE  =HDR[4]  ||''; // Último seguimiento (col E)
-  const colG  =HDR[6]  ||''; // Empresa
-  const colK  =HDR[10] ||''; // Creado
-  const colM  =HDR[12] ||''; // Agente
-  const colN  =HDR[13] ||''; // Área asignada
-  const colU  =HDR[20] ||''; // Desarrollador
-
-  // Detección por valor para campos base
   const keys=HDR;
   function fkv(pats){return keys.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
-
-  const kId   =fkv(['^ID$','^Id$','^id$']);
-  const kSt   =fkv(['^Estado$','^Status$']);
-  const kPr   =fkv(['^Prioridad$','^Priority$']);
-  const kSub  =fkv(['^Asunto$','^Subject$']);
+  const kId=fkv(['^ID$','^Id$','^id$']);
+  const kSt=fkv(['^Estado$','^Status$']);
+  const kPr=fkv(['^Prioridad$','^Priority$']);
+  const kSub=fkv(['^Asunto$','^Subject$']);
   const kAssign=fkv(['Agente asignado','Assignee Name','Assignee']);
-  const kSResp =fkv(['Responsable Soporte','S-Responsable','s-responsable']);
-  const kRango =fkv(['Antigüedad.*ETIQUETA','Antiguedad.*ETIQUETA','antigüedad.*etiq']);
+  const kSResp=fkv(['Responsable Soporte','S-Responsable','s-responsable']);
+  const kRango=fkv(['Antigüedad.*ETIQUETA','Antiguedad.*ETIQUETA','antigüedad.*etiq']);
   const kTiempo=fkv(['Horas de atraso','tiempo transcurrido','horas.*atraso']);
   const kMesAnt=fkv(['Antigüedad.*Mes','Mes$','^Mes$']);
-  const kDResp =colU?null:fkv(['D-Responsable','d-responsable','Desarrollador']);
 
   const now=new Date();
   const ST=[{d:0,s:0},{d:1,s:1},{d:2,s:2},{d:3,s:3},{d:4,s:5},{d:5,s:7},{d:6,s:9},{d:7,s:12},{d:15,s:20},{d:30,s:30},{d:45,s:40},{d:60,s:50},{d:90,s:60},{d:120,s:68},{d:180,s:75},{d:240,s:80},{d:360,s:88},{d:720,s:99}];
@@ -274,56 +232,40 @@ function mapRows(rows, headers){
     const priority=(kPr?r[kPr]||'':'').toLowerCase().trim();
     const status=(kSt?r[kSt]||'':'').toLowerCase().trim();
     const rangoStr=(kRango?r[kRango]||'':'').trim();
-    const band=getBand(rangoStr);
-
-    // Fecha creación desde col K
     const crRaw=(colK&&r[colK]?r[colK]:r[colE]||'').trim();
     const crDate=crRaw?new Date(crRaw):null;
     const created=crDate&&!isNaN(crDate)?crDate.toISOString().split('T')[0]:'';
     const days=created?Math.max(0,Math.floor((now-new Date(created))/86400000)):0;
-
     let brSc=0;for(const e of ST){if(days>=e.d)brSc=e.s;else break;}
     const score=(PS[priority]||0)+brSc;
     function act(s){if(s>=350)return{t:'Resolver hoy',c:'#dc2626'};if(s>=220)return{t:'Atender hoy',c:'#d97706'};if(s>=200)return{t:'Mañana',c:'#2563eb'};if(s>=100)return{t:'Esta semana',c:'#6b7280'};return{t:'—',c:'#9ca3af'};}
-
-    // Tiempo transcurrido — buscar valor HH:MM:SS
     let tiempo='';
     if(kTiempo&&r[kTiempo]&&/\d+:\d{2}:\d{2}/.test(r[kTiempo])){tiempo=r[kTiempo].trim();}
     else{for(const v of Object.values(r)){if(/^\d{1,5}:\d{2}:\d{2}$/.test((v||'').trim())){tiempo=v.trim();break;}}}
-
-    // Área asignada (col N) — detectar sin asignar
     const areaN=(colN?r[colN]||'':'').trim();
     const isSinAsignar=/sin\s+asignar|sin\s+clasificar/i.test(areaN);
-
-    // Empresa desde col G
     const org=colG?r[colG]||'':'';
-
-    // Último seguimiento desde col E
     const ultimoSegRaw=(colE?r[colE]||'':'').trim();
-    let ultimoSegFmt=ultimoSegRaw;
-    if(ultimoSegRaw){
-      const d=new Date(ultimoSegRaw);
-      if(!isNaN(d))ultimoSegFmt=d.toLocaleString('es-MX');
-    }
-    
+    // Agente SIEMPRE de col M
+    const agenteVal=colM?r[colM]||'':'';
     return{
-      id, status, priority,
+      id,status,priority,
       subject:kSub?r[kSub]||'':'',
       org,
-      agente:colM?r[colM]||'':'',
-      areaAsig:areaN,
-      dResp:colU?r[colU]||'':(kDResp?r[kDResp]||'':''),
+      agente:agenteVal,         // col M siempre
+      areaAsig:areaN,            // col N
+      dResp:colU?r[colU]||'':'',
       sResp:kSResp?r[kSResp]||'':'',
       assignee:kAssign?r[kAssign]||'':'',
-      created, days, band, rangoStr,
+      created,days,rangoStr,
       isSla:isSlaVencido(rangoStr),
       isSinAsignar,
       sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),
       createdFmt:fmtDateShort(crRaw),
-      score, action:act(score),
+      score,action:act(score),
       mes:created?MN[new Date(created).getMonth()+1]||'—':'—',
       mesAnt:kMesAnt?r[kMesAnt]||'':'',
-      tiempo, ultimoSeg:ultimoSegRaw,
+      tiempo,ultimoSeg:ultimoSegRaw,
     };
   }).filter(Boolean);
 }
@@ -332,102 +274,58 @@ function mapRows(rows, headers){
 function mkChart(id,type,labels,data,colors,horiz,onClickFn){
   if(CH[id])CH[id].destroy();
   const ctx=el(id);if(!ctx)return;
-
-  // Crear gradientes para barras
-  let bgColors=colors;
-  if(type==='bar'){
-    try{
-      const c2d=ctx.getContext('2d');
-      bgColors=colors.map((col,i)=>{
-        const isH=horiz;
-        const g=isH
-          ?c2d.createLinearGradient(0,0,ctx.width||300,0)
-          :c2d.createLinearGradient(0,0,0,ctx.height||200);
-        g.addColorStop(0,col);
-        g.addColorStop(1,col+'99');
-        return g;
-      });
-    }catch(e){bgColors=colors;}
-  }
-
   const opts={
     responsive:true,maintainAspectRatio:false,
     indexAxis:horiz?'y':'x',
     plugins:{
       legend:{display:false},
-      tooltip:{
-        callbacks:{label:c=>`${c.raw} tickets`},
-        backgroundColor:'#111827',titleColor:'#9ca3af',
-        bodyColor:'#f9fafb',cornerRadius:6,padding:8
-      }
+      tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',titleColor:'#9ca3af',bodyColor:'#f9fafb',cornerRadius:6,padding:8}
     },
     scales:type==='doughnut'?{}:{
       x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780',drawBorder:false}},
       y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}
     }
   };
-
   if(onClickFn){
-    opts.onClick=(e,elements)=>{
-      if(elements.length>0){
-        const idx=elements[0].index;
-        onClickFn(labels[idx]);
-      }
-    };
+    opts.onClick=(e,elements)=>{if(elements.length>0){const idx=elements[0].index;onClickFn(labels[idx]);}};
     ctx.style.cursor='pointer';
-    ctx.classList.add('clickable');
   }
-
-  CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:bgColors,borderWidth:0,borderRadius:type==='bar'?4:0,hoverBackgroundColor:colors.map(c=>c+'CC')}]},options:opts});
+  CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:type==='bar'?4:0,hoverBackgroundColor:colors.map(c=>c+'CC')}]},options:opts});
 }
 
-
-// ── Diagnóstico inteligente ────────────────────────────────────────────────
+// ── Diagnóstico ──────────────────────────────────────────────────────────────
 function getDiagnosis(tickets){
   if(!tickets||!tickets.length)return'';
   const total=tickets.length;
   const urg=tickets.filter(t=>t.priority==='urgent').length;
   const hi=tickets.filter(t=>t.priority==='high').length;
-  const norm=tickets.filter(t=>t.priority==='normal').length;
   const sla=tickets.filter(t=>t.isSla).length;
   const sinSeg=tickets.filter(t=>t.sinSeguimiento).length;
   const sinResp=tickets.filter(t=>t.isSinAsignar).length;
   const criticos=tickets.filter(t=>t.score>=350).length;
-  const abiertos=tickets.filter(t=>t.status==='open').length;
-  const pend=tickets.filter(t=>t.status==='pending').length;
-  // Área más afectada
-  const arMap={};tickets.forEach(t=>{const a=t.areaAsig||'Sin área';arMap[a]=(arMap[a]||0)+1;});
-  const topArea=Object.entries(arMap).sort((a,b)=>b[1]-a[1])[0];
-  // Antigüedad máxima
   const maxDias=Math.max(...tickets.map(t=>parseDias(t.rangoStr)).filter(d=>d>=0));
-
   const items=[];
   if(criticos>0)items.push(`<span style="color:#EF4444;font-weight:600">🚨 ${criticos} ticket${criticos>1?'s':''} crítico${criticos>1?'s':''}</span> con score ≥350 requieren atención inmediata.`);
-  if(urg>0)items.push(`<span style="color:#FF5C5C;font-weight:600">⚡ ${urg} urgente${urg>1?'s':''}</span>${hi>0?` y <span style="color:#FF9A3C;font-weight:600">${hi} de alta prioridad</span>`:''}${urg+hi>0?' representan el '+Math.round((urg+hi)/total*100)+'% de esta vista.':''}`);
-  if(sla>0)items.push(`<span style="color:#F59E0B;font-weight:600">🕐 ${sla} ticket${sla>1?'s':''}</span> ${sla>1?'llevan':'lleva'} más de 7 días sin resolución — SLA vencido.`);
+  if(urg>0)items.push(`<span style="color:#FF5C5C;font-weight:600">⚡ ${urg} urgente${urg>1?'s':''}${hi>0?` y <span style="color:#FF9A3C;font-weight:600">${hi} de alta prioridad</span>`:''}</span> representan el ${Math.round((urg+hi)/total*100)}% de esta vista.`);
+  if(sla>0)items.push(`<span style="color:#F59E0B;font-weight:600">🕐 ${sla} ticket${sla>1?'s':''}</span> con SLA vencido (+7d).`);
   if(sinSeg>0)items.push(`<span style="color:#e11d48;font-weight:600">📭 ${sinSeg} ticket${sinSeg>1?'s':''}</span> sin seguimiento en más de 3 días.`);
   if(sinResp>0)items.push(`<span style="color:#7c3aed;font-weight:600">👤 ${sinResp} ticket${sinResp>1?'s':''}</span> sin responsable asignado.`);
-  if(topArea&&topArea[1]>1)items.push(`El área con más carga es <strong>${topArea[0]}</strong> con ${topArea[1]} tickets (${Math.round(topArea[1]/total*100)}% del total visible).`);
-  if(maxDias>180)items.push(`El ticket más antiguo lleva <strong>${maxDias} días</strong> — considera revisión o cierre.`);
-  if(abiertos>0&&pend>0)items.push(`${abiertos} abierto${abiertos>1?'s':''} y ${pend} pendiente${pend>1?'s':''}.`);
-
+  if(maxDias>180)items.push(`El ticket más antiguo lleva <strong>${maxDias} días</strong>.`);
   if(!items.length)return'';
-  return`<div id="detail-diag" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:0 0 var(--rl) var(--rl);padding:14px 18px;border-top:none">
+  return`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:0 0 var(--rl) var(--rl);padding:14px 18px;border-top:none">
     <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Diagnóstico</div>
-    <ul style="list-style:none;display:flex;flex-direction:column;gap:5px">
-      ${items.map(item=>`<li style="font-size:12px;color:var(--txt2);line-height:1.5">• ${item}</li>`).join('')}
-    </ul>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:5px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2);line-height:1.5">• ${i}</li>`).join('')}</ul>
   </div>`;
 }
 
-// ── KPI Definitions ──────────────────────────────────────────────────────────
+// ── KPI Definitions para Indicadores ────────────────────────────────────────
 const KDEF=[
-  {key:'total',   label:'Total tickets',        color:'#2563eb', fn:()=>T},
-  {key:'urgent',  label:'Urgentes',             color:'#FF5C5C', fn:()=>T.filter(t=>t.priority==='urgent')},
-  {key:'high',    label:'Alta prioridad',       color:'#FF9A3C', fn:()=>T.filter(t=>t.priority==='high')},
-  {key:'sla',     label:'Vencidos SLA +7d',     color:'#F59E0B', fn:()=>T.filter(t=>t.isSla)},
-  {key:'sinSeg',  label:'Sin seguimiento +3d',  color:'#e11d48', fn:()=>T.filter(t=>t.sinSeguimiento)},
-  {key:'sinA',    label:'Sin responsable',      color:'#7c3aed', fn:()=>T.filter(t=>t.isSinAsignar)},
+  {key:'total',  label:'Total tickets',       color:'#2563eb', fn:()=>T},
+  {key:'urgent', label:'Urgentes',            color:'#FF5C5C', fn:()=>T.filter(t=>t.priority==='urgent')},
+  {key:'high',   label:'Alta prioridad',      color:'#FF9A3C', fn:()=>T.filter(t=>t.priority==='high')},
+  {key:'sla',    label:'Vencidos SLA +7d',    color:'#F59E0B', fn:()=>T.filter(t=>t.isSla)},
+  {key:'sinSeg', label:'Sin seguimiento +3d', color:'#e11d48', fn:()=>T.filter(t=>t.sinSeguimiento)},
+  {key:'sinA',   label:'Sin responsable',     color:'#7c3aed', fn:()=>T.filter(t=>t.isSinAsignar)},
 ];
 
 // ── Render Indicadores ────────────────────────────────────────────────────────
@@ -445,12 +343,9 @@ function renderInd(){
     </div>`;
   }).join('');
 
-  // Org data
   const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
   const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
   const orgH=Math.max(180,orgS.length*32);
-
-  // Rango data (col R raw values sorted)
   const rVals=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))];
   rVals.sort((a,b)=>parseDias(a)-parseDias(b));
   const rCounts=rVals.map(r=>T.filter(t=>t.rangoStr===r).length);
@@ -470,11 +365,11 @@ function renderInd(){
         </div>
       </div>
       <div class="ccard">
-        <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">Col. R · clic para filtrar</span></div>
+        <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div>
         <div class="cb"><div style="position:relative;height:220px;width:100%;overflow:hidden"><canvas id="ca"></canvas></div></div>
       </div>
       <div class="ccard">
-        <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total · clic para filtrar</span></div>
+        <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total</span></div>
         <div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div>
       </div>
     </div>
@@ -490,7 +385,6 @@ function renderInd(){
       <div class="tw" id="detail-body"></div>
     </div>`;
 
-  // Gráfica prioridad con leyenda
   const priData=['urgent','high','normal','low'].map(k=>T.filter(t=>t.priority===k).length);
   const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
   CH['cp']&&CH['cp'].destroy();
@@ -498,166 +392,64 @@ function renderInd(){
   if(cpCtx){
     CH['cp']=new Chart(cpCtx,{type:'doughnut',
       data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff',hoverBorderWidth:0}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',titleColor:'#9ca3af',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});
   }
-  // Leyenda manual
   const legEl=el('pri-legend');
   if(legEl){
     const priLabels=['Urgente','Alto','Normal','Bajo'];
     legEl.innerHTML=priLabels.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
   }
-
-  mkChart('ca','bar',rVals,rCounts,rColors,false,(label)=>{
-    filterByChart('rango',label);
-  });
-  mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,(label)=>{
-    filterByChart('org',label);
-  });
-
-  renderDetail(AKPI, null, null);
+  mkChart('ca','bar',rVals,rCounts,rColors,false,(label)=>{filterByChart('rango',label);});
+  mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,(label)=>{filterByChart('org',label);});
+  renderDetail(AKPI,null,null);
 }
 
-// ── Chart filter & detail ────────────────────────────────────────────────────
 let CHART_FILTER={type:null,value:null};
 
 function filterByChart(type,value){
-  CHART_FILTER={type,value};
-  AKPI=null;
+  CHART_FILTER={type,value};AKPI=null;
   document.querySelectorAll('.kc').forEach(c=>c.classList.remove('active'));
-  renderDetail(null, type, value);
+  renderDetail(null,type,value);
 }
-
 function setKPI(key){
-  AKPI=AKPI===key?null:key;
-  CHART_FILTER={type:null,value:null};
-  document.querySelectorAll('.kc').forEach((c,i)=>c.classList.toggle('active',AKPI===KDEF[i]?.key));
+  AKPI=AKPI===key?null:key;CHART_FILTER={type:null,value:null};
   document.querySelectorAll('.kc').forEach((c,i)=>{
     const k=KDEF[i];if(!k)return;
+    c.classList.toggle('active',AKPI===k.key);
     c.style.borderColor=AKPI===k.key?k.color:'';
     c.style.boxShadow=AKPI===k.key?`0 0 0 3px ${k.color}20,var(--sh2)`:'';
   });
-  renderDetail(AKPI, null, null);
+  renderDetail(AKPI,null,null);
 }
-
-function refilterDetail(){
-  const fa=el('df-area')?.value||'';
-  const fs=el('df-status')?.value||'';
-  const fp=el('df-pri')?.value||'';
-  const base=window._detailTickets||[];
-  const list=base.filter(t=>{
-    if(fa&&t.areaAsig!==fa)return false;
-    if(fs&&t.status!==fs)return false;
-    if(fp&&t.priority!==fp)return false;
-    return true;
-  }).sort((a,b)=>b.score-a.score);
-  const tbody=el('detail-tbl')?.querySelector('tbody');
-  if(tbody){
-    const sc2=(sc)=>sc>=350?'#EF4444':sc>=220?'#F59E0B':sc>=200?'#4B9BFF':'#9ca3af';
-    const sorted=[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
-    tbody.innerHTML=sorted.map((t,i)=>{
-      const sc=sc2(t.score);const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-      return`<tr onclick="om(${t.id})">
-        <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
-        <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-        <td style="max-width:200px">${t.subject||'—'}</td>
-        <td style="color:var(--txt2)">${t.org||'—'}</td>
-        <td>${bdg(st.t,st.c,st.bg)}</td>
-        <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-        <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-        <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
-        <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
-        <td style="color:var(--txt2)">${t.dResp||'—'}</td>
-        <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
-        <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-      </tr>`;
-    }).join('');
-    // Update diagnosis
-    const diagEl=el('detail-diag');
-    if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('<div id="detail-diag"','<div');
-  }
-  const cnt=el('df-count');if(cnt)cnt.textContent=list.length+' tickets';
-}
-
 function clearFilter(){
   AKPI=null;CHART_FILTER={type:null,value:null};
   document.querySelectorAll('.kc').forEach(c=>{c.classList.remove('active');c.style.borderColor='';c.style.boxShadow='';});
-  renderDetail(null, null, null);
+  renderDetail(null,null,null);
 }
 
-function renderDetail(kpiKey, chartType, chartValue){
-  const titleEl=el('detail-title');
-  const countEl=el('detail-count');
-  const bodyEl=el('detail-body');
-  const headEl=el('detail-head');
-  const clearEl=el('detail-clear');
+function renderDetail(kpiKey,chartType,chartValue){
+  const titleEl=el('detail-title');const countEl=el('detail-count');const bodyEl=el('detail-body');
+  const headEl=el('detail-head');const clearEl=el('detail-clear');
   if(!titleEl||!bodyEl)return;
-
-  let tickets=[];
-  let title='Sin responsable asignado';
-  let headStyle='background:#fef2f2;border-bottom:1px solid #fecaca';
-  let countStyle='background:#fee2e2;color:#dc2626';
-  let showClear=false;
-
+  let tickets=[],title='Sin responsable asignado',headStyle='background:#fef2f2;border-bottom:1px solid #fecaca',countStyle='background:#fee2e2;color:#dc2626',showClear=false;
   if(chartType&&chartValue){
-    showClear=true;
-    title=chartValue;
-    if(chartType==='rango'){
-      tickets=T.filter(t=>t.rangoStr===chartValue);
-      const rc=getRangoColor(chartValue);
-      headStyle=`background:${rc}15;border-bottom:1px solid ${rc}40`;
-      countStyle=`background:${rc}25;color:${rc}`;
-    } else if(chartType==='org'){
-      tickets=T.filter(t=>t.org===chartValue);
-      headStyle='background:#eff4ff;border-bottom:1px solid #bfdbfe';
-      countStyle='background:#bfdbfe;color:#1e40af';
-    }
+    showClear=true;title=chartValue;
+    if(chartType==='rango'){tickets=T.filter(t=>t.rangoStr===chartValue);const rc=getRangoColor(chartValue);headStyle=`background:${rc}15;border-bottom:1px solid ${rc}40`;countStyle=`background:${rc}25;color:${rc}`;}
+    else if(chartType==='org'){tickets=T.filter(t=>t.org===chartValue);headStyle='background:#eff4ff;border-bottom:1px solid #bfdbfe';countStyle='background:#bfdbfe;color:#1e40af';}
   } else if(kpiKey){
     showClear=true;
     const kd=KDEF.find(k=>k.key===kpiKey);
-    if(kd){
-      tickets=kd.fn();title=kd.label;
-      headStyle=`background:${kd.color}12;border-bottom:1px solid ${kd.color}30`;
-      countStyle=`background:${kd.color}25;color:${kd.color}`;
-    }
-  } else {
-    tickets=T.filter(t=>t.isSinAsignar);
-  }
-
+    if(kd){tickets=kd.fn();title=kd.label;headStyle=`background:${kd.color}12;border-bottom:1px solid ${kd.color}30`;countStyle=`background:${kd.color}25;color:${kd.color}`;}
+  } else {tickets=T.filter(t=>t.isSinAsignar);}
   if(titleEl)titleEl.textContent=title;
-  if(countEl)countEl.textContent=tickets.length;
-  countEl.style.cssText=countStyle+';font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';
+  if(countEl){countEl.textContent=tickets.length;countEl.style.cssText=countStyle+';font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';}
   headEl.style.cssText=headStyle;
   if(clearEl)clearEl.style.display=showClear?'':'none';
-  // Update download button
   const dlBtn=el('detail-dl');
-  if(dlBtn){
-    const fname=(kpiKey||chartValue||'tickets').replace(/[^a-zA-Z0-9]/g,'_');
-    dlBtn.onclick=()=>downloadCSV(tickets,fname);
-    dlBtn.style.display=tickets.length?'':'none';
-  }
-
-  if(!tickets.length){
-    bodyEl.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';
-    return;
-  }
-  // Filters
-  const filterBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)" id="detail-filters">
-    <select class="sel" id="df-area" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las áreas</option>${[...new Set(tickets.map(t=>t.areaAsig).filter(Boolean))].sort().map(a=>`<option>${a}</option>`).join('')}</select>
-    <select class="sel" id="df-status" onchange="refilterDetail()" style="font-size:11px"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
-    <select class="sel" id="df-pri" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
-    <span style="font-size:11px;color:var(--txt3);align-self:center" id="df-count">${tickets.length} tickets</span>
-  </div>`;
-
+  if(dlBtn){dlBtn.onclick=()=>downloadCSV(tickets,(kpiKey||chartValue||'tickets').replace(/[^a-zA-Z0-9]/g,'_'));dlBtn.style.display=tickets.length?'':'none';}
+  if(!tickets.length){bodyEl.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';return;}
   window._detailTickets=tickets;
-  function sortByAge(list){
-    return [...list].sort((a,b)=>{
-      const da=parseDias(a.rangoStr);
-      const db=parseDias(b.rangoStr);
-      if(db!==da)return db-da; // mayor antigüedad primero
-      return b.score-a.score;  // desempate por score
-    });
-  }
+  function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
   function buildRows(list){
     return list.map((t,i)=>{
       const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
@@ -667,171 +459,64 @@ function renderDetail(kpiKey, chartType, chartValue){
         <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
         <td style="max-width:200px">${t.subject||'—'}</td>
         <td style="color:var(--txt2)">${t.org||'—'}</td>
-        <td>${bdg(st.t,st.c,st.bg)}</td>
-        <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+        <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
         <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
         <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
-        <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
+        <td style="color:var(--txt2)">${t.agente||'—'}</td>
         <td style="color:var(--txt2)">${t.dResp||'—'}</td>
         <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
         <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
       </tr>`;
     }).join('');
   }
-
-  const diagHtml=getDiagnosis(tickets);
-  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows(sortByAge(tickets))}</tbody></table></div>`+diagHtml;
+  const filterBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)">
+    <select class="sel" id="df-area" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las áreas</option>${[...new Set(tickets.map(t=>t.areaAsig).filter(Boolean))].sort().map(a=>`<option>${a}</option>`).join('')}</select>
+    <select class="sel" id="df-status" onchange="refilterDetail()" style="font-size:11px"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
+    <select class="sel" id="df-pri" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
+    <span style="font-size:11px;color:var(--txt3);align-self:center" id="df-count">${tickets.length} tickets</span>
+  </div>`;
+  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows(sortByAge(tickets))}</tbody></table></div>`+getDiagnosis(tickets);
 }
 
-// ── Render Soporte / Desarrollo ──────────────────────────────────────────────
-function renderArea(area,vid){
-  const key=area==='sop'?'Soporte 1':'Desarrollo 1',label=area==='sop'?'Soporte':'Desarrollo';
-  const list=[...T.filter(x=>x.assignee===key)].sort((a,b)=>b.score-a.score);
-  const crit=list.filter(x=>x.score>=350).length,ua=list.filter(x=>x.priority==='urgent'||x.priority==='high').length,sla=list.filter(x=>x.isSla).length;
-  // Sort by antigüedad desc, then score
-  list=[...list].sort((a,b)=>{
-    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
-    return db!==da?db-da:b.score-a.score;
-  });
-  const rows=list.map((x,i)=>{
-    const sc=x.score>=350?'#EF4444':x.score>=220?'#F59E0B':x.score>=200?'#4B9BFF':'#9ca3af';
-    const pr=PC[x.priority]||PC[''];
-    return`<tr onclick="om(${x.id})">
-      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${x.rangoStr||'—'}</td>
-      <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${x.tiempo||'—'}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td style="color:var(--txt2)">${x.agente||'—'}</td>
-      <td style="color:var(--txt2)">${x.dResp||'—'}</td>
-      <td><a href="https://dual.zendesk.com/agent/tickets/${x.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${x.id}</a></td>
-      <td style="max-width:180px">${x.subject||'—'}</td>
-      <td style="color:var(--txt2)">${x.org||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${x.score}</td>
-      <td style="font-size:11px;color:${sc}">${x.action.t}</td>
-    </tr>`;
-  }).join('');
-  el(vid).innerHTML=`
-    <div><div class="slbl">${label} — resumen del área</div>
-      <div class="akrow">
-        <div class="ak" style="background:#fef2f2;border-color:#fecaca"><div class="an" style="color:#dc2626">${crit}</div><div class="al" style="color:#dc2626">Crítico ≥350</div></div>
-        <div class="ak" style="background:#fffbeb;border-color:#fde68a"><div class="an" style="color:#d97706">${ua}</div><div class="al" style="color:#d97706">Urgente / Alto</div></div>
-        <div class="ak" style="background:var(--sur2);border-color:var(--bdr)"><div class="an" style="color:var(--txt2)">${sla}</div><div class="al" style="color:var(--txt2)">SLA vencido</div></div>
-      </div>
-    </div>
-    <div class="ccard">
-      <div class="ch"><span class="ct">${label} — tickets por score</span>
-        <div class="sg">
-          <span class="si" style="background:#fef2f2;border-color:#fecaca;color:#dc2626">≥350 Hoy</span>
-          <span class="si" style="background:#fffbeb;border-color:#fde68a;color:#d97706">220–349 Hoy</span>
-          <span class="si" style="background:#eff4ff;border-color:#bfdbfe;color:#2563eb">200–219 Mañana</span>
-          <span class="si" style="background:var(--sur2);border-color:var(--bdr);color:var(--txt3)">Esta semana</span>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th style="width:30px">#</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Prioridad</th><th>Agente</th><th>Desarrollador</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Score</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div>
-    </div>
-    ${getDiagnosis(list)}`;
+function refilterDetail(){
+  const fa=el('df-area')?.value||'',fs=el('df-status')?.value||'',fp=el('df-pri')?.value||'';
+  const base=window._detailTickets||[];
+  const list=base.filter(t=>{if(fa&&t.areaAsig!==fa)return false;if(fs&&t.status!==fs)return false;if(fp&&t.priority!==fp)return false;return true;}).sort((a,b)=>b.score-a.score);
+  const tbody=el('detail-tbl')?.querySelector('tbody');
+  if(tbody){
+    const sorted=[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
+    tbody.innerHTML=sorted.map((t,i)=>{
+      const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+      const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+      return`<tr onclick="om(${t.id})">
+        <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+        <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+        <td style="max-width:200px">${t.subject||'—'}</td>
+        <td style="color:var(--txt2)">${t.org||'—'}</td>
+        <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
+        <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+        <td style="color:var(--txt2)">${t.agente||'—'}</td>
+        <td style="color:var(--txt2)">${t.dResp||'—'}</td>
+        <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+      </tr>`;
+    }).join('');
+    const cnt=el('df-count');if(cnt)cnt.textContent=list.length+' tickets';
+  }
 }
 
-// ── Render Antigüedad ────────────────────────────────────────────────────────
-function renderAnt(){
-  const rangos=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
-  const etqs=[...new Set(T.map(t=>(HDR[12]?t.etiqueta||t.agente:t.agente)||'').filter(Boolean))];
-  const meses=[...new Set(T.map(t=>t.mesAnt).filter(Boolean))];
-  el('v-ant').innerHTML=`
-    <div class="charts-row">
-      <div class="ccard"><div class="ch"><span class="ct">Por rango</span></div><div class="cb" style="height:180px;position:relative"><canvas id="c-ar"></canvas></div></div>
-      <div class="ccard"><div class="ch"><span class="ct">Por tipo de cliente</span></div><div class="cb" style="height:180px;position:relative"><canvas id="c-at"></canvas></div></div>
-      <div class="ccard"><div class="ch"><span class="ct">Por mes</span></div><div class="cb" style="height:180px;position:relative"><canvas id="c-am"></canvas></div></div>
-    </div>
-    <div class="ccard">
-      <div class="ch"><span class="ct">Detalle de antigüedad</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <select class="sel" id="far" onchange="rafilt()"><option value="">Todos los rangos</option>${rangos.map(r=>`<option>${r}</option>`).join('')}</select>
-          <select class="sel" id="fat" onchange="rafilt()"><option value="">Todos los tipos</option>${etqs.map(r=>`<option>${r}</option>`).join('')}</select>
-          <select class="sel" id="fam" onchange="rafilt()"><option value="">Todos los meses</option>${meses.map(r=>`<option>${r}</option>`).join('')}</select>
-        </div>
-      </div>
-      <div class="tw" id="atbl"></div>
-    </div>`;
-  mkChart('c-ar','bar',rangos,rangos.map(r=>T.filter(t=>t.rangoStr===r).length),rangos.map(r=>getRangoColor(r)));
-  const etqCols=['#4B9BFF','#A855F7','#22C55E','#F59E0B','#EF4444'];
-  mkChart('c-at','doughnut',etqs,etqs.map(e=>T.filter(t=>(t.etiqueta||t.agente)===e).length),etqs.map((_,i)=>etqCols[i%5]));
-  mkChart('c-am','bar',meses,meses.map(m=>T.filter(t=>t.mesAnt===m).length),meses.map(()=>'#A855F7'));
-  rafilt();
-}
-function rafilt(){
-  const fr=el('far')?.value||'',ft=el('fat')?.value||'',fm=el('fam')?.value||'';
-  const list=T.filter(t=>{
-    if(fr&&t.rangoStr!==fr)return false;
-    const ae=t.etiqueta||t.agente;
-    if(ft&&ae!==ft)return false;
-    if(fm&&t.mesAnt!==fm)return false;
-    return true;
-  });
-  const rows=list.map(t=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    return`<tr onclick="om(${t.id})"><td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td><td>${t.subject||'—'}</td><td style="color:var(--txt2)">${t.org||'—'}</td><td style="font-family:var(--mono);color:#16a34a">${t.tiempo||'—'}</td><td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td><td style="color:var(--txt2)">${t.mesAnt||'—'}</td><td style="color:var(--txt2)">${t.agente||'—'}</td><td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td></tr>`;
-  }).join('');
-  if(el('atbl'))el('atbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>⏱ Tiempo</th><th>Rango</th><th>Mes</th><th>Agente</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
-}
-
-// ── Render Todos ─────────────────────────────────────────────────────────────
-function renderTod(){
-  const agents=[...new Set(T.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
-  el('v-tod').innerHTML=`<div class="ccard">
-    <div class="ch"><span class="ct">Todos los tickets</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <select class="sel" id="fst" onchange="tfilt()"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select>
-        <select class="sel" id="fpr" onchange="tfilt()"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
-        <select class="sel" id="fag" onchange="tfilt()"><option value="">Todos los agentes</option>${agents.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
-        <select class="sel" id="farea" onchange="tfilt()"><option value="">Todas las áreas</option><option value="Soporte 1">Soporte</option><option value="Desarrollo 1">Desarrollo</option></select>
-      </div>
-    </div>
-    <div class="tw" id="ttbl"></div>
-  </div>`;tfilt();
-}
-function tfilt(){
-  const fs=el('fst')?.value||'',fp=el('fpr')?.value||'',fa=el('fag')?.value||'',fr=el('farea')?.value||'';
-  const list=[...T].filter(t=>{
-    if(fs&&t.status!==fs)return false;if(fp&&t.priority!==fp)return false;
-    if(fa&&(t.agente||t.sResp)!==fa)return false;if(fr&&t.assignee!==fr)return false;
-    return true;
-  }).sort((a,b)=>b.score-a.score);
-  const rows=list.map(t=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-    return`<tr onclick="om(${t.id})">
-      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-      <td style="max-width:200px">${t.subject||'—'}</td><td style="color:var(--txt2)">${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-      <td style="font-family:var(--mono);color:#16a34a;font-size:11px">${t.tiempo||'—'}</td>
-      <td style="color:var(--txt2)">${t.agente||t.sResp||'—'}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-    </tr>`;
-  }).join('');
-  if(el('ttbl'))el('ttbl').innerHTML=`<table><thead><tr><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>⏱ Tiempo</th><th>Agente</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
-}
-
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ── Modal ────────────────────────────────────────────────────────────────────
 function om(id){
   const t=T.find(x=>x.id===id);if(!t)return;
   const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#6b7280';
   const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
   el('mb').innerHTML=`
-    <div class="mhdr">
-      <div class="mttl">${t.subject||'Ticket #'+t.id}</div>
-      <button class="mx" onclick="cm()">×</button>
-    </div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
-      ${bdg(st.t,st.c,st.bg)} ${bdg(pr.t,pr.c,pr.bg)}
-      ${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}
-    </div>
+    <div class="mhdr"><div class="mttl">${t.subject||'Ticket #'+t.id}</div><button class="mx" onclick="cm()">×</button></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">${bdg(st.t,st.c,st.bg)} ${bdg(pr.t,pr.c,pr.bg)} ${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</div>
     <div class="score-block" style="border-color:${sc}25">
       <div class="score-num" style="color:${sc}">${t.score}</div>
-      <div><div style="font-size:10px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Score</div>
-      <div style="font-size:13px;font-weight:600;color:var(--txt2)">${t.action.t}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Score</div><div style="font-size:13px;font-weight:600;color:var(--txt2)">${t.action.t}</div></div>
     </div>
     ${t.tiempo?`<div class="tbox"><div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:#16a34a">${t.tiempo}</div><div style="font-size:11px;color:var(--txt3);margin-top:2px">Tiempo en espera</div></div></div>`:''}
     <div class="mdv"></div>
@@ -847,50 +532,64 @@ function om(id){
 function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 
-
-
-// ── Render Operación Interna ─────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// ── Render Op. Interna ───────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
 function renderInt(){
-  const areas=[...new Set(T.map(t=>t.areaAsig).filter(Boolean))].sort();
-  const agents=[...new Set(T.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
-  const devs=[...new Set(T.map(t=>t.dResp).filter(Boolean))].sort();
+  const areas=[...new Set(T.map(t=>t.areaAsig).filter(a=>a&&!/sin\s+asignar|sin\s+clasificar/i.test(a)))].sort();
 
   el('v-int').innerHTML=`
     <div>
       <div class="slbl">KPIs de operación interna</div>
       <div class="kpi-grid" id="int-kpis"></div>
     </div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px;background:var(--sur2);border-radius:var(--r);border:1px solid var(--bdr)" id="int-filters">
-      <select class="sel" id="int-area" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
-        <option value="">Todas las áreas</option>${areas.map(a=>`<option>${a}</option>`).join('')}
-      </select>
-      <select class="sel" id="int-agent" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
-        <option value="">Todos los agentes</option>${agents.map(a=>`<option>${a}</option>`).join('')}
-      </select>
-      <select class="sel" id="int-dev" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
-        <option value="">Todos los desarrolladores</option>${devs.map(d=>`<option>${d}</option>`).join('')}
-      </select>
-      <select class="sel" id="int-pri" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
-        <option value="">Todas las prioridades</option>
-        <option value="urgent">Urgente</option><option value="high">Alto</option>
-        <option value="normal">Normal</option><option value="low">Bajo</option>
-      </select>
-      <select class="sel" id="int-st" onchange="intFilt()" style="font-size:11px;padding:5px 9px">
-        <option value="">Todos los estados</option>
-        <option value="open">Abierto</option><option value="pending">Pendiente</option>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--sur);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh)" id="int-filters">
+      <select class="sel" id="int-area" onchange="intAreaChange()" style="font-size:12px;padding:6px 10px;font-weight:600">
+        <option value="">Todas las áreas</option>
+        ${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
       </select>
       <button onclick="intFiltSeg()" id="int-seg-btn" style="background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);padding:5px 12px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">📭 Sin seguimiento +3d</button>
       <button onclick="intClear()" style="background:none;border:1px solid var(--bdr);color:var(--txt3);padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer;font-family:var(--font)">✕ Limpiar</button>
       <span style="font-size:11px;color:var(--txt3);align-self:center" id="int-count">${T.length} tickets</span>
     </div>
-    <div class="charts-row" id="int-charts"></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px" id="int-agent-cards"></div>
-    <div class="ccard">
+
+    <!-- Vista de tarjetas de agentes (se muestra cuando hay área seleccionada o todas) -->
+    <div id="int-agent-section">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px" id="int-agent-cards"></div>
+    </div>
+
+    <!-- Vista de detalle de un agente (oculta por defecto) -->
+    <div id="int-detail-section" style="display:none">
+      <div style="margin-bottom:12px">
+        <button class="back-btn" onclick="intBackToCards()">← Regresar</button>
+      </div>
+      <div class="ccard">
+        <div class="ch" id="int-detail-head" style="background:#eff4ff;border-bottom:1px solid #bfdbfe">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="int-detail-avatar" style="width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+            <div>
+              <div style="font-size:14px;font-weight:700" id="int-detail-name"></div>
+              <div style="font-size:11px;color:var(--txt3)" id="int-detail-sub"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="int-detail-count" style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px">0</span>
+            <button onclick="intDownloadAgent()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+          </div>
+        </div>
+        <!-- Mini KPIs del agente -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)" id="int-agent-kpis"></div>
+        <div class="tw" id="int-detail-tbl"></div>
+      </div>
+    </div>
+
+    <!-- Tabla global (sin agente seleccionado, sin área filtrada) -->
+    <div class="ccard" id="int-global-tbl-card" style="display:none">
       <div class="ch">
         <span class="ct" id="int-tbl-title">Detalle de tickets</span>
         <div style="display:flex;gap:6px;align-items:center">
-          <span class="detail-count" id="int-tbl-count" style="background:#fee2e2;color:#dc2626">0</span>
-          <button id="int-dl" onclick="intDownload()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+          <span id="int-tbl-count" style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px">0</span>
+          <button onclick="intDownload()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
         </div>
       </div>
       <div class="tw" id="int-tbl"></div>
@@ -899,6 +598,14 @@ function renderInt(){
 
   window._intSeg=false;
   window._intActiveAgent=null;
+  window._intCurrentArea='';
+  intFilt();
+}
+
+function intAreaChange(){
+  window._intActiveAgent=null;
+  el('int-detail-section').style.display='none';
+  el('int-agent-section').style.display='';
   intFilt();
 }
 
@@ -910,59 +617,47 @@ function intFiltSeg(){
 }
 
 function intClear(){
-  ['int-area','int-agent','int-dev','int-pri','int-st'].forEach(id=>{const e=el(id);if(e)e.value='';});
-  window._intSeg=false;
+  const a=el('int-area');if(a)a.value='';
+  window._intSeg=false;window._intActiveAgent=null;window._intCurrentArea='';
   const btn=el('int-seg-btn');
   if(btn){btn.style.background='var(--acc2)';btn.style.color='var(--acc)';}
+  el('int-detail-section').style.display='none';
+  el('int-agent-section').style.display='';
   intFilt();
 }
 
 function intFilt(){
   const fa=el('int-area')?.value||'';
-  const fag=el('int-agent')?.value||'';
-  const fd=el('int-dev')?.value||'';
-  const fp=el('int-pri')?.value||'';
-  const fs=el('int-st')?.value||'';
   const fseg=window._intSeg||false;
+  window._intCurrentArea=fa;
 
-  const activeAg=window._intActiveAgent||'';
-  let list=T.filter(t=>{
+  // Lista base según filtros globales
+  let baseList=T.filter(t=>{
     if(fa&&t.areaAsig!==fa)return false;
-    if(activeAg&&t.agente!==activeAg)return false;
-    else if(!activeAg&&fag&&(t.agente||t.sResp)!==fag)return false;
-    if(fd&&t.dResp!==fd)return false;
-    if(fp&&t.priority!==fp)return false;
-    if(fs&&t.status!==fs)return false;
     if(fseg&&!t.sinSeguimiento)return false;
     return true;
   });
 
-  // Sort by age desc
-  list=[...list].sort((a,b)=>{
-    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
-    return db!==da?db-da:b.score-a.score;
-  });
+  window._intList=baseList;
+  const cnt=el('int-count');if(cnt)cnt.textContent=baseList.length+' tickets';
 
-  window._intList=list;
-  const cnt=el('int-count');if(cnt)cnt.textContent=list.length+' tickets';
-
-  // ── KPIs
+  // ── KPIs dinámicos (reflejan el área seleccionada) ──
   const kpisEl=el('int-kpis');
   if(kpisEl){
-    const urg=list.filter(t=>t.priority==='urgent').length;
-    const hi=list.filter(t=>t.priority==='high').length;
-    const sinSeg=list.filter(t=>t.sinSeguimiento).length;
-    const sla=list.filter(t=>t.isSla).length;
-    const criticos=list.filter(t=>t.score>=350).length;
-    const sinR=list.filter(t=>t.isSinAsignar).length;
-    const tot=list.length||1;
+    const tot=baseList.length||1;
+    const urg=baseList.filter(t=>t.priority==='urgent').length;
+    const hi=baseList.filter(t=>t.priority==='high').length;
+    const sinSeg=baseList.filter(t=>t.sinSeguimiento).length;
+    const sla=baseList.filter(t=>t.isSla).length;
+    const criticos=baseList.filter(t=>t.score>=350).length;
+    const sinR=baseList.filter(t=>t.isSinAsignar).length;
     const kpis=[
-      {l:'Total tickets',v:list.length,c:'#2563eb',pct:100},
-      {l:'Sin seguimiento +3d',v:sinSeg,c:'#e11d48',pct:Math.round(sinSeg/tot*100)},
-      {l:'Vencidos SLA +7d',v:sla,c:'#d97706',pct:Math.round(sla/tot*100)},
-      {l:'Urgente / Alto',v:urg+hi,c:'#FF5C5C',pct:Math.round((urg+hi)/tot*100)},
-      {l:'Score crítico ≥350',v:criticos,c:'#EF4444',pct:Math.round(criticos/tot*100)},
-      {l:'Sin responsable',v:sinR,c:'#7c3aed',pct:Math.round(sinR/tot*100)},
+      {l:'Total tickets',      v:baseList.length, c:'#2563eb', pct:100},
+      {l:'Sin seguimiento +3d',v:sinSeg,          c:'#e11d48', pct:Math.round(sinSeg/tot*100)},
+      {l:'Vencidos SLA +7d',   v:sla,             c:'#d97706', pct:Math.round(sla/tot*100)},
+      {l:'Urgente / Alto',     v:urg+hi,          c:'#FF5C5C', pct:Math.round((urg+hi)/tot*100)},
+      {l:'Score crítico ≥350', v:criticos,        c:'#EF4444', pct:Math.round(criticos/tot*100)},
+      {l:'Sin responsable',    v:sinR,            c:'#7c3aed', pct:Math.round(sinR/tot*100)},
     ];
     kpisEl.innerHTML=kpis.map(k=>`<div class="kc" style="cursor:default">
       <div class="kc-val" style="color:${k.c}">${k.v}</div>
@@ -972,223 +667,153 @@ function intFilt(){
     </div>`).join('');
   }
 
-  // ── Charts
-  const chartsEl=el('int-charts');
-  if(chartsEl){
-    const areaMap={};list.forEach(t=>{const a=t.areaAsig||'Sin área';areaMap[a]=(areaMap[a]||0)+1;});
-    const areaS=Object.entries(areaMap).sort((a,b)=>b[1]-a[1]);
-    const agMap={};list.forEach(t=>{const a=t.agente||t.sResp||'Sin asignar';agMap[a]=(agMap[a]||0)+1;});
-    const agS=Object.entries(agMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const aH=Math.max(150,agS.length*32);
-    chartsEl.innerHTML=`
-      <div class="ccard">
-        <div class="ch"><span class="ct">Tickets por área</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div>
-        <div class="cb"><div style="position:relative;height:160px"><canvas id="int-ca"></canvas></div></div>
-      </div>
-      <div class="ccard">
-        <div class="ch"><span class="ct">Tickets por agente</span><span style="font-size:10px;color:var(--txt3)">${list.length} total</span></div>
-        <div class="cb"><div style="position:relative;height:${aH}px"><canvas id="int-cag"></canvas></div></div>
-      </div>`;
-    setTimeout(()=>{
-      const areaColors={'Customer':'#4B9BFF','Implementación':'#A855F7','Implementacion':'#A855F7','Desarrollo':'#22C55E','Soporte':'#F59E0B','publicaciones':'#EF4444','Sin área':'#9ca3af'};
-      if(CH['int-ca'])CH['int-ca'].destroy();
-      if(CH['int-cag'])CH['int-cag'].destroy();
-      const ca=el('int-ca');
-      if(ca)CH['int-ca']=new Chart(ca,{type:'bar',data:{labels:areaS.map(x=>x[0]),datasets:[{data:areaS.map(x=>x[1]),backgroundColor:areaS.map(x=>areaColors[x[0]]||'#6b7280'),borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,onClick:(e,els)=>{if(els.length){const v=areaS[els[0].index][0];el('int-area').value=v;intFilt();}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}}});
-      const cag=el('int-cag');
-      if(cag)CH['int-cag']=new Chart(cag,{type:'bar',data:{labels:agS.map(x=>x[0]),datasets:[{data:agS.map(x=>x[1]),backgroundColor:'#4B9BFF',borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(e,els)=>{if(els.length){const v=agS[els[0].index][0];el('int-agent').value=v;intFilt();}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}}});
-    },100);
-  }
+  // ── Tarjetas de agentes ──────────────────────────────────────────────────
+  // Lógica:
+  //   - Si área = Desarrollo → agentes únicos de col M que tienen tickets en esa área
+  //   - Si área = otra (Soporte, Customer, Implementación, etc.) → col M, validado por col N === área
+  //   - Sin filtro de área → todos los agentes únicos de col M (excluyendo "No"/vacíos)
 
-  // ── Agent cards (col M only, exclude No/empty)
   const cardsEl=el('int-agent-cards');
   if(cardsEl){
-    const allAgents=[...new Set(list.map(t=>t.agente).filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!==''))].sort();
-    cardsEl.innerHTML=allAgents.map(ag=>{
-      const atks=list.filter(t=>t.agente===ag);
+    let agentList=[];
+    if(fa){
+      // Agentes que tienen al menos 1 ticket en el área seleccionada (validado por col N)
+      agentList=[...new Set(
+        baseList
+          .filter(t=>t.areaAsig===fa)
+          .map(t=>t.agente)
+          .filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!=='')
+      )].sort();
+    } else {
+      // Sin filtro: todos los agentes de col M
+      agentList=[...new Set(
+        T.map(t=>t.agente).filter(a=>a&&a.toLowerCase()!=='no'&&a.trim()!=='')
+      )].sort();
+    }
+
+    cardsEl.innerHTML=agentList.map(ag=>{
+      // Tickets del agente dentro del filtro actual
+      const atks=baseList.filter(t=>t.agente===ag);
+      if(!atks.length)return'';
       const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
       const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
-      const avgScore=atks.length?Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length):0;
+      const avgScore=Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length);
       const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
       const devs2=[...new Set(atks.map(t=>t.dResp).filter(d=>d&&d.toLowerCase()!=='no'))];
-      const pct=list.length?Math.round(atks.length/list.length*100):0;
+      const pct=baseList.length?Math.round(atks.length/baseList.length*100):0;
       const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
       const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
       const isActive=window._intActiveAgent===ag;
-      return`<div class="kc" style="cursor:pointer;padding:14px;${isActive?'border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe,var(--sh2)':''}" onclick="intAgentClick('${ag.replace(/'/g,"\'")}')">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div style="width:32px;height:32px;border-radius:50%;background:${isActive?'#2563eb':'#dbeafe'};color:${isActive?'#fff':'#1e40af'};font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
-          <div><div style="font-size:13px;font-weight:600">${ag}</div><div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}%</div></div>
+      return`<div class="kc${isActive?' agent-card-active':''}" style="cursor:pointer;padding:16px" onclick="intAgentClick('${ag.replace(/'/g,"\\'")}')">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'#2563eb':'#dbeafe'};color:${isActive?'#fff':'#1e40af'};font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--txt)">${ag}</div>
+            <div style="font-size:10px;color:var(--txt3)">${atks.length} tickets · ${pct}%</div>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span><span style="font-size:11px;font-weight:600;color:${segColor}">${asinSeg}</span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span><span style="font-size:11px;font-weight:600;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;color:var(--txt2)">Score promedio</span><span style="font-size:11px;font-weight:600">${avgScore}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:11px;color:var(--txt2)">Sin seguimiento +3d</span>
+          <span style="font-size:12px;font-weight:700;color:${segColor}">${asinSeg}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:11px;color:var(--txt2)">Urgente / Alto</span>
+          <span style="font-size:12px;font-weight:700;color:${aurghi>0?'#d97706':'#16a34a'}">${aurghi}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:11px;color:var(--txt2)">Score promedio</span>
+          <span style="font-size:12px;font-weight:700">${avgScore}</span>
+        </div>
         <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:${isActive?'#2563eb':'#4B9BFF'}"></div></div>
-        <div style="margin-top:7px;display:flex;gap:4px;flex-wrap:wrap">
+        <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
           ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
           ${devs2.length?`<span style="font-size:10px;color:var(--txt3)">Dev: ${devs2.slice(0,2).join(', ')}</span>`:''}
         </div>
-        <div style="margin-top:8px;font-size:10px;color:var(--acc);font-weight:500;text-align:center">${isActive?'▲ Ocultar tickets':'▼ Ver tickets'}</div>
+        <div style="margin-top:10px;text-align:center;font-size:10px;font-weight:600;color:var(--acc)">▼ Ver tickets</div>
       </div>`;
     }).join('');
   }
 
-  // ── Table
-  // Update table title
-  const titleEl2=el('int-tbl-title');
-  if(titleEl2){
-    if(window._intActiveAgent) titleEl2.textContent='Tickets de '+window._intActiveAgent;
-    else titleEl2.textContent='Detalle de tickets';
+  // Si hay agente activo, renderizar su detalle
+  if(window._intActiveAgent){
+    intRenderAgentDetail(window._intActiveAgent,baseList);
   }
-  const tblEl=el('int-tbl');
-  const cntEl=el('int-tbl-count');
-  if(cntEl){cntEl.textContent=list.length;cntEl.style.cssText='background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';}
-  if(!tblEl)return;
-  const rows=list.map((t,i)=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-    const segFlag=t.sinSeguimiento?`<span class="b" style="background:#fef2f2;color:#e11d48;font-size:9px">+3d</span>`:'';
-    const ultSeg=t.ultimoSeg?fmtDate(t.ultimoSeg):'—';
-    return`<tr onclick="om(${t.id})">
-      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
-      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-      <td style="max-width:180px">${t.subject||'—'}</td>
-      <td style="color:var(--txt2)">${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
-      <td style="font-size:11px">${ultSeg} ${segFlag}</td>
-      <td style="color:var(--txt2)">${t.agente||'—'}</td>
-      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-    </tr>`;
-  }).join('');
-  tblEl.innerHTML=`<table><thead><tr>
-    <th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th>
-    <th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th>
-    <th>Último seguimiento</th><th>Agente (col M)</th><th>Desarrollador (col U)</th><th>Área</th><th>Score</th>
-  </tr></thead><tbody>${rows||'<tr><td colspan="13" class="empty">Sin resultados</td></tr>'}</tbody></table>`;
-
-  // Diagnosis
-  const diagEl=el('int-diag');
-  if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="int-diag-box"');
 }
 
 function intAgentClick(ag){
-  if(window._intActiveAgent===ag){
-    window._intActiveAgent=null;
-  } else {
-    window._intActiveAgent=ag;
-    // Filter agent in selector
-    const sel=el('int-agent');
-    if(sel){sel.value=ag;}
-  }
+  window._intActiveAgent=ag;
+  // Ocultar sección global, mostrar detalle
+  el('int-detail-section').style.display='';
+  el('int-global-tbl-card').style.display='none';
+  // Re-render cards para marcar activo
   intFilt();
-  if(window._intActiveAgent){
-    // Scroll to detail table
-    setTimeout(()=>{
-      const tbl=el('int-tbl');
-      if(tbl)tbl.closest('.ccard')?.scrollIntoView({behavior:'smooth',block:'start'});
-    },200);
-  }
+  // Scroll al detalle
+  setTimeout(()=>{
+    const d=el('int-detail-section');
+    if(d)d.scrollIntoView({behavior:'smooth',block:'start'});
+  },150);
 }
 
-function intDownload(){
-  const list=window._intList||[];
-  downloadCSV(list,'operacion_interna');
+function intBackToCards(){
+  window._intActiveAgent=null;
+  el('int-detail-section').style.display='none';
+  // Re-render para limpiar estado activo en tarjetas
+  intFilt();
+  // Scroll a la sección de tarjetas
+  setTimeout(()=>{
+    const c=el('int-agent-cards');
+    if(c)c.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
 }
 
-// ── Render Operación por Área ─────────────────────────────────────────────
-function renderOp(){
-  const areas=[...new Set(T.map(t=>t.areaAsig).filter(Boolean))].sort();
-  const agents=[...new Set(T.map(t=>t.agente||t.sResp).filter(Boolean))].sort();
-  const meses=[...new Set(T.map(t=>t.mesAnt||t.mes).filter(Boolean))];
-
-  el('v-op').innerHTML=`
-    <div>
-      <div class="slbl">Operación por área — resumen detallado</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <select class="sel" id="op-area" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
-          <option value="">Todas las áreas</option>
-          ${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
-        </select>
-        <select class="sel" id="op-agent" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
-          <option value="">Todos los agentes</option>
-          ${agents.map(a=>`<option value="${a}">${a}</option>`).join('')}
-        </select>
-        <select class="sel" id="op-seg" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
-          <option value="">Todos los seguimientos</option>
-          <option value="1">Sin seguimiento +3d</option>
-          <option value="0">Con seguimiento reciente</option>
-        </select>
-        <select class="sel" id="op-pri" onchange="opFilt()" style="font-size:12px;padding:6px 10px">
-          <option value="">Todas las prioridades</option>
-          <option value="urgent">Urgente</option>
-          <option value="high">Alto</option>
-          <option value="normal">Normal</option>
-          <option value="low">Bajo</option>
-        </select>
-        <span style="font-size:12px;color:var(--txt3);align-self:center" id="op-count">${T.length} tickets</span>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="op-kpis"></div>
-    <div class="ccard">
-      <div class="ch"><span class="ct" id="op-title">Todos los tickets</span></div>
-      <div class="tw" id="op-tbl"></div>
-      <div id="op-diag"></div>
-    </div>`;
-  opFilt();
-}
-
-function opFilt(){
-  const fa=el('op-area')?.value||'';
-  const fag=el('op-agent')?.value||'';
-  const fs=el('op-seg')?.value||'';
-  const fp=el('op-pri')?.value||'';
-  let list=T.filter(t=>{
-    if(fa&&t.areaAsig!==fa)return false;
-    if(fag&&(t.agente||t.sResp)!==fag)return false;
-    if(fs==='1'&&!t.sinSeguimiento)return false;
-    if(fs==='0'&&t.sinSeguimiento)return false;
-    if(fp&&t.priority!==fp)return false;
-    return true;
-  });
-  // Sort by antigüedad desc
-  list=[...list].sort((a,b)=>{
+function intRenderAgentDetail(ag,baseList){
+  const atks=[...baseList.filter(t=>t.agente===ag)].sort((a,b)=>{
     const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
     return db!==da?db-da:b.score-a.score;
   });
+  window._intAgentTickets=atks;
 
-  const cnt=el('op-count');if(cnt)cnt.textContent=list.length+' tickets';
-  const titleEl=el('op-title');if(titleEl)titleEl.textContent=(fa||'Todas las áreas')+(fag?' · '+fag:'');
+  const detailSection=el('int-detail-section');
+  if(detailSection)detailSection.style.display='';
 
-  // Mini KPIs
-  const kpisEl=el('op-kpis');
+  const nameEl=el('int-detail-name');if(nameEl)nameEl.textContent=ag;
+  const subEl=el('int-detail-sub');if(subEl)subEl.textContent=atks.length+' tickets';
+  const cntEl=el('int-detail-count');if(cntEl)cntEl.textContent=atks.length;
+  const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+  const avEl=el('int-detail-avatar');if(avEl)avEl.textContent=initials;
+
+  // Mini KPIs del agente
+  const kpisEl=el('int-agent-kpis');
   if(kpisEl){
-    const urg=list.filter(t=>t.priority==='urgent').length;
-    const hi=list.filter(t=>t.priority==='high').length;
-    const sinSeg=list.filter(t=>t.sinSeguimiento).length;
-    const criticos=list.filter(t=>t.score>=350).length;
-    const sinR=list.filter(t=>t.isSinAsignar).length;
-    kpisEl.innerHTML=[
-      {l:'Total',v:list.length,c:'#2563eb'},
-      {l:'Urgentes',v:urg,c:'#FF5C5C'},
-      {l:'Alta prioridad',v:hi,c:'#FF9A3C'},
+    const tot=atks.length||1;
+    const sinSeg=atks.filter(t=>t.sinSeguimiento).length;
+    const ug=atks.filter(t=>t.priority==='urgent').length;
+    const hi=atks.filter(t=>t.priority==='high').length;
+    const sla=atks.filter(t=>t.isSla).length;
+    const crit=atks.filter(t=>t.score>=350).length;
+    [
+      {l:'Total',v:atks.length,c:'#2563eb'},
       {l:'Sin seguimiento +3d',v:sinSeg,c:'#e11d48'},
-      {l:'Score crítico ≥350',v:criticos,c:'#EF4444'},
-      {l:'Sin responsable',v:sinR,c:'#7c3aed'},
-    ].map(k=>`<div class="kc" style="cursor:default;padding:12px 14px">
-      <div class="kc-val" style="color:${k.c};font-size:26px">${k.v}</div>
-      <div class="kc-lbl" style="font-size:11px">${k.l}</div>
+      {l:'SLA vencido',v:sla,c:'#d97706'},
+      {l:'Urgente / Alto',v:ug+hi,c:'#FF5C5C'},
+      {l:'Score crítico ≥350',v:crit,c:'#EF4444'},
+    ].forEach(k=>{/* built below */});
+    kpisEl.innerHTML=[
+      {l:'Total',          v:atks.length, c:'#2563eb'},
+      {l:'Sin seguim. +3d',v:sinSeg,      c:'#e11d48'},
+      {l:'SLA vencido',    v:sla,         c:'#d97706'},
+      {l:'Urgente / Alto', v:ug+hi,       c:'#FF5C5C'},
+      {l:'Crítico ≥350',   v:crit,        c:'#EF4444'},
+    ].map(k=>`<div style="text-align:center;padding:6px 4px">
+      <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${k.c}">${k.v}</div>
+      <div style="font-size:10px;font-weight:600;color:var(--txt3);margin-top:2px">${k.l}</div>
     </div>`).join('');
   }
 
-  // Table
-  const tblEl=el('op-tbl');
+  // Tabla de tickets del agente
+  const tblEl=el('int-detail-tbl');
   if(!tblEl)return;
-  const rows=list.map((t,i)=>{
+  const rows=atks.map((t,i)=>{
     const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
     const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
     const segFlag=t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px">+3d</span>`:'';
@@ -1201,142 +826,97 @@ function opFilt(){
       <td>${bdg(pr.t,pr.c,pr.bg)}</td>
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
-      <td style="color:var(--txt2);font-size:11px">${fmtDate(t.ultimoSeg)||'—'} ${segFlag}</td>
-      <td style="color:var(--txt2)">${t.agente||'—'}</td>
+      <td style="font-size:11px">${fmtDate(t.ultimoSeg)||'—'} ${segFlag}</td>
       <td style="color:var(--txt2)">${t.dResp||'—'}</td>
       <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
     </tr>`;
   }).join('');
-
   tblEl.innerHTML=`<table><thead><tr>
     <th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th>
     <th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th>
-    <th>Último seguimiento</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th>
-  </tr></thead><tbody>${rows||'<tr><td colspan="13" class="empty">Sin resultados con estos filtros</td></tr>'}</tbody></table>`;
-
-  const diagEl=el('op-diag');
-  if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="op-diag-inner"');
+    <th>Último seguimiento</th><th>Desarrollador</th><th>Área</th><th>Score</th>
+  </tr></thead><tbody>${rows||'<tr><td colspan="12" class="empty">Sin tickets</td></tr>'}</tbody></table>`;
 }
+
+function intDownload(){const list=window._intList||[];downloadCSV(list,'operacion_interna');}
+function intDownloadAgent(){const list=window._intAgentTickets||[];downloadCSV(list,'agente_'+( window._intActiveAgent||'').replace(/\s+/g,'_'));}
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','int','sop','dev','ant','tod','op'][i]===tab));
-  ['ind','int','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','int'][i]===tab));
+  ['ind','int'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='ind')renderInd();
   else if(tab==='int')renderInt();
-  else if(tab==='sop')renderArea('sop','v-sop');
-  else if(tab==='dev')renderArea('dev','v-dev');
-  else if(tab==='ant')renderAnt();
-  else if(tab==='tod')renderTod();
-  else if(tab==='op')renderOp();
 }
 
-// ── Load ──────────────────────────────────────────────────────────────────────
+// ── Utilidades ────────────────────────────────────────────────────────────────
 async function fetchCSV(csvUrl){
-  const url = csvUrl.includes('?') ? csvUrl + '&cachebust=' + Date.now() : csvUrl + '?cachebust=' + Date.now();
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const text = await res.text();
-  return parseCSV(text);
+  const url=csvUrl.includes('?')?csvUrl+'&cachebust='+Date.now():csvUrl+'?cachebust='+Date.now();
+  const res=await fetch(url);if(!res.ok)throw new Error('HTTP '+res.status);
+  return parseCSV(await res.text());
 }
 
 function fmtDate(str){
-  if(!str||str==='—')return'—';
-  const d=new Date(str);
-  if(isNaN(d))return str;
-  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const day=String(d.getDate()).padStart(2,'0');
-  const mon=months[d.getMonth()];
-  const yr=d.getFullYear();
-  const h=String(d.getHours()).padStart(2,'0');
-  const m=String(d.getMinutes()).padStart(2,'0');
-  return day+' '+mon+' '+yr+' '+h+':'+m;
+  if(!str||str==='—')return'—';const d=new Date(str);if(isNaN(d))return str;
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
-
 function fmtDateShort(str){
-  if(!str)return'—';
-  const d=new Date(str);
-  if(isNaN(d))return str;
-  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const day=String(d.getDate()).padStart(2,'0');
-  return day+' '+months[d.getMonth()]+' '+d.getFullYear();
+  if(!str)return'—';const d=new Date(str);if(isNaN(d))return str;
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear();
 }
-
-function downloadCSV(tickets, filename){
+function downloadCSV(tickets,filename){
   if(!tickets.length)return;
   const cols=['id','subject','org','status','priority','rangoStr','agente','dResp','areaAsig','score','created','ultimoSeg'];
   const heads=['Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Área','Score','Creado','Último seguimiento'];
-  const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{
-    const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');
-    return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;
-  }).join(','))];
-  const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=filename+'.csv';
-  a.click();
+  const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))];
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));a.download=filename+'.csv';a.click();
 }
-
 function parseCSV(text){
-  const lines = text.split('\n');
-  function clean(v){return (v||'').replace(/^"|"$/g,'').trim();}
-
-  // Find header row: contains 'ID' and 'Estado'/'Status' in any column
-  let hi = -1;
-  for(let i = 0; i < Math.min(10, lines.length); i++){
-    const r = csvLine(lines[i]).map(v => clean(v).toLowerCase());
-    if(r.some(v=>v==='id') && r.some(v=>['estado','status','prioridad','priority'].includes(v))){
-      hi = i; break;
-    }
+  const lines=text.split('\n');
+  function clean(v){return(v||'').replace(/^"|"$/g,'').trim();}
+  let hi=-1;
+  for(let i=0;i<Math.min(10,lines.length);i++){
+    const r=csvLine(lines[i]).map(v=>clean(v).toLowerCase());
+    if(r.some(v=>v==='id')&&r.some(v=>['estado','status','prioridad','priority'].includes(v))){hi=i;break;}
   }
-  if(hi < 0) return {rows:[], headers:[]};
-
-  const headers = csvLine(lines[hi]).map(v => clean(v));
-  // Find index of ID column
-  const idIdx = headers.findIndex(h => h.toLowerCase() === 'id');
-
-  const rows = [];
-  for(let i = hi + 1; i < lines.length; i++){
-    const line = lines[i];
-    if(!line.trim()) continue;
-    const vals = csvLine(line);
-    const idVal = clean(vals[idIdx] || '');
-    // Only include rows where ID column is a 6-7 digit ticket number
-    if(!/^\d{5,7}$/.test(idVal)) continue;
-    const row = {};
-    headers.forEach((h, j) => { if(h) row[h] = clean(vals[j]); });
-    rows.push(row);
+  if(hi<0)return{rows:[],headers:[]};
+  const headers=csvLine(lines[hi]).map(v=>clean(v));
+  const idIdx=headers.findIndex(h=>h.toLowerCase()==='id');
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const line=lines[i];if(!line.trim())continue;
+    const vals=csvLine(line);
+    const idVal=clean(vals[idIdx]||'');
+    if(!/^\d{5,7}$/.test(idVal))continue;
+    const row={};headers.forEach((h,j)=>{if(h)row[h]=clean(vals[j]);});rows.push(row);
   }
-  return { rows, headers };
+  return{rows,headers};
 }
-
 function csvLine(line){
-  const r = []; let cur = '', q = false;
-  for(let i = 0; i < line.length; i++){
-    const ch = line[i];
-    if(ch === '"'){ if(q && line[i+1] === '"'){cur+='"';i++;}else q=!q; }
-    else if(ch === ',' && !q){ r.push(cur); cur = ''; }
-    else cur += ch;
-  }
-  r.push(cur);
-  return r;
+  const r=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}
+    else if(ch===','&&!q){r.push(cur);cur='';}
+    else cur+=ch;
+  }r.push(cur);return r;
 }
-
-
 function safeSet(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
-  ['ind','sop','dev','ant','tod'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  ['ind','int'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   AKPI=null;CHART_FILTER={type:null,value:null};
   try{
     el('ls').textContent='Leyendo Ant_Tickets…';
-    const {rows, headers: hdrs} = await fetchCSV(API);
-    T=mapRows(rows, hdrs);
+    const{rows,headers:hdrs}=await fetchCSV(API);
+    T=mapRows(rows,hdrs);
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
@@ -1344,26 +924,17 @@ async function loadData(){
     safeSet('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
     safeSet('nb-ind',T.length);
     safeSet('nb-int',T.length);
-    safeSet('nb-sop',T.filter(t=>t.assignee==='Soporte 1').length);
-    safeSet('nb-dev',T.filter(t=>t.assignee==='Desarrollo 1').length);
-    safeSet('nb-tod',T.length);
     el('ldr').style.display='none';
-    // Show view first so elements exist when render functions run
-    ['ind','int','sop','dev','ant','tod','op'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+    ['ind','int'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
     const v=el('v-'+TAB);if(v)v.classList.add('on');
-    // Use setTimeout to ensure DOM is updated before rendering
     setTimeout(()=>{
       if(TAB==='ind')renderInd();
       else if(TAB==='int')renderInt();
-      else if(TAB==='sop')renderArea('sop','v-sop');
-      else if(TAB==='dev')renderArea('dev','v-dev');
-      else if(TAB==='ant')renderAnt();
-      else if(TAB==='tod')renderTod();
-      else if(TAB==='op')renderOp();
     },10);
   }catch(e){
     el('ldr').style.display='none';
-    const v=el('v-ind');if(v){v.classList.add('on');v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div><button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button></div>`;}
+    const v=el('v-ind');
+    if(v){v.classList.add('on');v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div><button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button></div>`;}
     TAB='ind';document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',i===0));
   }finally{btn.disabled=false;btn.classList.remove('spin');}
 }
