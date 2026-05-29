@@ -710,10 +710,14 @@ function intFilt(){
   if(fa){
     // Agentes únicos de col M cuya col N === área seleccionada (sin "No"/vacíos)
     const agMap={};
-    T.filter(t=>t.areaAsig===fa && t.agente && t.agente.toLowerCase()!=='no' && t.agente.trim()!=='')
+    // Coincidencia EXACTA col N → agentes de col M
+    T.filter(t=>t.areaAsig===fa)
+     .filter(t=>{
+       const a=(t.agente||'').trim();
+       return a!==''&&a.toLowerCase()!=='no'&&!/sin\s+asignar|ticket\s+sin/i.test(a);
+     })
      .forEach(t=>{
        const ag=t.agente.trim();
-       // Solo contamos tickets que también pasan el filtro sin seguimiento si aplica
        if(fseg && !t.sinSeguimiento)return;
        agMap[ag]=(agMap[ag]||0)+1;
      });
@@ -736,9 +740,11 @@ function intFilt(){
       agSection.style.display='';
       // Agentes = col M únicos de los tickets donde col N === área seleccionada
       // (usando T completo para obtener todos los agentes del área, no solo los filtrados por sin-seguimiento)
+      // Coincidencia EXACTA: col N === área seleccionada → únicos de col M
       const agentList=[...new Set(
-        T.filter(t=>t.areaAsig===fa && t.agente && t.agente.toLowerCase()!=='no' && t.agente.trim()!=='')
-         .map(t=>t.agente.trim())
+        T.filter(t=>t.areaAsig===fa)
+         .map(t=>(t.agente||'').trim())
+         .filter(a=>a!==''&&a.toLowerCase()!=='no'&&!/sin\s+asignar|ticket\s+sin/i.test(a))
       )].sort();
 
       const cardsEl=el('int-agent-cards');
@@ -911,6 +917,7 @@ function intRenderAgentDetail(ag, baseList){
   // TODOS los tickets del agente en el área filtrada (no solo sin seguimiento)
   const fa=el('int-area')?.value||'';
   // Siempre mostrar todos los tickets del agente en su área, independiente del filtro sin-seguimiento
+  // Todos los tickets donde col M === agente Y col N === área (coincidencia exacta)
   const allAgentTickets=[...T.filter(t=>t.agente===ag && (fa?t.areaAsig===fa:true))].sort((a,b)=>{
     const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
     return db!==da?db-da:b.score-a.score;
@@ -1046,8 +1053,6 @@ async function loadData(){
     el('ls').textContent='Leyendo Ant_Tickets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
     T=mapRows(rows,hdrs);
-    console.log('HEADERS:', hdrs.slice(10,22));
-    console.log('SAMPLE agente/area:', T.slice(0,5).map(t=>({id:t.id,agente:t.agente,area:t.areaAsig})));
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
