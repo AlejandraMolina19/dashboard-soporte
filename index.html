@@ -1079,17 +1079,9 @@ async function loadData(){
     el('ls').textContent='Leyendo Ant_Tickets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
     T=mapRows(rows,hdrs);
-    // Debug: mostrar en pantalla qué columnas se detectaron
-    function norm2(s){return(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();}
-    const mIdx=hdrs.findIndex(h=>norm2(h).includes('traduccion')&&norm2(h).includes('agente'));
-    const nIdx=hdrs.findIndex(h=>norm2(h).includes('etiqueta'));
-    console.log('=== DEBUG COLS ===');
-    console.log('M idx:',mIdx,'val:',hdrs[mIdx],'| N idx:',nIdx,'val:',hdrs[nIdx]);
-    console.log('All headers:', hdrs.join(' | '));
-    if(T.length>0){
-      const sample=T.slice(0,3).map(t=>t.agente+'//'+t.areaAsig);
-      console.log('Sample agente//area:', sample);
-    }
+    console.log('AREAS UNICAS:',[...new Set(T.map(t=>t.areaAsig))]);
+    console.log('AGENTES UNICOS:',[...new Set(T.map(t=>t.agente))]);
+    console.log('SAMPLE 5:', T.slice(0,5).map(t=>({ag:t.agente,area:t.areaAsig})));
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
