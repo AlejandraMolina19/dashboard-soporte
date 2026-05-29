@@ -1046,6 +1046,8 @@ async function loadData(){
     el('ls').textContent='Leyendo Ant_Tickets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
     T=mapRows(rows,hdrs);
+    console.log('HEADERS:', hdrs.slice(10,22));
+    console.log('SAMPLE agente/area:', T.slice(0,5).map(t=>({id:t.id,agente:t.agente,area:t.areaAsig})));
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
