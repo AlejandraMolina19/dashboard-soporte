@@ -204,12 +204,22 @@ function isSinSeguimiento(fechaStr,now){
 function mapRows(rows,headers){
   if(!rows.length)return[];
   HDR=headers||Object.keys(rows[0]);
-  const colE=HDR[4]||'';   // Último seguimiento
-  const colG=HDR[6]||'';   // Empresa
-  const colK=HDR[10]||'';  // Creado
-  const colM=HDR[12]||'';  // Agente (SIEMPRE col M)
-  const colN=HDR[13]||'';  // Área asignada (col N)
-  const colU=HDR[20]||'';  // Desarrollador
+  // Buscar columnas por nombre exacto del header (más robusto que posición fija)
+  function findCol(patterns){
+    const idx=HDR.findIndex(h=>patterns.some(p=>h.toLowerCase().includes(p.toLowerCase())));
+    return idx>=0?HDR[idx]:'';
+  }
+  // Col M = "traducción de agente" (nombre operativo del agente)
+  const colM=findCol(['traducción de agente','traduccion de agente','traducción agente']);
+  // Col N = "ETIQUETA" (área del ticket)
+  const colN=findCol(['etiqueta','ETIQUETA']);
+  // Resto por posición o nombre
+  const colE=findCol(['actualización','actualizacion','último seguimiento','ultima actualizacion'])||HDR[4]||'';
+  const colG=findCol(['traducción organización','traduccion organizacion','organización traducida'])||HDR[6]||'';
+  const colK=findCol(['fecha inicio','Fecha inicio'])||HDR[10]||'';
+  const colU=findCol(['traducción de desarrollador','traduccion de desarrollador','desarrollador traducido'])||HDR[20]||'';
+  // Debug temporal
+  console.log('colM header:', colM, '| colN header:', colN, '| colK:', colK);
 
   const keys=HDR;
   function fkv(pats){return keys.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
@@ -1016,13 +1026,21 @@ function parseCSV(text){
   const lines=text.split('\n');
   function clean(v){return(v||'').replace(/^"|"$/g,'').trim();}
   let hi=-1;
-  for(let i=0;i<Math.min(10,lines.length);i++){
+  // Buscar fila de encabezado: debe tener "id" Y ("estado"/"status") Y ("traducción" o "etiqueta" o "prioridad")
+  for(let i=0;i<Math.min(15,lines.length);i++){
     const r=csvLine(lines[i]).map(v=>clean(v).toLowerCase());
-    if(r.some(v=>v==='id')&&r.some(v=>['estado','status','prioridad','priority'].includes(v))){hi=i;break;}
+    const hasId=r.some(v=>v==='id'||v==='n.'||v==='n');
+    const hasStatus=r.some(v=>['estado','status'].includes(v));
+    const hasExtra=r.some(v=>v.includes('traducci')||v.includes('etiqueta')||v==='prioridad'||v==='priority');
+    if(hasId&&hasStatus&&hasExtra){hi=i;break;}
+    // Fallback: tiene id y estado
+    if(hi<0&&hasId&&hasStatus){hi=i;}
   }
   if(hi<0)return{rows:[],headers:[]};
   const headers=csvLine(lines[hi]).map(v=>clean(v));
+  // Buscar columna ID (número de ticket)
   const idIdx=headers.findIndex(h=>h.toLowerCase()==='id');
+  if(idIdx<0)return{rows:[],headers:[]};
   const rows=[];
   for(let i=hi+1;i<lines.length;i++){
     const line=lines[i];if(!line.trim())continue;
