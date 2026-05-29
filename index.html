@@ -536,31 +536,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 // ── Render Op. Interna ───────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
 
-// Mapeo fijo área → agentes operativos (coincidencia parcial, case-insensitive)
-const AREA_AGENTS = {
-  'Customer':       ['héctor','hector','andrea'],
-  'Implementación': ['oscar','leonardo'],
-  'Implementacion': ['oscar','leonardo'],
-  'Soporte':        ['alejandra','ivette','karina'],
-  'Desarrollo':     ['miguel','ricardo campos','rommel','yareli','ulises','osmar'],
-};
-
-function getAgentsForArea(area){
-  // Busca coincidencia parcial de área en el mapa
-  const key = Object.keys(AREA_AGENTS).find(k => area.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(area.toLowerCase()));
-  return key ? AREA_AGENTS[key] : null;
-}
-
-function agentMatchesArea(agenteName, area){
-  const allowed = getAgentsForArea(area);
-  if(!allowed) return true; // área no mapeada → mostrar todos
-  const name = (agenteName||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  return allowed.some(a => {
-    const an = a.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    return name.includes(an) || an.includes(name);
-  });
-}
-
 function renderInt(){
   const areas=[...new Set(T.map(t=>t.areaAsig).filter(a=>a&&!/sin\s+asignar|sin\s+clasificar/i.test(a)))].sort();
 
@@ -569,8 +544,6 @@ function renderInt(){
       <div class="slbl">KPIs de operación interna</div>
       <div class="kpi-grid" id="int-kpis"></div>
     </div>
-
-    <!-- Gráficas: Prioridad + Antigüedad + Por área -->
     <div class="charts-row">
       <div class="ccard">
         <div class="ch"><span class="ct">Por prioridad</span></div>
@@ -588,8 +561,6 @@ function renderInt(){
         <div class="cb"><div style="position:relative;height:220px"><canvas id="int-carea"></canvas></div></div>
       </div>
     </div>
-
-    <!-- Filtros -->
     <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--sur);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh)">
       <select class="sel" id="int-area" onchange="intAreaChange()" style="font-size:12px;padding:6px 10px;font-weight:600">
         <option value="">Todas las áreas</option>
@@ -600,12 +571,12 @@ function renderInt(){
       <span style="font-size:11px;color:var(--txt3);align-self:center" id="int-count">${T.length} tickets</span>
     </div>
 
-    <!-- Tarjetas de agentes: solo si hay área seleccionada -->
+    <!-- Tarjetas de agentes: solo visible cuando hay área seleccionada -->
     <div id="int-agent-section" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px" id="int-agent-cards"></div>
     </div>
 
-    <!-- Detalle de agente específico -->
+    <!-- Detalle de agente (clic en tarjeta) -->
     <div id="int-detail-section" style="display:none">
       <div style="margin-bottom:12px">
         <button class="back-btn" onclick="intBackToCards()">← Regresar</button>
@@ -629,7 +600,7 @@ function renderInt(){
       </div>
     </div>
 
-    <!-- Detalle KPI (clickeable igual que Indicadores) -->
+    <!-- Detalle KPI (clic en recuadro KPI) -->
     <div class="detail-card" id="int-detail-card" style="display:none">
       <div class="detail-head" id="int-detail-kpi-head" style="background:#fef2f2;border-bottom:1px solid #fecaca">
         <span class="detail-title" id="int-detail-kpi-title">–</span>
@@ -640,19 +611,6 @@ function renderInt(){
         </div>
       </div>
       <div id="int-detail-kpi-body"></div>
-    </div>
-
-    <!-- Detalle de tickets: SIEMPRE visible, muestra todos los tickets del filtro actual -->
-    <div class="ccard" id="int-global-tbl-card">
-      <div class="ch">
-        <span class="ct" id="int-tbl-title">Todos los tickets</span>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span id="int-tbl-count" style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px">0</span>
-          <button onclick="intDownload()" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
-        </div>
-      </div>
-      <div class="tw" id="int-tbl"></div>
-      <div id="int-diag"></div>
     </div>`;
 
   window._intSeg=false;
@@ -662,19 +620,17 @@ function renderInt(){
   intFilt();
 }
 
-// KPI definitions para Op. Interna
 const INT_KDEF=[
-  {key:'total',  label:'Total tickets',       color:'#2563eb', fn:(list)=>list},
-  {key:'sinSeg', label:'Sin seguimiento +3d', color:'#e11d48', fn:(list)=>list.filter(t=>t.sinSeguimiento)},
-  {key:'sla',    label:'Vencidos SLA +7d',    color:'#d97706', fn:(list)=>list.filter(t=>t.isSla)},
-  {key:'urghi',  label:'Urgente / Alto',      color:'#FF5C5C', fn:(list)=>list.filter(t=>t.priority==='urgent'||t.priority==='high')},
-  {key:'crit',   label:'Score crítico ≥350',  color:'#EF4444', fn:(list)=>list.filter(t=>t.score>=350)},
-  {key:'sinR',   label:'Sin responsable',     color:'#7c3aed', fn:(list)=>list.filter(t=>t.isSinAsignar)},
+  {key:'total',  label:'Total tickets',       color:'#2563eb', fn:(l)=>l},
+  {key:'sinSeg', label:'Sin seguimiento +3d', color:'#e11d48', fn:(l)=>l.filter(t=>t.sinSeguimiento)},
+  {key:'sla',    label:'Vencidos SLA +7d',    color:'#d97706', fn:(l)=>l.filter(t=>t.isSla)},
+  {key:'urghi',  label:'Urgente / Alto',      color:'#FF5C5C', fn:(l)=>l.filter(t=>t.priority==='urgent'||t.priority==='high')},
+  {key:'crit',   label:'Score crítico ≥350',  color:'#EF4444', fn:(l)=>l.filter(t=>t.score>=350)},
+  {key:'sinR',   label:'Sin responsable',     color:'#7c3aed', fn:(l)=>l.filter(t=>t.isSinAsignar)},
 ];
 
 function intAreaChange(){
-  window._intActiveAgent=null;
-  window._intActiveKpi=null;
+  window._intActiveAgent=null;window._intActiveKpi=null;
   el('int-detail-section').style.display='none';
   const dc=el('int-detail-card');if(dc)dc.style.display='none';
   intFilt();
@@ -697,7 +653,6 @@ function intClear(){
 function intClearKpi(){
   window._intActiveKpi=null;
   const dc=el('int-detail-card');if(dc)dc.style.display='none';
-  // Limpiar estilo activo en KPIs
   const kpisEl=el('int-kpis');
   if(kpisEl)kpisEl.querySelectorAll('.kc').forEach(c=>{c.classList.remove('active');c.style.borderColor='';c.style.boxShadow='';});
 }
@@ -707,7 +662,7 @@ function intFilt(){
   const fseg=window._intSeg||false;
   window._intCurrentArea=fa;
 
-  let baseList=T.filter(t=>{
+  const baseList=T.filter(t=>{
     if(fa&&t.areaAsig!==fa)return false;
     if(fseg&&!t.sinSeguimiento)return false;
     return true;
@@ -733,78 +688,68 @@ function intFilt(){
     }).join('');
   }
 
-  // ── Gráficas dinámicas según filtro ──
+  // ── Gráficas dinámicas ──
   const priData=['urgent','high','normal','low'].map(k=>baseList.filter(t=>t.priority===k).length);
   const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
   if(CH['int-cp'])CH['int-cp'].destroy();
   const cpCtx=el('int-cp');
   if(cpCtx){
     CH['int-cp']=new Chart(cpCtx,{type:'doughnut',
-      data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff',hoverBorderWidth:0}]},
+      data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});
   }
   const legEl=el('int-pri-legend');
-  if(legEl){
-    legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
-  }
+  if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
+
   // Antigüedad dinámica
   const rVals=[...new Set(baseList.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
-  const rCounts=rVals.map(r=>baseList.filter(t=>t.rangoStr===r).length);
-  const rColors=rVals.map(r=>getRangoColor(r));
-  mkChart('int-ca','bar',rVals,rCounts,rColors,false,null);
+  mkChart('int-ca','bar',rVals,rVals.map(r=>baseList.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,null);
 
-  // Gráfica por área (dinámica)
+  // Tercera gráfica: por área (sin filtro) o por agente del área seleccionada
+  const titleEl=el('int-area-chart-title');
   if(fa){
-    // Con área seleccionada → mostrar tickets por agente operativo del área
-    const allowed=getAgentsForArea(fa);
-    let agMap={};
-    baseList.forEach(t=>{
-      const ag=(t.agente||'').trim();
-      if(!ag||ag.toLowerCase()==='no')return;
-      if(allowed && !agentMatchesArea(ag,fa))return;
-      agMap[ag]=(agMap[ag]||0)+1;
-    });
+    // Agentes únicos de col M cuya col N === área seleccionada (sin "No"/vacíos)
+    const agMap={};
+    T.filter(t=>t.areaAsig===fa && t.agente && t.agente.toLowerCase()!=='no' && t.agente.trim()!=='')
+     .forEach(t=>{
+       const ag=t.agente.trim();
+       // Solo contamos tickets que también pasan el filtro sin seguimiento si aplica
+       if(fseg && !t.sinSeguimiento)return;
+       agMap[ag]=(agMap[ag]||0)+1;
+     });
     const agS=Object.entries(agMap).sort((a,b)=>b[1]-a[1]);
-    const titleEl=el('int-area-chart-title');
     if(titleEl)titleEl.textContent='Tickets por agente — '+fa;
-    const agColors=['#4B9BFF','#A855F7','#22C55E','#F59E0B','#EF4444','#EC4899'];
+    const agColors=['#4B9BFF','#A855F7','#22C55E','#F59E0B','#EF4444','#EC4899','#14B8A6'];
     mkChart('int-carea','bar',agS.map(x=>x[0]),agS.map(x=>x[1]),agS.map((_,i)=>agColors[i%agColors.length]),true,null);
   } else {
-    // Sin área → tickets por área
     const areaMap={};baseList.forEach(t=>{const a=t.areaAsig||'Sin área';areaMap[a]=(areaMap[a]||0)+1;});
     const areaS=Object.entries(areaMap).sort((a,b)=>b[1]-a[1]);
-    const titleEl=el('int-area-chart-title');
     if(titleEl)titleEl.textContent='Tickets por área';
-    const areaColors={'Customer':'#4B9BFF','Implementación':'#A855F7','Implementacion':'#A855F7','Desarrollo':'#22C55E','Soporte':'#F59E0B','Sin área':'#9ca3af'};
-    mkChart('int-carea','bar',areaS.map(x=>x[0]),areaS.map(x=>x[1]),areaS.map(x=>areaColors[x[0]]||'#6b7280'),true,null);
+    const aColors={'Customer':'#4B9BFF','Implementación':'#A855F7','Implementacion':'#A855F7','Desarrollo':'#22C55E','Soporte':'#F59E0B'};
+    mkChart('int-carea','bar',areaS.map(x=>x[0]),areaS.map(x=>x[1]),areaS.map(x=>aColors[x[0]]||'#6b7280'),true,null);
   }
 
-  // ── Tarjetas de agentes: solo si hay área seleccionada ──
+  // ── Tarjetas de agentes: SOLO si hay área seleccionada ──
   const agSection=el('int-agent-section');
   if(agSection){
     if(fa){
       agSection.style.display='';
-      // Agentes operativos del área según mapeo fijo, filtrados por col N = área
-      const allowed=getAgentsForArea(fa);
+      // Agentes = col M únicos de los tickets donde col N === área seleccionada
+      // (usando T completo para obtener todos los agentes del área, no solo los filtrados por sin-seguimiento)
       const agentList=[...new Set(
-        T.filter(t=>t.areaAsig===fa)
-         .map(t=>t.agente)
-         .filter(a=>{
-           if(!a||a.toLowerCase()==='no'||a.trim()==='')return false;
-           if(allowed)return agentMatchesArea(a,fa);
-           return true;
-         })
+        T.filter(t=>t.areaAsig===fa && t.agente && t.agente.toLowerCase()!=='no' && t.agente.trim()!=='')
+         .map(t=>t.agente.trim())
       )].sort();
 
       const cardsEl=el('int-agent-cards');
       if(cardsEl){
         cardsEl.innerHTML=agentList.map(ag=>{
+          // Sus tickets dentro del filtro actual (área + sin seguimiento si aplica)
           const atks=baseList.filter(t=>t.agente===ag);
           if(!atks.length)return'';
           const asinSeg=atks.filter(t=>t.sinSeguimiento).length;
           const aurghi=atks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
           const avgScore=Math.round(atks.reduce((s,t)=>s+t.score,0)/atks.length);
-          const areas=[...new Set(atks.map(t=>t.areaAsig).filter(Boolean))];
           const pct=baseList.length?Math.round(atks.length/baseList.length*100):0;
           const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
           const segColor=asinSeg>5?'#e11d48':asinSeg>2?'#d97706':'#16a34a';
@@ -830,9 +775,6 @@ function intFilt(){
               <span style="font-size:12px;font-weight:700">${avgScore}</span>
             </div>
             <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:${isActive?'#2563eb':'#4B9BFF'}"></div></div>
-            <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
-              ${areas.map(a=>`<span class="b" style="background:#eff4ff;color:#1e40af;font-size:9px">${a}</span>`).join('')}
-            </div>
             <div style="margin-top:10px;text-align:center;font-size:10px;font-weight:600;color:var(--acc)">▼ Ver tickets</div>
           </div>`;
         }).filter(Boolean).join('');
@@ -842,58 +784,14 @@ function intFilt(){
     }
   }
 
-  // Si hay agente activo, renderizar su detalle
+  // Si había agente activo, actualizar su detalle
   if(window._intActiveAgent && fa){
     intRenderAgentDetail(window._intActiveAgent, baseList);
   }
-
-  // Si hay KPI activo, actualizar su detalle
+  // Si había KPI activo, actualizar su detalle
   if(window._intActiveKpi){
     intRenderKpiDetail(window._intActiveKpi, baseList);
   }
-
-  // ── Tabla global: SIEMPRE visible — todos los tickets del filtro actual ──
-  intRenderGlobalTable(baseList, fa);
-}
-
-function intRenderGlobalTable(list, fa){
-  const sortedList=[...list].sort((a,b)=>{
-    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
-    return db!==da?db-da:b.score-a.score;
-  });
-  const titleEl=el('int-tbl-title');
-  if(titleEl)titleEl.textContent=fa?`Todos los tickets — ${fa}`:'Todos los tickets';
-  const cntEl=el('int-tbl-count');
-  if(cntEl)cntEl.textContent=sortedList.length;
-  const tblEl=el('int-tbl');
-  if(!tblEl)return;
-  const rows=sortedList.map((t,i)=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-    const segFlag=t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px">+3d</span>`:'';
-    return`<tr onclick="om(${t.id})">
-      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
-      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
-      <td style="max-width:180px">${t.subject||'—'}</td>
-      <td style="color:var(--txt2)">${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
-      <td style="font-size:11px">${fmtDate(t.ultimoSeg)||'—'} ${segFlag}</td>
-      <td style="color:var(--txt2)">${t.agente||'—'}</td>
-      <td style="color:var(--txt2)">${t.dResp||'—'}</td>
-      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-    </tr>`;
-  }).join('');
-  tblEl.innerHTML=`<table><thead><tr>
-    <th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th>
-    <th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th>
-    <th>Último seguimiento</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th>
-  </tr></thead><tbody>${rows||'<tr><td colspan="13" class="empty">Sin tickets</td></tr>'}</tbody></table>`;
-  const diagEl=el('int-diag');
-  if(diagEl)diagEl.innerHTML=getDiagnosis(list).replace('id="detail-diag"','id="int-diag-inner"');
 }
 
 function intKpiClick(key){
@@ -918,10 +816,10 @@ function intKpiClick(key){
     if(fseg&&!t.sinSeguimiento)return false;
     return true;
   });
-  intRenderKpiDetail(window._intActiveKpi,baseList);
+  intRenderKpiDetail(window._intActiveKpi, baseList);
 }
 
-function intRenderKpiDetail(kpiKey,baseList){
+function intRenderKpiDetail(kpiKey, baseList){
   const dc=el('int-detail-card');
   if(!kpiKey){if(dc)dc.style.display='none';return;}
   const kd=INT_KDEF.find(k=>k.key===kpiKey);
@@ -933,8 +831,7 @@ function intRenderKpiDetail(kpiKey,baseList){
   if(titleEl)titleEl.textContent=kd.label;
   if(countEl){countEl.textContent=tickets.length;countEl.style.cssText=`background:${kd.color}25;color:${kd.color};font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px`;}
   const dlBtn=el('int-kpi-dl');if(dlBtn)dlBtn.onclick=()=>downloadCSV(tickets,'int_'+kpiKey);
-  const b=el('int-detail-kpi-body');
-  if(!b)return;
+  const b=el('int-detail-kpi-body');if(!b)return;
   if(!tickets.length){b.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin tickets en esta categoría</div>';return;}
   const rows=[...tickets].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;}).map((t,i)=>{
     const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
@@ -961,51 +858,93 @@ function intAgentClick(ag){
   window._intActiveAgent=ag;
   window._intActiveKpi=null;
   const dc=el('int-detail-card');if(dc)dc.style.display='none';
+  intClearKpi();
   el('int-detail-section').style.display='';
-  intFilt();
+  // Re-render tarjetas para marcar activa
+  const fa=el('int-area')?.value||'';
+  const fseg=window._intSeg||false;
+  const baseList=T.filter(t=>{
+    if(fa&&t.areaAsig!==fa)return false;
+    if(fseg&&!t.sinSeguimiento)return false;
+    return true;
+  });
+  intRenderAgentDetail(ag, baseList);
+  // Actualizar estado activo en tarjetas
+  const cardsEl=el('int-agent-cards');
+  if(cardsEl){
+    cardsEl.querySelectorAll('.kc').forEach(c=>{
+      const nameEl=c.querySelector('div > div > div:first-child');
+      if(nameEl){
+        const isActive=nameEl.textContent.trim()===ag;
+        c.classList.toggle('agent-card-active',isActive);
+        const avatar=c.querySelector('div > div:first-child > div:first-child');
+        if(avatar){avatar.style.background=isActive?'#2563eb':'#dbeafe';avatar.style.color=isActive?'#fff':'#1e40af';}
+        const bar=c.querySelector('.kc-fill');
+        if(bar)bar.style.background=isActive?'#2563eb':'#4B9BFF';
+        const hint=c.querySelector('div:last-child');
+        if(hint&&hint.textContent.includes('Ver tickets'))hint.textContent=isActive?'▲ Ocultar tickets':'▼ Ver tickets';
+      }
+    });
+  }
   setTimeout(()=>{const d=el('int-detail-section');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});},150);
 }
 
 function intBackToCards(){
   window._intActiveAgent=null;
   el('int-detail-section').style.display='none';
-  intFilt();
+  // Limpiar activo en tarjetas
+  const cardsEl=el('int-agent-cards');
+  if(cardsEl){
+    cardsEl.querySelectorAll('.kc').forEach(c=>{
+      c.classList.remove('agent-card-active');
+      const avatar=c.querySelector('div > div:first-child > div:first-child');
+      if(avatar){avatar.style.background='#dbeafe';avatar.style.color='#1e40af';}
+      const bar=c.querySelector('.kc-fill');if(bar)bar.style.background='#4B9BFF';
+      const hint=c.querySelector('div:last-child');
+      if(hint&&hint.textContent.includes('tickets'))hint.textContent='▼ Ver tickets';
+    });
+  }
   setTimeout(()=>{const c=el('int-agent-cards');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},100);
 }
 
-function intRenderAgentDetail(ag,baseList){
-  const atks=[...baseList.filter(t=>t.agente===ag)].sort((a,b)=>{
+function intRenderAgentDetail(ag, baseList){
+  // TODOS los tickets del agente en el área filtrada (no solo sin seguimiento)
+  const fa=el('int-area')?.value||'';
+  // Siempre mostrar todos los tickets del agente en su área, independiente del filtro sin-seguimiento
+  const allAgentTickets=[...T.filter(t=>t.agente===ag && (fa?t.areaAsig===fa:true))].sort((a,b)=>{
     const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
     return db!==da?db-da:b.score-a.score;
   });
-  window._intAgentTickets=atks;
+  window._intAgentTickets=allAgentTickets;
+
   const detailSection=el('int-detail-section');if(detailSection)detailSection.style.display='';
   const nameEl=el('int-detail-name');if(nameEl)nameEl.textContent=ag;
-  const subEl=el('int-detail-sub');if(subEl)subEl.textContent=atks.length+' tickets — todos los asignados';
-  const cntEl=el('int-detail-count');if(cntEl)cntEl.textContent=atks.length;
+  const subEl=el('int-detail-sub');if(subEl)subEl.textContent=allAgentTickets.length+' tickets — todos los asignados';
+  const cntEl=el('int-detail-count');if(cntEl)cntEl.textContent=allAgentTickets.length;
   const initials=ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   const avEl=el('int-detail-avatar');if(avEl)avEl.textContent=initials;
+
   const kpisEl=el('int-agent-kpis');
   if(kpisEl){
-    const sinSeg=atks.filter(t=>t.sinSeguimiento).length;
-    const ug=atks.filter(t=>t.priority==='urgent').length;
-    const hi=atks.filter(t=>t.priority==='high').length;
-    const sla=atks.filter(t=>t.isSla).length;
-    const crit=atks.filter(t=>t.score>=350).length;
+    const sinSeg=allAgentTickets.filter(t=>t.sinSeguimiento).length;
+    const ug=allAgentTickets.filter(t=>t.priority==='urgent').length;
+    const hi=allAgentTickets.filter(t=>t.priority==='high').length;
+    const sla=allAgentTickets.filter(t=>t.isSla).length;
+    const crit=allAgentTickets.filter(t=>t.score>=350).length;
     kpisEl.innerHTML=[
-      {l:'Total',          v:atks.length,c:'#2563eb'},
-      {l:'Sin seguim. +3d',v:sinSeg,     c:'#e11d48'},
-      {l:'SLA vencido',    v:sla,        c:'#d97706'},
-      {l:'Urgente / Alto', v:ug+hi,      c:'#FF5C5C'},
-      {l:'Crítico ≥350',   v:crit,       c:'#EF4444'},
+      {l:'Total',          v:allAgentTickets.length, c:'#2563eb'},
+      {l:'Sin seguim. +3d',v:sinSeg,                 c:'#e11d48'},
+      {l:'SLA vencido',    v:sla,                    c:'#d97706'},
+      {l:'Urgente / Alto', v:ug+hi,                  c:'#FF5C5C'},
+      {l:'Crítico ≥350',   v:crit,                   c:'#EF4444'},
     ].map(k=>`<div style="text-align:center;padding:6px 4px">
       <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${k.c}">${k.v}</div>
       <div style="font-size:10px;font-weight:600;color:var(--txt3);margin-top:2px">${k.l}</div>
     </div>`).join('');
   }
-  const tblEl=el('int-detail-tbl');
-  if(!tblEl)return;
-  const rows=atks.map((t,i)=>{
+
+  const tblEl=el('int-detail-tbl');if(!tblEl)return;
+  const rows=allAgentTickets.map((t,i)=>{
     const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
     const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
     const segFlag=t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px">+3d</span>`:'';
@@ -1030,8 +969,8 @@ function intRenderAgentDetail(ag,baseList){
   </tr></thead><tbody>${rows||'<tr><td colspan="12" class="empty">Sin tickets</td></tr>'}</tbody></table>`;
 }
 
-function intDownload(){const list=window._intList||[];downloadCSV(list,'operacion_interna');}
-function intDownloadAgent(){const list=window._intAgentTickets||[];downloadCSV(list,'agente_'+(window._intActiveAgent||'').replace(/\s+/g,'_'));}
+function intDownload(){downloadCSV(window._intList||[],'operacion_interna');}
+function intDownloadAgent(){downloadCSV(window._intAgentTickets||[],'agente_'+(window._intActiveAgent||'').replace(/\s+/g,'_'));}
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};
