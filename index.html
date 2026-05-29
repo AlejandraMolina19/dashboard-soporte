@@ -204,22 +204,30 @@ function isSinSeguimiento(fechaStr,now){
 function mapRows(rows,headers){
   if(!rows.length)return[];
   HDR=headers||Object.keys(rows[0]);
-  // Buscar columnas por nombre exacto del header (más robusto que posición fija)
+  // Buscar columna por índice posicional basado en headers conocidos
+  // HDR viene del CSV — buscar por nombre normalizado (sin tildes, lowercase)
+  function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
   function findCol(patterns){
-    const idx=HDR.findIndex(h=>patterns.some(p=>h.toLowerCase().includes(p.toLowerCase())));
+    const idx=HDR.findIndex(h=>patterns.some(p=>norm(h).includes(norm(p))));
     return idx>=0?HDR[idx]:'';
   }
-  // Col M = "traducción de agente" (nombre operativo del agente)
-  const colM=findCol(['traducción de agente','traduccion de agente','traducción agente']);
-  // Col N = "ETIQUETA" (área del ticket)
-  const colN=findCol(['etiqueta','ETIQUETA']);
-  // Resto por posición o nombre
-  const colE=findCol(['actualización','actualizacion','último seguimiento','ultima actualizacion'])||HDR[4]||'';
-  const colG=findCol(['traducción organización','traduccion organizacion','organización traducida'])||HDR[6]||'';
-  const colK=findCol(['fecha inicio','Fecha inicio'])||HDR[10]||'';
-  const colU=findCol(['traducción de desarrollador','traduccion de desarrollador','desarrollador traducido'])||HDR[20]||'';
-  // Debug temporal
-  console.log('colM header:', colM, '| colN header:', colN, '| colK:', colK);
+  function findColIdx(patterns){
+    return HDR.findIndex(h=>patterns.some(p=>norm(h).includes(norm(p))));
+  }
+
+  // Col M = "traducción de agente" → buscar por "traduccion" + "agente"
+  const colMIdx=findColIdx(['traduccion de agente','traducción de agente','traduc.*agente']);
+  const colM=colMIdx>=0?HDR[colMIdx]:(HDR[12]||'');
+
+  // Col N = "ETIQUETA" → buscar por "etiqueta"
+  const colNIdx=findColIdx(['etiqueta']);
+  const colN=colNIdx>=0?HDR[colNIdx]:(HDR[13]||'');
+
+  // Otras columnas
+  const colE=findCol(['actualizacion','actualizaci'])||HDR[4]||'';
+  const colG=findCol(['traduccion organizacion','traduccion org','traduc.*org'])||HDR[6]||'';
+  const colK=findCol(['fecha inicio'])||HDR[10]||'';
+  const colU=HDR[20]||'';
 
   const keys=HDR;
   function fkv(pats){return keys.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
@@ -1071,6 +1079,17 @@ async function loadData(){
     el('ls').textContent='Leyendo Ant_Tickets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
     T=mapRows(rows,hdrs);
+    // Debug: mostrar en pantalla qué columnas se detectaron
+    function norm2(s){return(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();}
+    const mIdx=hdrs.findIndex(h=>norm2(h).includes('traduccion')&&norm2(h).includes('agente'));
+    const nIdx=hdrs.findIndex(h=>norm2(h).includes('etiqueta'));
+    console.log('=== DEBUG COLS ===');
+    console.log('M idx:',mIdx,'val:',hdrs[mIdx],'| N idx:',nIdx,'val:',hdrs[nIdx]);
+    console.log('All headers:', hdrs.join(' | '));
+    if(T.length>0){
+      const sample=T.slice(0,3).map(t=>t.agente+'//'+t.areaAsig);
+      console.log('Sample agente//area:', sample);
+    }
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
