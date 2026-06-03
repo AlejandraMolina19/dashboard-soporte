@@ -10,7 +10,7 @@
 :root{--bg:#f0f2f7;--sur:#fff;--sur2:#f7f8fc;--sur3:#eef0f6;--bdr:#e2e5ef;--bdr2:#d0d4e8;--txt:#111827;--txt2:#4b5568;--txt3:#9ca3af;--acc:#2563eb;--acc2:#eff4ff;--acc3:#dbeafe;--grn:#16a34a;--red:#dc2626;--red2:#fef2f2;--red3:#fee2e2;--org:#d97706;--org2:#fffbeb;--pur:#7c3aed;--pur2:#f5f3ff;--r:8px;--rl:12px;--rxl:16px;--font:'Plus Jakarta Sans',sans-serif;--mono:'IBM Plex Mono',monospace;--sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);--sh2:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -2px rgba(0,0,0,.05)}
 *{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}body{display:flex;flex-direction:column;min-height:100vh}
 .tb{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:48px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}.brand{display:flex;align-items:center;gap:10px}.brand-icon{width:28px;height:28px;border-radius:6px;background:var(--acc);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;font-family:var(--mono)}.brand-name{font-size:13px;font-weight:700;color:var(--txt)}.brand-sep{width:1px;height:18px;background:var(--bdr);margin:0 4px}.brand-sub{font-size:11px;color:var(--txt3);font-weight:500}.chips{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2);font-family:var(--mono)}.chip.live{color:var(--grn);background:#f0fdf4;border-color:#bbf7d0}.ubtn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);border:none;background:var(--acc);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(37,99,235,.2)}.ubtn:hover{background:#1d4ed8}.ubtn:disabled{opacity:.5;cursor:not-allowed}.ubtn.spin svg{animation:rot .7s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
-.nav{display:flex;padding:0 12px;background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}.ntab{padding:0 14px;height:40px;font-size:12px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:4px}.ntab:hover{color:var(--txt2)}.ntab.on{color:var(--acc);border-bottom-color:var(--acc)}.nb{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--acc3);color:var(--acc);font-family:var(--mono)}
+.nav{display:flex;padding:0 8px;background:var(--sur);border-bottom:1px solid var(--bdr)}.ntab{padding:0 16px;height:38px;font-size:13px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px;flex:1;justify-content:center}.ntab:hover{color:var(--txt2)}.ntab.on{color:var(--acc);border-bottom-color:var(--acc)}.nb{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--acc3);color:var(--acc);font-family:var(--mono)}
 .main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:14px}.view{display:none;flex-direction:column;gap:14px}.view.on{display:flex}.slbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px}.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.kc{background:var(--sur);border:1.5px solid var(--bdr);border-radius:var(--rl);padding:16px 18px;cursor:pointer;transition:all .18s;box-shadow:var(--sh)}.kc:hover{border-color:var(--bdr2);box-shadow:var(--sh2);transform:translateY(-1px)}.kc.active{box-shadow:0 0 0 3px var(--acc3),var(--sh2)}.kc-top{display:flex;justify-content:flex-end;margin-bottom:8px}.kc-arrow{font-size:10px;font-weight:700;color:var(--txt3);opacity:0;transition:opacity .15s}.kc:hover .kc-arrow,.kc.active .kc-arrow{opacity:1}.kc-val{font-size:36px;font-weight:700;line-height:1;letter-spacing:-.04em;margin-bottom:4px;font-family:var(--mono)}.kc-lbl{font-size:12px;font-weight:600;color:var(--txt2)}.kc-bar{height:3px;border-radius:2px;margin-top:12px;background:var(--sur3);overflow:hidden}.kc-fill{height:100%;border-radius:2px;transition:width 1s ease}.kc-hint{font-size:10px;color:var(--txt3);margin-top:4px}
 .charts-row{display:grid;grid-template-columns:240px 1fr 1fr;gap:12px}@media(max-width:920px){.charts-row{grid-template-columns:1fr 1fr}}.ccard{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}.ch{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}.ct{font-size:12px;font-weight:700;color:var(--txt)}.cb{padding:14px}.chart-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--txt2)}.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .detail-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}.detail-head{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--bdr);transition:background .2s}.detail-title{font-size:13px;font-weight:700;color:var(--txt)}.detail-meta{display:flex;align-items:center;gap:8px}.detail-count{font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px}.detail-clear{background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt3);font-family:var(--font)}.detail-clear:hover{background:var(--sur2);color:var(--txt)}
@@ -100,7 +100,7 @@ function mapRows(rows,headers){
     if(kTiempo&&r[kTiempo]&&/\d+:\d{2}:\d{2}/.test(r[kTiempo])){tiempo=r[kTiempo].trim();}
     else{for(const v of Object.values(r)){if(/^\d{1,5}:\d{2}:\d{2}$/.test((v||'').trim())){tiempo=v.trim();break;}}}
     const areaN=(colN?r[colN]||'':'').trim();
-    const isSinAsignar=/sin\s+asignar|sin\s+clasificar/i.test(areaN);
+    const isSinAsignar=/sin\s+asignar|sin\s+clasificar|ticket\s+sin|^nuevo$/i.test(areaN)||areaN==='';
     const org=colG?r[colG]||'':'';
     const ultimoSegRaw=(colE?r[colE]||'':'').trim();
     const agenteVal=colM?r[colM]||'':'';
@@ -129,10 +129,42 @@ function getDiagnosis(tickets){
   return`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:0 0 var(--rl) var(--rl);padding:14px 18px;border-top:none"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Diagnóstico</div><ul style="list-style:none;display:flex;flex-direction:column;gap:5px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2);line-height:1.5">• ${i}</li>`).join('')}</ul></div>`;
 }
 
-const KDEF=[{key:'total',label:'Total tickets',color:'#2563eb',fn:()=>T},{key:'urgent',label:'Urgentes',color:'#FF5C5C',fn:()=>T.filter(t=>t.priority==='urgent')},{key:'high',label:'Alta prioridad',color:'#FF9A3C',fn:()=>T.filter(t=>t.priority==='high')},{key:'sla',label:'Vencidos SLA +7d',color:'#F59E0B',fn:()=>T.filter(t=>t.isSla)},{key:'sinSeg',label:'Sin seguimiento +3d',color:'#e11d48',fn:()=>T.filter(t=>t.sinSeguimiento)},{key:'sinA',label:'Sin responsable',color:'#7c3aed',fn:()=>T.filter(t=>t.isSinAsignar)}];
+const KDEF=[
+  {key:'total', label:'Total tickets',        color:'#2563eb', fn:()=>T},
+  {key:'urgent',label:'Urgentes',             color:'#FF5C5C', fn:()=>T.filter(t=>t.priority==='urgent')},
+  {key:'high',  label:'Alta prioridad',       color:'#FF9A3C', fn:()=>T.filter(t=>t.priority==='high')},
+  {key:'sla',   label:'Vencidos SLA +7d',     color:'#F59E0B', fn:()=>T.filter(t=>t.isSla)},
+  {key:'sinSeg',label:'Sin seguimiento +3d',  color:'#e11d48', fn:()=>T.filter(t=>t.sinSeguimiento)},
+  {key:'sinA',  label:'Sin responsable',      color:'#7c3aed', fn:()=>T.filter(t=>t.isSinAsignar)},
+  {key:'emp3',  label:'Empresas con +3 tickets', color:'#0891b2',
+   fn:()=>{
+     // Contar por empresa (col G = org), devolver tickets de las que tienen >3
+     const orgCount={};T.forEach(t=>{if(t.org&&t.org.trim()!=='')orgCount[t.org]=(orgCount[t.org]||0)+1;});
+     return T.filter(t=>t.org&&(orgCount[t.org]||0)>3);
+   }
+  },
+];
 
 function renderInd(){
-  const kpis=KDEF.map(k=>{const list=k.fn();const pct=T.length?Math.round(list.length/T.length*100):0;const isA=AKPI===k.key;return`<div class="kc${isA?' active':''}" style="${isA?`border-color:${k.color};box-shadow:0 0 0 3px ${k.color}20,var(--sh2)`:''}" onclick="setKPI('${k.key}')"><div class="kc-top"><span class="kc-arrow" style="color:${k.color}">▼</span></div><div class="kc-val" style="color:${k.color}">${list.length}</div><div class="kc-lbl">${k.label}</div><div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:linear-gradient(90deg,${k.color},${k.color}88)"></div></div><div class="kc-hint">Ver detalle · ${pct}% del total</div></div>`;}).join('');
+  const kpis=KDEF.map(k=>{
+    const list=k.fn();
+    const pct=T.length?Math.round(list.length/T.length*100):0;
+    const isA=AKPI===k.key;
+    // Para emp3: mostrar número de empresas únicas en lugar de tickets
+    let displayVal=list.length, hint=`Ver detalle · ${pct}% del total`;
+    if(k.key==='emp3'){
+      const uniqueEmps=[...new Set(list.map(t=>t.org).filter(Boolean))].length;
+      displayVal=uniqueEmps;
+      hint=`Ver detalle · ${list.length} tickets`;
+    }
+    return`<div class="kc${isA?' active':''}" style="${isA?`border-color:${k.color};box-shadow:0 0 0 3px ${k.color}20,var(--sh2)`:''}" onclick="setKPI('${k.key}')">
+      <div class="kc-top"><span class="kc-arrow" style="color:${k.color}">▼</span></div>
+      <div class="kc-val" style="color:${k.color}">${displayVal}</div>
+      <div class="kc-lbl">${k.label}</div>
+      <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:linear-gradient(90deg,${k.color},${k.color}88)"></div></div>
+      <div class="kc-hint">${hint}</div>
+    </div>`;
+  }).join('');
   const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
   const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);const orgH=Math.max(180,orgS.length*32);
   const rVals=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
@@ -159,6 +191,8 @@ function renderDetail(kpiKey,chartType,chartValue){
   if(chartType&&chartValue){showClear=true;title=chartValue;if(chartType==='rango'){tickets=T.filter(t=>t.rangoStr===chartValue);const rc=getRangoColor(chartValue);headStyle=`background:${rc}15;border-bottom:1px solid ${rc}40`;countStyle=`background:${rc}25;color:${rc}`;}else if(chartType==='org'){tickets=T.filter(t=>t.org===chartValue);headStyle='background:#eff4ff;border-bottom:1px solid #bfdbfe';countStyle='background:#bfdbfe;color:#1e40af';}}
   else if(kpiKey){showClear=true;const kd=KDEF.find(k=>k.key===kpiKey);if(kd){tickets=kd.fn();title=kd.label;headStyle=`background:${kd.color}12;border-bottom:1px solid ${kd.color}30`;countStyle=`background:${kd.color}25;color:${kd.color}`;}}
   else{tickets=T.filter(t=>t.isSinAsignar);}
+  // Para emp3: agregar breakdown por empresa al inicio del detalle
+  window._kpiKey=kpiKey;
   if(titleEl)titleEl.textContent=title;
   if(countEl){countEl.textContent=tickets.length;countEl.style.cssText=countStyle+';font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px';}
   headEl.style.cssText=headStyle;if(clearEl)clearEl.style.display=showClear?'':'none';
@@ -168,7 +202,14 @@ function renderDetail(kpiKey,chartType,chartValue){
   function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
   function buildRows(list){return list.map((t,i)=>{const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];return`<tr onclick="om(${t.id})"><td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td><td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td><td style="max-width:200px">${t.subject||'—'}</td><td style="color:var(--txt2)">${t.org||'—'}</td><td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td><td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td><td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td><td style="color:var(--txt2)">${t.agente||'—'}</td><td style="color:var(--txt2)">${t.dResp||'—'}</td><td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td><td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td></tr>`;}).join('');}
   const filterBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)"><select class="sel" id="df-area" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las áreas</option>${[...new Set(tickets.map(t=>t.areaAsig).filter(Boolean))].sort().map(a=>`<option>${a}</option>`).join('')}</select><select class="sel" id="df-status" onchange="refilterDetail()" style="font-size:11px"><option value="">Todos los estados</option><option value="open">Abierto</option><option value="pending">Pendiente</option></select><select class="sel" id="df-pri" onchange="refilterDetail()" style="font-size:11px"><option value="">Todas las prioridades</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select><span style="font-size:11px;color:var(--txt3);align-self:center" id="df-count">${tickets.length} tickets</span></div>`;
-  bodyEl.innerHTML=filterBar+`<div class="tw"><table id="detail-tbl"><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows(sortByAge(tickets))}</tbody></table></div>`+getDiagnosis(tickets);
+  // Para emp3: insertar resumen por empresa
+  let emp3Summary='';
+  if(kpiKey==='emp3'){
+    const orgMap={};tickets.forEach(t=>{if(!orgMap[t.org])orgMap[t.org]=[];orgMap[t.org].push(t);});
+    const orgRows=Object.entries(orgMap).sort((a,b)=>b[1].length-a[1].length).map(([org,tks])=>`<tr><td style="font-weight:600">${org}</td><td style="font-family:var(--mono);font-weight:700;color:#0891b2;text-align:center">${tks.length}</td><td style="color:var(--txt3);font-size:11px">${tks.map(t=>`<a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="color:#2563eb;font-family:var(--mono);font-size:11px">#${t.id}</a>`).join(', ')}</td></tr>`).join('');
+    emp3Summary=`<div style="padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)"><div style="font-size:11px;font-weight:700;color:#0891b2;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Resumen por empresa</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:10px;font-weight:700;color:var(--txt3);padding:4px 8px">Empresa</th><th style="text-align:center;font-size:10px;font-weight:700;color:var(--txt3);padding:4px 8px">Tickets</th><th style="text-align:left;font-size:10px;font-weight:700;color:var(--txt3);padding:4px 8px">IDs</th></tr></thead><tbody>${orgRows}</tbody></table></div>`;
+  }
+  bodyEl.innerHTML=filterBar+emp3Summary+`<div class="tw"><table id="detail-tbl"><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Desarrollador</th><th>Área</th><th>Score</th></tr></thead><tbody>${buildRows(sortByAge(tickets))}</tbody></table></div>`+getDiagnosis(tickets);
 }
 
 function refilterDetail(){
@@ -182,7 +223,17 @@ function om(id){
   const t=T.find(x=>x.id===id);if(!t)return;
   const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#6b7280';
   const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-  el('mb').innerHTML=`<div class="mhdr"><div class="mttl">${t.subject||'Ticket #'+t.id}</div><button class="mx" onclick="cm()">×</button></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">${bdg(st.t,st.c,st.bg)} ${bdg(pr.t,pr.c,pr.bg)} ${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</div><div class="score-block" style="border-color:${sc}25"><div class="score-num" style="color:${sc}">${t.score}</div><div><div style="font-size:10px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Score</div><div style="font-size:13px;font-weight:600;color:var(--txt2)">${t.action.t}</div></div></div>${t.tiempo?`<div class="tbox"><div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:#16a34a">${t.tiempo}</div><div style="font-size:11px;color:var(--txt3);margin-top:2px">Tiempo en espera</div></div></div>`:''}<div class="mdv"></div><div class="mr"><span class="ml">ID Ticket</span><span class="mv"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none">#${t.id} ↗</a></span></div><div class="mr"><span class="ml">Empresa</span><span class="mv">${t.org||'—'}</span></div><div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDateShort(t.created)}</span></div><div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'—')}</span></div><div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||t.assignee||'—'}</span></div><div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||'—'}</span></div><div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
+  el('mb').innerHTML=`<div class="mhdr"><div class="mttl">${t.subject||'Ticket #'+t.id}</div><button class="mx" onclick="cm()">×</button></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">${bdg(st.t,st.c,st.bg)} ${bdg(pr.t,pr.c,pr.bg)} ${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</div><div class="score-block" style="border-color:${sc}25">
+  <div class="score-num" style="color:${sc}">${t.score}</div>
+  <div style="flex:1">
+    <div style="font-size:10px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Score · ${t.action.t}</div>
+    <div style="font-size:11px;color:var(--txt3);margin-top:4px;line-height:1.5">
+      <span style="font-weight:600;color:var(--txt2)">Prioridad:</span> ${({urgent:400,high:300,normal:200,low:100})[t.priority]||0} pts
+      &nbsp;+&nbsp;<span style="font-weight:600;color:var(--txt2)">Antigüedad:</span> ${t.score-({urgent:400,high:300,normal:200,low:100})[t.priority]||t.score} pts
+    </div>
+    <div style="font-size:10px;color:var(--txt3);margin-top:3px">≥350 resolver hoy · 220-349 atender hoy · 200-219 mañana · &lt;200 esta semana</div>
+  </div>
+</div>${t.tiempo?`<div class="tbox"><div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:#16a34a">${t.tiempo}</div><div style="font-size:11px;color:var(--txt3);margin-top:2px">Tiempo en espera</div></div></div>`:''}<div class="mdv"></div><div class="mr"><span class="ml">ID Ticket</span><span class="mv"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none">#${t.id} ↗</a></span></div><div class="mr"><span class="ml">Empresa</span><span class="mv">${t.org||'—'}</span></div><div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDateShort(t.created)}</span></div><div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'—')}</span></div><div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||t.assignee||'—'}</span></div><div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||'—'}</span></div><div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
   el('msk').classList.add('on');
 }
 function cm(){el('msk').classList.remove('on');}
