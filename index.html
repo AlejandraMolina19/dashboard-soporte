@@ -18,6 +18,24 @@
 .b{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono)}.sel{background:var(--sur);border:1px solid var(--bdr);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:500;font-family:var(--font);cursor:pointer}.ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl)}.ring{width:34px;height:34px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite}
 .msk{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;padding-top:48px;backdrop-filter:blur(3px)}.msk.on{display:flex}.mbox{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rxl);padding:22px;max-width:520px;width:92%;max-height:82vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.12);animation:mIn .2s ease}@keyframes mIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.mhdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}.mttl{font-size:15px;font-weight:700;line-height:1.4;flex:1;margin-right:10px}.mx{background:none;border:none;cursor:pointer;width:28px;height:28px;border-radius:6px;color:var(--txt3);font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s}.mx:hover{background:var(--sur3);color:var(--txt)}.mdv{height:1px;background:var(--bdr);margin:12px 0}.mr{display:flex;gap:8px;margin-bottom:8px;font-size:12px}.ml{color:var(--txt3);min-width:145px;flex-shrink:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}.mv{color:var(--txt);font-weight:500}.score-block{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--rl);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px}.score-num{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}.tbox{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px}.empty{padding:32px;text-align:center;color:var(--txt3);font-size:13px;font-weight:500}
 .agent-card-active{border-color:#2563eb !important;box-shadow:0 0 0 3px #dbeafe,var(--sh2) !important}.back-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s}.back-btn:hover{background:var(--sur2);border-color:var(--bdr2);color:var(--txt)}
+/* Nuevas secciones */
+.new-section{border:1.5px dashed #0891b2 !important;border-radius:var(--rl);overflow:hidden}
+.new-section .ch{background:#f0f9ff;border-bottom:1px solid #bae6fd}
+.badge-new{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#e0f2fe;color:#0369a1;margin-left:6px}
+.alert-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:10px 16px;display:flex;align-items:center;gap:10px;animation:pulse-border 2s ease-in-out infinite}
+@keyframes pulse-border{0%,100%{border-color:#fecaca}50%{border-color:#f87171}}
+.alert-banner.hidden{display:none}
+.agent-sem-card{background:var(--sur);border:0.5px solid var(--bdr);border-radius:var(--rl);padding:14px;position:relative;overflow:hidden}
+.agent-sem-card.red{border-left:4px solid #dc2626}
+.agent-sem-card.amber{border-left:4px solid #d97706}
+.agent-sem-card.green{border-left:4px solid #16a34a}
+.sem-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.sem-badge.red{background:#fef2f2;color:#dc2626}
+.sem-badge.amber{background:#fffbeb;color:#92400e}
+.sem-badge.green{background:#f0fdf4;color:#15803d}
+.pred-bar{height:3px;border-radius:2px;background:var(--sur3);overflow:hidden;margin-top:6px}
+.pred-fill{height:100%;border-radius:2px}
+.trend-section{background:var(--sur);border:0.5px solid var(--bdr);border-radius:var(--rl);overflow:hidden}
 </style>
 </head>
 <body>
@@ -129,6 +147,71 @@ function getDiagnosis(tickets){
   return`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:0 0 var(--rl) var(--rl);padding:14px 18px;border-top:none"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Diagnóstico</div><ul style="list-style:none;display:flex;flex-direction:column;gap:5px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2);line-height:1.5">• ${i}</li>`).join('')}</ul></div>`;
 }
 
+// ── Tendencia semanal ───────────────────────────────────
+function getTrendData(){
+  const now=new Date();
+  const weeks=[];
+  for(let w=5;w>=0;w--){
+    const wStart=new Date(now);wStart.setDate(now.getDate()-w*7-now.getDay());wStart.setHours(0,0,0,0);
+    const wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+7);
+    const label='S-'+wk(wStart);
+    const open=T.filter(t=>{if(!t.created)return false;const d=new Date(t.created);return d>=wStart&&d<wEnd;}).length;
+    const sla=T.filter(t=>{if(!t.created)return false;const d=new Date(t.created);return d>=wStart&&d<wEnd&&t.isSla;}).length;
+    weeks.push({label,open,sla});
+  }
+  return weeks;
+}
+
+// ── Top solicitantes ─────────────────────────────────
+function getTopSolicitantes(){
+  const map={};
+  T.forEach(t=>{
+    const sol=(t.sResp||t.assignee||'').trim();
+    if(!sol||sol.toLowerCase()==='no')return;
+    if(!map[sol])map[sol]={count:0,maxScore:0};
+    map[sol].count++;
+    if(t.score>map[sol].maxScore)map[sol].maxScore=t.score;
+  });
+  return Object.entries(map).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+}
+
+// ── Semáforo agentes ────────────────────────────────
+function getAgentSemaforo(){
+  const agMap={};
+  T.forEach(t=>{
+    const ag=(t.agente||'').trim();
+    if(!ag||ag.toLowerCase()==='no'||ag==='')return;
+    if(!agMap[ag])agMap[ag]={tickets:[],area:t.areaAsig||''};
+    agMap[ag].tickets.push(t);
+  });
+  return Object.entries(agMap).map(([ag,d])=>{
+    const tks=d.tickets;
+    const avgScore=tks.length?Math.round(tks.reduce((s,t)=>s+t.score,0)/tks.length):0;
+    const sinSeg=tks.filter(t=>t.sinSeguimiento).length;
+    const sla=tks.filter(t=>t.isSla).length;
+    const urghi=tks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
+    const color=avgScore>=300?'red':avgScore>=200?'amber':'green';
+    const label=avgScore>=300?'Carga alta':avgScore>=200?'Revisar':'Al día';
+    return{ag,tks:tks.length,area:d.area,avgScore,sinSeg,sla,urghi,color,label};
+  }).sort((a,b)=>b.avgScore-a.avgScore);
+}
+
+// ── Predicción SLA próximas 48h ─────────────────────
+function getPredSLA(){
+  const now=new Date();
+  const SLA_DIAS=7;
+  const predH24=[];const predH48=[];const predSem=[];const vencHoy=[];
+  T.filter(t=>!t.isSla&&t.created).forEach(t=>{
+    const diasAbierto=t.days||0;
+    const restante=SLA_DIAS-diasAbierto;
+    if(restante<=0)vencHoy.push(t);
+    else if(restante<=1)predH24.push(t);
+    else if(restante<=2)predH48.push(t);
+    else if(restante<=7)predSem.push(t);
+  });
+  return{vencHoy:vencHoy.length,predH24:predH24.length,predH48:predH48.length,predSem:predSem.length};
+}
+
 const KDEF=[
   {key:'total', label:'Total tickets',        color:'#2563eb', fn:()=>T},
   {key:'urgent',label:'Urgentes',             color:'#FF5C5C', fn:()=>T.filter(t=>t.priority==='urgent')},
@@ -146,34 +229,177 @@ const KDEF=[
 ];
 
 function renderInd(){
+  // ── Alert banner ───────────────────────────────────
+  const criticos=T.filter(t=>t.score>=400);
+  const vencH=getPredSLA();
+  const showAlert=criticos.length>0||vencH.vencHoy>0;
+  const alertHtml=showAlert?`<div class="alert-banner" id="alert-banner">
+    <span style="width:8px;height:8px;border-radius:50%;background:#dc2626;flex-shrink:0;display:inline-block"></span>
+    <span style="font-size:12px;font-weight:600;color:#dc2626;flex:1">${criticos.length>0?criticos.length+' ticket'+(criticos.length>1?'s':'')+' con score ≥400':''}${criticos.length>0&&vencH.vencHoy>0?' · ':''}${vencH.vencHoy>0?vencH.vencHoy+' vencen SLA hoy':''}</span>
+    <button onclick="setKPI('urgent')" style="font-size:11px;background:none;border:1px solid #fca5a5;color:#dc2626;padding:3px 10px;border-radius:6px;cursor:pointer;font-family:var(--font)">Ver ahora →</button>
+  </div>`:'';
+
+  // ── KPIs ───────────────────────────────────────────
   const kpis=KDEF.map(k=>{
     const list=k.fn();
     const pct=T.length?Math.round(list.length/T.length*100):0;
     const isA=AKPI===k.key;
-    // Para emp3: mostrar número de empresas únicas en lugar de tickets
     let displayVal=list.length, hint=`Ver detalle · ${pct}% del total`;
     if(k.key==='emp3'){
       const uniqueEmps=[...new Set(list.map(t=>t.org).filter(Boolean))].length;
       displayVal=uniqueEmps;
       hint=`Ver detalle · ${list.length} tickets`;
     }
-    return`<div class="kc${isA?' active':''}" style="${isA?`border-color:${k.color};box-shadow:0 0 0 3px ${k.color}20,var(--sh2)`:''}" onclick="setKPI('${k.key}')">
-      <div class="kc-top"><span class="kc-arrow" style="color:${k.color}">▼</span></div>
+    const isNew=k.key==='emp3';
+    return`<div class="kc${isA?' active':''}" style="${isA?`border-color:${k.color};box-shadow:0 0 0 3px ${k.color}20,var(--sh2)`:isNew?'border:1.5px dashed #0891b2':''}" onclick="setKPI('${k.key}')">
+      <div class="kc-top"><span class="kc-arrow" style="color:${k.color}">▼</span>${isNew?'<span class="badge-new">nuevo</span>':''}</div>
       <div class="kc-val" style="color:${k.color}">${displayVal}</div>
       <div class="kc-lbl">${k.label}</div>
       <div class="kc-bar"><div class="kc-fill" style="width:${pct}%;background:linear-gradient(90deg,${k.color},${k.color}88)"></div></div>
       <div class="kc-hint">${hint}</div>
     </div>`;
   }).join('');
+
+  // ── Gráficas ───────────────────────────────────────
   const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
-  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);const orgH=Math.max(180,orgS.length*32);
+  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const orgH=Math.max(180,orgS.length*32);
   const rVals=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
-  el('v-ind').innerHTML=`<div><div class="slbl">Indicadores clave de operación</div><div class="kpi-grid">${kpis}</div></div><div class="charts-row"><div class="ccard"><div class="ch"><span class="ct">Por prioridad</span></div><div class="cb"><div style="position:relative;height:170px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div><div class="ccard"><div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div><div class="cb"><div style="position:relative;height:220px;width:100%;overflow:hidden"><canvas id="ca"></canvas></div></div></div><div class="ccard"><div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div></div><div class="detail-card" id="detail-card"><div class="detail-head" id="detail-head" style="background:#fef2f2;border-bottom:1px solid #fecaca"><span class="detail-title" id="detail-title">Sin responsable asignado</span><div class="detail-meta"><span class="detail-count" id="detail-count" style="background:#fee2e2;color:#dc2626">0</span><button class="detail-clear" id="detail-clear" onclick="clearFilter()" style="display:none">✕ Limpiar filtro</button><button id="detail-dl" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font);display:none">⬇ CSV</button></div></div><div class="tw" id="detail-body"></div></div>`;
+
+  // ── Tendencia semanal ──────────────────────────────
+  const trendData=getTrendData();
+  const trendMax=Math.max(...trendData.map(w=>w.open),1);
+  const trendH=80;
+  const trendPoints=trendData.map((w,i)=>{const x=10+i*28;const y=trendH-(w.open/trendMax*(trendH-10));return`${x},${y}`;}).join(' ');
+  const slaPoints=trendData.map((w,i)=>{const x=10+i*28;const y=trendH-(w.sla/trendMax*(trendH-10));return`${x},${y}`;}).join(' ');
+  const trendLabels=trendData.map((w,i)=>`<span style="font-size:8px;color:var(--txt3);flex:1;text-align:center">${w.label}</span>`).join('');
+
+  // ── Predicción SLA ─────────────────────────────────
+  const pred=getPredSLA();
+  const predHtml=`<div class="new-section">
+    <div class="ch"><span class="ct">Predicción de vencimientos SLA<span class="badge-new">nuevo</span></span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px">
+      <div style="background:#fef2f2;border:0.5px solid #fecaca;border-radius:var(--rl);padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#dc2626">${pred.vencHoy}</div>
+        <div style="font-size:10px;color:#dc2626;margin-top:2px">Vencen hoy</div>
+      </div>
+      <div style="background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--rl);padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#92400e">${pred.predH24}</div>
+        <div style="font-size:10px;color:#92400e;margin-top:2px">Vencen mañana</div>
+      </div>
+      <div style="background:#eff6ff;border:0.5px solid #bfdbfe;border-radius:var(--rl);padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#1d4ed8">${pred.predH48}</div>
+        <div style="font-size:10px;color:#1d4ed8;margin-top:2px">En 48h</div>
+      </div>
+      <div style="background:var(--sur2);border:0.5px solid var(--bdr);border-radius:var(--rl);padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--txt)">${pred.predSem}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:2px">Esta semana</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Semáforo de agentes ────────────────────────────
+  const semData=getAgentSemaforo();
+  const semCards=semData.slice(0,6).map(ag=>{
+    const initials=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+    const avatarBg=ag.color==='red'?'#fef2f2':ag.color==='amber'?'#fffbeb':'#f0fdf4';
+    const avatarC=ag.color==='red'?'#dc2626':ag.color==='amber'?'#92400e':'#15803d';
+    const predPct=Math.min(100,Math.round(ag.avgScore/4));
+    const predColor=ag.color==='red'?'#dc2626':ag.color==='amber'?'#d97706':'#16a34a';
+    return`<div class="agent-sem-card ${ag.color}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="width:30px;height:30px;border-radius:50%;background:${avatarBg};color:${avatarC};font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ag.ag}</div>
+          <div style="font-size:10px;color:var(--txt3)">${ag.tks} tickets · ${ag.area||'—'}</div>
+        </div>
+        <span class="sem-badge ${ag.color}">${ag.label}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--txt2)">Score promedio</span><span style="font-size:11px;font-weight:700;color:${predColor}">${ag.avgScore}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--txt2)">Sin seguimiento +3d</span><span style="font-size:11px;font-weight:600;color:${ag.sinSeg>0?'#dc2626':'#16a34a'}">${ag.sinSeg}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:10px;color:var(--txt2)">SLA vencido</span><span style="font-size:11px;font-weight:600;color:${ag.sla>0?'#d97706':'#16a34a'}">${ag.sla}</span></div>
+      <div class="pred-bar"><div class="pred-fill" style="width:${predPct}%;background:${predColor}"></div></div>
+    </div>`;
+  }).join('');
+
+  // ── Top solicitantes ───────────────────────────────
+  const topSol=getTopSolicitantes();
+  const solColors=['#dc2626','#d97706','#4B9BFF','#22C55E','#A855F7'];
+  const solBgs=['#fef2f2','#fffbeb','#eff4ff','#f0fdf4','#faf5ff'];
+  const solRows=topSol.map(([sol,d],i)=>`<div style="display:grid;grid-template-columns:1fr 36px 64px;gap:4px;align-items:center;padding:5px 4px;border-bottom:0.5px solid var(--bdr)">
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:${solColors[i]};flex-shrink:0"></div><span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sol}</span></div>
+    <span style="font-size:12px;font-weight:600;color:${solColors[i]};text-align:center">${d.count}</span>
+    <div style="text-align:right"><span style="font-size:10px;background:${solBgs[i]};color:${solColors[i]};padding:1px 6px;border-radius:4px">${d.maxScore}</span></div>
+  </div>`).join('');
+
+  el('v-ind').innerHTML=`
+    ${alertHtml}
+    <div><div class="slbl">Indicadores clave de operación</div><div class="kpi-grid">${kpis}</div></div>
+    <div class="charts-row">
+      <div class="ccard">
+        <div class="ch"><span class="ct">Por prioridad</span></div>
+        <div class="cb">
+          <div style="position:relative;height:170px"><canvas id="cp"></canvas></div>
+          <div class="chart-legend" id="pri-legend"></div>
+        </div>
+      </div>
+      <div class="ccard">
+        <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div>
+        <div class="cb"><div style="position:relative;height:220px;width:100%;overflow:hidden"><canvas id="ca"></canvas></div></div>
+      </div>
+      <div class="trend-section new-section">
+        <div class="ch"><span class="ct">Tendencia semanal<span class="badge-new">nuevo</span></span></div>
+        <div style="padding:12px">
+          <svg width="100%" height="${trendH}" viewBox="0 0 170 ${trendH}" preserveAspectRatio="none" style="display:block">
+            <polyline points="${trendPoints}" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>
+            <polyline points="${slaPoints}" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round" stroke-dasharray="4,2"/>
+            ${trendData.map((w,i)=>`<circle cx="${10+i*28}" cy="${trendH-(w.open/trendMax*(trendH-10))}" r="3" fill="#2563eb"/>`).join('')}
+          </svg>
+          <div style="display:flex;margin-top:4px">${trendLabels}</div>
+          <div style="display:flex;gap:12px;margin-top:8px">
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txt2)"><div style="width:12px;height:2px;background:#2563eb;border-radius:1px"></div>Abiertos</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txt2)"><div style="width:12px;height:2px;background:#F59E0B;border-radius:1px;border-top:1px dashed #F59E0B"></div>SLA vencidos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${predHtml}
+    <div class="new-section">
+      <div class="ch"><span class="ct">Semáforo de agentes — carga y riesgo<span class="badge-new">nuevo</span></span><span style="font-size:10px;color:var(--txt3)">color = score promedio ponderado</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px">${semCards}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ccard new-section">
+        <div class="ch"><span class="ct">Top solicitantes<span class="badge-new">nuevo</span></span><span style="font-size:10px;color:var(--txt3)">tickets · score máx.</span></div>
+        <div style="padding:8px 12px">
+          <div style="display:grid;grid-template-columns:1fr 36px 64px;gap:4px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 4px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.06em"><span>Solicitante</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span></div>
+          ${solRows}
+        </div>
+      </div>
+      <div class="ccard">
+        <div class="ch"><span class="ct">Tickets por empresa</span><span style="font-size:10px;color:var(--txt3)">${T.length} total</span></div>
+        <div class="cb"><div style="position:relative;height:${Math.max(180,orgS.length*32)}px"><canvas id="cag"></canvas></div></div>
+      </div>
+    </div>
+    <div class="detail-card" id="detail-card">
+      <div class="detail-head" id="detail-head" style="background:#fef2f2;border-bottom:1px solid #fecaca">
+        <span class="detail-title" id="detail-title">Sin responsable asignado</span>
+        <div class="detail-meta">
+          <span class="detail-count" id="detail-count" style="background:#fee2e2;color:#dc2626">0</span>
+          <button class="detail-clear" id="detail-clear" onclick="clearFilter()" style="display:none">✕ Limpiar filtro</button>
+          <button id="detail-dl" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font);display:none">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="tw" id="detail-body"></div>
+    </div>`;
+
   const priData=['urgent','high','normal','low'].map(k=>T.filter(t=>t.priority===k).length);
   const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
   CH['cp']&&CH['cp'].destroy();
-  const cpCtx=el('cp');if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff',hoverBorderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});}
-  const legEl=el('pri-legend');if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
+  const cpCtx=el('cp');
+  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff',hoverBorderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});}
+  const legEl=el('pri-legend');
+  if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
   mkChart('ca','bar',rVals,rVals.map(r=>T.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{filterByChart('rango',label);});
   mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,(label)=>{filterByChart('org',label);});
   renderDetail(AKPI,null,null);
