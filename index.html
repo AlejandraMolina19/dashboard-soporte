@@ -175,7 +175,8 @@ function getTopSolicitantes(){
   return Object.entries(map).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
 }
 
-// ── Semáforo agentes ────────────────────────────────
+// ── Semáforo agentes ── solo agentes con riesgo real ────────────
+// Criterios: sin seguimiento >3d, tickets >=7 días antigüedad, o >=5 tickets asignados
 function getAgentSemaforo(){
   const agMap={};
   T.forEach(t=>{
@@ -187,29 +188,62 @@ function getAgentSemaforo(){
   return Object.entries(agMap).map(([ag,d])=>{
     const tks=d.tickets;
     const avgScore=tks.length?Math.round(tks.reduce((s,t)=>s+t.score,0)/tks.length):0;
-    const sinSeg=tks.filter(t=>t.sinSeguimiento).length;
-    const sla=tks.filter(t=>t.isSla).length;
+    const sinSeg=tks.filter(t=>t.sinSeguimiento).length;       // col E >3d
+    const sla=tks.filter(t=>t.isSla).length;                   // col R >=7 días
+    const ticketsMas7=tks.filter(t=>parseDias(t.rangoStr)>=7).length; // col R >=7 días
     const urghi=tks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
-    const color=avgScore>=300?'red':avgScore>=200?'amber':'green';
-    const label=avgScore>=300?'Carga alta':avgScore>=200?'Revisar':'Al día';
-    return{ag,tks:tks.length,area:d.area,avgScore,sinSeg,sla,urghi,color,label};
-  }).sort((a,b)=>b.avgScore-a.avgScore);
+    const totalTks=tks.length;
+    // Calificar riesgo:
+    // ROJO: tiene sin seguimiento >3d O tickets >=7 días Y total >=5
+    // AMARILLO: tiene tickets >=7 días O total >=5
+    // Si no cumple ninguno → no aparece en semáforo (se filtra)
+    const tieneRiesgo=sinSeg>0||ticketsMas7>0||totalTks>=5;
+    if(!tieneRiesgo)return null;
+    let color,label;
+    if(sinSeg>0&&(ticketsMas7>0||totalTks>=5)){color='red';label='Carga alta';}
+    else if(sinSeg>0||ticketsMas7>0){color='amber';label='Revisar';}
+    else{color='amber';label='Revisar';} // totalTks>=5
+    return{ag,tks:totalTks,area:d.area,avgScore,sinSeg,sla,ticketsMas7,urghi,color,label,_tickets:tks};
+  }).filter(Boolean).sort((a,b)=>{
+    // Ordenar: rojos primero, luego por sin seguimiento desc
+    if(a.color!==b.color)return a.color==='red'?-1:1;
+    return b.sinSeg-a.sinSeg||b.tks-a.tks;
+  });
 }
 
-// ── Predicción SLA próximas 48h ─────────────────────
+// ── Predicción SLA — 4 indicadores desde col R y col E ──────────
 function getPredSLA(){
-  const now=new Date();
-  const SLA_DIAS=7;
-  const predH24=[];const predH48=[];const predSem=[];const vencHoy=[];
-  T.filter(t=>!t.isSla&&t.created).forEach(t=>{
-    const diasAbierto=t.days||0;
-    const restante=SLA_DIAS-diasAbierto;
-    if(restante<=0)vencHoy.push(t);
-    else if(restante<=1)predH24.push(t);
-    else if(restante<=2)predH48.push(t);
-    else if(restante<=7)predSem.push(t);
+  // Indicador 1: col R dice exactamente "7 Días" → vencen hoy (SLA = 7 días)
+  const ind1=T.filter(t=>{
+    const r=(t.rangoStr||'').trim().toLowerCase();
+    return r==='7 días'||r==='7 dias';
   });
-  return{vencHoy:vencHoy.length,predH24:predH24.length,predH48:predH48.length,predSem:predSem.length};
+  // Indicador 2: col R dice exactamente "6 Días" → vencen mañana
+  const ind2=T.filter(t=>{
+    const r=(t.rangoStr||'').trim().toLowerCase();
+    return r==='6 días'||r==='6 dias';
+  });
+  // Indicador 3: col E (ultimoSeg) sin seguimiento > 3 días desde hoy → vencen hoy sin atención
+  const now=new Date();
+  const ind3=T.filter(t=>{
+    if(!t.ultimoSeg||t.ultimoSeg.trim()==='')return false;
+    const d=new Date(t.ultimoSeg);
+    if(isNaN(d))return false;
+    const diff=(now-d)/86400000;
+    return diff>3;
+  });
+  // Indicador 4: col E con exactamente 2 días de antigüedad desde hoy → vencen mañana sin seguimiento
+  const ind4=T.filter(t=>{
+    if(!t.ultimoSeg||t.ultimoSeg.trim()==='')return false;
+    const d=new Date(t.ultimoSeg);
+    if(isNaN(d))return false;
+    const diff=(now-d)/86400000;
+    return diff>2&&diff<=3;
+  });
+  return{
+    ind1,ind2,ind3,ind4,
+    n1:ind1.length,n2:ind2.length,n3:ind3.length,n4:ind4.length
+  };
 }
 
 const KDEF=[
@@ -219,11 +253,11 @@ const KDEF=[
   {key:'sla',   label:'Vencidos SLA +7d',     color:'#F59E0B', fn:()=>T.filter(t=>t.isSla)},
   {key:'sinSeg',label:'Sin seguimiento +3d',  color:'#e11d48', fn:()=>T.filter(t=>t.sinSeguimiento)},
   {key:'sinA',  label:'Sin responsable',      color:'#7c3aed', fn:()=>T.filter(t=>t.isSinAsignar)},
-  {key:'emp3',  label:'Empresas con +3 tickets', color:'#0891b2',
+  {key:'emp3', label:'Empresas con +3 tickets', color:'#0891b2',
    fn:()=>{
-     // Contar por empresa (col G = org), devolver tickets de las que tienen >3
+     // col G = org: empresas con >= 3 tickets
      const orgCount={};T.forEach(t=>{if(t.org&&t.org.trim()!=='')orgCount[t.org]=(orgCount[t.org]||0)+1;});
-     return T.filter(t=>t.org&&(orgCount[t.org]||0)>3);
+     return T.filter(t=>t.org&&(orgCount[t.org]||0)>=3);
    }
   },
 ];
@@ -275,38 +309,61 @@ function renderInd(){
   const trendLabels=trendData.map((w,i)=>`<span style="font-size:8px;color:var(--txt3);flex:1;text-align:center">${w.label}</span>`).join('');
 
   // ── Predicción SLA ─────────────────────────────────
+  // ── Predicción SLA — 4 indicadores ────────────────────────────
   const pred=getPredSLA();
+  window._predTickets={ind1:pred.ind1,ind2:pred.ind2,ind3:pred.ind3,ind4:pred.ind4};
   const predHtml=`<div class="new-section">
-    <div class="ch"><span class="ct">Predicción de vencimientos SLA<span class="badge-new">nuevo</span></span></div>
+    <div class="ch">
+      <span class="ct">Predicción de vencimientos SLA<span class="badge-new">nuevo</span></span>
+      <span style="font-size:10px;color:var(--txt3)">col R = antigüedad etiqueta · col E = último seguimiento</span>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px">
-      <div style="background:#fef2f2;border:0.5px solid #fecaca;border-radius:var(--rl);padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#dc2626">${pred.vencHoy}</div>
-        <div style="font-size:10px;color:#dc2626;margin-top:2px">Vencen hoy</div>
+      <div onclick="showPredDetail('ind1','Vencen hoy — Antigüedad 7 Días','#dc2626')"
+           style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:14px;text-align:center;cursor:pointer;transition:transform .15s"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:32px;font-weight:700;font-family:var(--mono);color:#dc2626">${pred.n1}</div>
+        <div style="font-size:11px;font-weight:600;color:#dc2626;margin-top:4px">Vencen hoy</div>
+        <div style="font-size:9px;color:#dc2626;opacity:.8;margin-top:3px">Antigüedad = 7 Días · col R</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:5px">▼ Ver detalle</div>
       </div>
-      <div style="background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--rl);padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#92400e">${pred.predH24}</div>
-        <div style="font-size:10px;color:#92400e;margin-top:2px">Vencen mañana</div>
+      <div onclick="showPredDetail('ind2','Vencen mañana — Antigüedad 6 Días','#d97706')"
+           style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--rl);padding:14px;text-align:center;cursor:pointer;transition:transform .15s"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:32px;font-weight:700;font-family:var(--mono);color:#92400e">${pred.n2}</div>
+        <div style="font-size:11px;font-weight:600;color:#92400e;margin-top:4px">Vencen mañana</div>
+        <div style="font-size:9px;color:#92400e;opacity:.8;margin-top:3px">Antigüedad = 6 Días · col R</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:5px">▼ Ver detalle</div>
       </div>
-      <div style="background:#eff6ff;border:0.5px solid #bfdbfe;border-radius:var(--rl);padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:#1d4ed8">${pred.predH48}</div>
-        <div style="font-size:10px;color:#1d4ed8;margin-top:2px">En 48h</div>
+      <div onclick="showPredDetail('ind3','Sin seguimiento >3d — Vencen hoy','#7c3aed')"
+           style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:var(--rl);padding:14px;text-align:center;cursor:pointer;transition:transform .15s"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:32px;font-weight:700;font-family:var(--mono);color:#7c3aed">${pred.n3}</div>
+        <div style="font-size:11px;font-weight:600;color:#7c3aed;margin-top:4px">Sin seguim. >3d hoy</div>
+        <div style="font-size:9px;color:#7c3aed;opacity:.8;margin-top:3px">Último seguimiento · col E</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:5px">▼ Ver detalle</div>
       </div>
-      <div style="background:var(--sur2);border:0.5px solid var(--bdr);border-radius:var(--rl);padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--txt)">${pred.predSem}</div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:2px">Esta semana</div>
+      <div onclick="showPredDetail('ind4','Sin seguimiento 2-3d — Vencen mañana','#2563eb')"
+           style="background:#eff4ff;border:1px solid #bfdbfe;border-radius:var(--rl);padding:14px;text-align:center;cursor:pointer;transition:transform .15s"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:32px;font-weight:700;font-family:var(--mono);color:#2563eb">${pred.n4}</div>
+        <div style="font-size:11px;font-weight:600;color:#2563eb;margin-top:4px">Sin seguim. mañana</div>
+        <div style="font-size:9px;color:#2563eb;opacity:.8;margin-top:3px">2-3 días sin atención · col E</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:5px">▼ Ver detalle</div>
       </div>
     </div>
-  </div>`;
+    <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
+  </div>\`;
 
   // ── Semáforo de agentes ────────────────────────────
   const semData=getAgentSemaforo();
-  const semCards=semData.slice(0,6).map(ag=>{
+  const semCards=semData.map(ag=>{
     const initials=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-    const avatarBg=ag.color==='red'?'#fef2f2':ag.color==='amber'?'#fffbeb':'#f0fdf4';
-    const avatarC=ag.color==='red'?'#dc2626':ag.color==='amber'?'#92400e':'#15803d';
-    const predPct=Math.min(100,Math.round(ag.avgScore/4));
-    const predColor=ag.color==='red'?'#dc2626':ag.color==='amber'?'#d97706':'#16a34a';
-    return`<div class="agent-sem-card ${ag.color}">
+    const avatarBg=ag.color==='red'?'#fef2f2':'#fffbeb';
+    const avatarC=ag.color==='red'?'#dc2626':'#92400e';
+    const predColor=ag.color==='red'?'#dc2626':'#d97706';
+    const predPct=Math.min(100,Math.round((ag.sinSeg+ag.ticketsMas7)/Math.max(ag.tks,1)*100));
+    const agKey=ag.ag.replace(/'/g,"\'");
+    return`<div class="agent-sem-card ${ag.color}" style="cursor:pointer" onclick="showSemDetail('${agKey}')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div style="width:30px;height:30px;border-radius:50%;background:${avatarBg};color:${avatarC};font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
         <div style="flex:1;min-width:0">
@@ -317,8 +374,9 @@ function renderInd(){
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--txt2)">Score promedio</span><span style="font-size:11px;font-weight:700;color:${predColor}">${ag.avgScore}</span></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--txt2)">Sin seguimiento +3d</span><span style="font-size:11px;font-weight:600;color:${ag.sinSeg>0?'#dc2626':'#16a34a'}">${ag.sinSeg}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:10px;color:var(--txt2)">SLA vencido</span><span style="font-size:11px;font-weight:600;color:${ag.sla>0?'#d97706':'#16a34a'}">${ag.sla}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:10px;color:var(--txt2)">Antigüedad ≥7d</span><span style="font-size:11px;font-weight:600;color:${ag.ticketsMas7>0?'#d97706':'#16a34a'}">${ag.ticketsMas7}</span></div>
       <div class="pred-bar"><div class="pred-fill" style="width:${predPct}%;background:${predColor}"></div></div>
+      <div style="margin-top:6px;font-size:10px;color:var(--acc);text-align:center">▼ Ver tickets</div>
     </div>`;
   }).join('');
 
@@ -365,8 +423,9 @@ function renderInd(){
     </div>
     ${predHtml}
     <div class="new-section">
-      <div class="ch"><span class="ct">Semáforo de agentes — carga y riesgo<span class="badge-new">nuevo</span></span><span style="font-size:10px;color:var(--txt3)">color = score promedio ponderado</span></div>
+      <div class="ch"><span class="ct">Semáforo de agentes — carga y riesgo<span class="badge-new">nuevo</span></span><span style="font-size:10px;color:var(--txt3)">solo agentes con riesgo · clic para ver tickets</span></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px">${semCards}</div>
+      <div id="sem-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="ccard new-section">
@@ -608,6 +667,90 @@ function intRenderAgentDetail(ag,baseList){
 
 function intDownload(){downloadCSV(window._intList||[],'operacion_interna');}
 function intDownloadAgent(){downloadCSV(window._intAgentTickets||[],'agente_'+(window._intActiveAgent||'').replace(/\s+/g,'_'));}
+
+// ── Detalle predicción SLA al clic ──────────────────────────────
+function showPredDetail(indKey,title,color){
+  const detail=el('pred-detail');if(!detail)return;
+  const tickets=(window._predTickets||{})[indKey]||[];
+  if(detail.dataset.open===indKey){
+    detail.style.display='none';detail.dataset.open='';return;
+  }
+  detail.dataset.open=indKey;
+  detail.style.display='';
+  if(!tickets.length){detail.innerHTML='<div class="empty" style="color:#16a34a;padding:20px">✓ Sin tickets en esta categoría</div>';return;}
+  function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
+  const rows=sortByAge(tickets).map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    return`<tr onclick="om(${t.id})">
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:180px">${t.subject||'—'}</td>
+      <td style="color:var(--txt2)">${t.org||'—'}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+      <td style="color:var(--txt2)">${t.agente||'—'}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+  detail.innerHTML=`<div style="padding:10px 16px;background:${color}10;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:12px;font-weight:600;color:${color}">${title}</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:${color}25;color:${color}">${tickets.length}</span>
+      <button onclick="downloadCSV(window._predTickets['${indKey}']||[],'pred_${indKey}')" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+      <button onclick="el('pred-detail').style.display='none';el('pred-detail').dataset.open=''" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕</button>
+    </div>
+  </div>
+  <div class="tw"><table><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Agente</th><th>Área</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+
+// ── Detalle semáforo al clic ─────────────────────────────────────
+function showSemDetail(agName){
+  const detail=el('sem-detail');if(!detail)return;
+  if(detail.dataset.open===agName){
+    detail.style.display='none';detail.dataset.open='';return;
+  }
+  detail.dataset.open=agName;
+  detail.style.display='';
+  const semData=getAgentSemaforo();
+  const ag=semData.find(a=>a.ag===agName);
+  if(!ag){detail.innerHTML='<div class="empty">Sin datos</div>';return;}
+  const tickets=[...ag._tickets].sort((a,b)=>{
+    const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);
+    return db!==da?db-da:b.score-a.score;
+  });
+  const color=ag.color==='red'?'#dc2626':'#d97706';
+  const rows=tickets.map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    const segFlag=t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:4px">+3d</span>`:'';
+    return`<tr onclick="om(${t.id})">
+      <td style="color:var(--txt3);font-weight:600;width:30px;font-size:11px">${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:600;color:#2563eb;text-decoration:none" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:180px">${t.subject||'—'}</td>
+      <td style="color:var(--txt2)">${t.org||'—'}</td>
+      <td>${bdg(st.t,st.c,st.bg)}</td><td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.createdFmt||'—'}</td>
+      <td style="font-size:11px">${fmtDate(t.ultimoSeg)||'—'}${segFlag}</td>
+      <td style="color:var(--txt2);font-size:11px">${t.areaAsig||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+  detail.innerHTML=`<div style="padding:10px 16px;background:${color}10;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:12px;font-weight:600;color:${color}">Tickets de ${agName} — ${ag.sinSeg} sin seguimiento · ${ag.ticketsMas7} con ≥7 días</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:${color}25;color:${color}">${tickets.length}</span>
+      <button onclick="downloadCSV(getAgentSemaforo().find(a=>a.ag==='${agName}')?._tickets||[],'agente_${agName}'.replace(/\s+/g,'_'))" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+      <button onclick="el('sem-detail').style.display='none';el('sem-detail').dataset.open=''" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕</button>
+    </div>
+  </div>
+  <div class="tw"><table><thead><tr><th style="width:30px">#</th><th>Ticket</th><th>Asunto</th><th>Empresa</th><th>Estado</th><th>Prioridad</th><th>Antigüedad</th><th>Creado</th><th>Último seguimiento</th><th>Área</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
 
 function go(tab){TAB=tab;AKPI=null;CHART_FILTER={type:null,value:null};document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['ind','int'][i]===tab));['ind','int'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});const v=el('v-'+tab);if(v)v.classList.add('on');if(tab==='ind')renderInd();else if(tab==='int')renderInt();}
 
