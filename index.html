@@ -898,6 +898,12 @@ async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
   ['hoy','equipo','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  // Timeout de seguridad: si tarda más de 12s mostrar error
+  const _timeout=setTimeout(()=>{
+    el('ldr').style.display='none';
+    const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar con Google Sheets. Verifica tu conexión y reintenta.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
+    btn.disabled=false;btn.classList.remove('spin');
+  },12000);
   try{
     el('ls').textContent='Leyendo Ant_Tickets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
@@ -913,11 +919,30 @@ async function loadData(){
     TAB='hoy';
     document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',i===0));
     const v=el('v-hoy');if(v)v.classList.add('on');
-    setTimeout(()=>renderHoy(),10);
+    setTimeout(()=>{
+      try{renderHoy();}catch(re){
+        const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;color:#dc2626;font-weight:600">Error al renderizar: '+re.message+'<br><small style=\'font-family:monospace;font-weight:400\'>'+re.stack+'</small></div>';}
+        console.error('renderHoy error:',re);
+      }
+    },10);
   }catch(e){
     el('ldr').style.display='none';
-    const v=el('v-hoy');if(v){v.classList.add('on');v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">${e.message}</div><button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button></div>`;}
-  }finally{btn.disabled=false;btn.classList.remove('spin');}
+    const v=el('v-hoy');
+    if(v){
+      v.classList.add('on');
+      v.style.display='flex';
+      v.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--rl);padding:20px;width:100%">
+        <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Error al cargar datos</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:8px">${e.message}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;font-family:monospace">${e.stack||''}</div>
+        <button onclick="loadData()" style="padding:7px 16px;border-radius:var(--r);border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">↺ Reintentar</button>
+      </div>`;
+    }
+    console.error('Dashboard error:',e);
+  }finally{
+    clearTimeout(_timeout);
+    btn.disabled=false;btn.classList.remove('spin');
+  }
 }
 loadData();
 </script>
