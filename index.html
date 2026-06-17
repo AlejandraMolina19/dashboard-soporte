@@ -224,6 +224,7 @@ tbody tr:last-child td{border-bottom:none}
 </div>
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 <script>
+
 const API='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv';
 const PCOLORS={urgent:'#FF5C5C',high:'#FF9A3C',normal:'#4B9BFF',low:'#8BC4FF'};
 const PC={urgent:{t:'Urgente',c:'#FF5C5C',bg:'#FFF0F0'},high:{t:'Alto',c:'#FF9A3C',bg:'#FFF8EF'},normal:{t:'Normal',c:'#4B9BFF',bg:'#EFF6FF'},low:{t:'Bajo',c:'#8BC4FF',bg:'#F0F7FF'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
@@ -765,7 +766,7 @@ function buildPanoCharts(subset){
 
   if(CH['cp'])CH['cp'].destroy();
   const cpCtx=el('cp');
-  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw;}},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}}})
+  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw;}},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}})}
   const legEl=el('pri-legend');if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
   mkChart('ca','bar',rVals,rVals.map(r=>subset.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{showPanoDetail('rango_'+label,label);});
   mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,null);
@@ -966,6 +967,8 @@ async function loadData(){
   }
 }
 loadData();
-</script>
+
+</script></script>
+
 </body>
 </html>
