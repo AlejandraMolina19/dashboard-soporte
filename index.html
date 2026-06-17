@@ -762,7 +762,7 @@ function buildPanoCharts(subset){
 
   if(CH['cp'])CH['cp'].destroy();
   const cpCtx=el('cp');
-  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}}})
+  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw;}},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}}})
   const legEl=el('pri-legend');if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
   mkChart('ca','bar',rVals,rVals.map(r=>subset.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{showPanoDetail('rango_'+label,label);});
   mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,null);
@@ -823,7 +823,7 @@ function showPredDetail(key,title,color){
 // ── CHART HELPER ─────────────────────────────────────────────────
 function mkChart(id,type,labels,data,colors,horiz,onClickFn){
   if(CH[id])CH[id].destroy();const ctx=el(id);if(!ctx)return;
-  const opts={responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}};
+  const opts={responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.raw+' tickets';}},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}};
   if(onClickFn){opts.onClick=(e,els)=>{if(els.length>0)onClickFn(labels[els[0].index]);};ctx.style.cursor='pointer';}
   CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:4}]},options:opts});
 }
@@ -886,7 +886,22 @@ function go(tab){
 }
 
 // ── UTILIDADES ───────────────────────────────────────────────────
-async function fetchCSV(url){const u=url.includes('?')?url+'&cachebust='+Date.now():url+'?cachebust='+Date.now();const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
+async function fetchCSV(url){
+  // Intentar primero sin cachebust, luego con si falla
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    if(!txt||txt.trim().length<10)throw new Error('Respuesta vacía');
+    return parseCSV(txt);
+  }catch(e1){
+    // Segundo intento con cachebust
+    const u2=url+(url.includes('?')?'&':'?')+'t='+Date.now();
+    const r2=await fetch(u2);
+    if(!r2.ok)throw new Error('HTTP '+r2.status+' ('+e1.message+')');
+    return parseCSV(await r2.text());
+  }
+}
 function fmtDate(str){if(!str||str==='—')return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function fmtDateShort(str){if(!str)return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear();}
 function downloadCSV(tickets,filename){if(!tickets||!tickets.length)return;const cols=['id','subject','org','status','priority','rangoStr','agente','dResp','areaAsig','score','created','ultimoSeg'];const heads=['Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Área','Score','Creado','Último seguimiento'];const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));a.download=(filename||'export')+'.csv';a.click();}
@@ -905,9 +920,11 @@ async function loadData(){
     btn.disabled=false;btn.classList.remove('spin');
   },12000);
   try{
-    el('ls').textContent='Leyendo Ant_Tickets…';
+    el('ls').textContent='Conectando con Google Sheets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
+    el('ls').textContent='Procesando '+rows.length+' registros…';
     T=mapRows(rows,hdrs);
+    el('ls').textContent='Calculando indicadores…';
     const now=new Date();
     safeSet('cf',now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
     safeSet('cs','SEM '+wk(now));
@@ -915,6 +932,7 @@ async function loadData(){
     safeSet('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
     const _q=getTicketsQuemandose();const _ar=getAgentesEnRiesgo();
     safeSet('nb-hoy',_q.length);safeSet('nb-equipo',_ar.length);
+    el('ls').textContent='Cargando vista…';
     el('ldr').style.display='none';
     TAB='hoy';
     document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',i===0));
