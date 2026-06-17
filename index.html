@@ -12,8 +12,7 @@
   --bdr:#e2e5ef;--bdr2:#d0d4e8;
   --txt:#111827;--txt2:#4b5568;--txt3:#9ca3af;
   --acc:#2563eb;--acc2:#eff4ff;--acc3:#dbeafe;
-  --grn:#16a34a;--red:#dc2626;
-  --org:#d97706;--pur:#7c3aed;
+  --grn:#16a34a;--red:#dc2626;--org:#d97706;--pur:#7c3aed;
   --r:8px;--rl:12px;--rxl:16px;
   --font:'Plus Jakarta Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
   --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
@@ -22,8 +21,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
 body{display:flex;flex-direction:column;min-height:100vh}
-
-/* ── Topbar ── */
 .tb{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:48px;background:var(--sur);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-icon{width:28px;height:28px;border-radius:6px;background:var(--acc);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;font-family:var(--mono)}
@@ -38,26 +35,19 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ubtn:disabled{opacity:.5;cursor:not-allowed}
 .ubtn.spin svg{animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
-
-/* ── Nav 3 pestañas ── */
 .nav{display:flex;background:var(--sur);border-bottom:1px solid var(--bdr)}
 .ntab{flex:1;text-align:center;padding:0 10px;height:40px;font-size:12px;font-weight:600;font-family:var(--font);color:var(--txt3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
 .ntab:hover{color:var(--txt2)}
 .ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
 .nb{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--sur3);color:var(--txt3);font-family:var(--mono)}
 .ntab.on .nb{background:var(--acc3);color:var(--acc)}
-.nb.danger{background:#fef2f2;color:#dc2626}
-.nb.warn{background:#fffbeb;color:#92400e}
-
-/* ── Layout ── */
+.nb.danger{background:#fef2f2 !important;color:#dc2626 !important}
+.nb.warn{background:#fffbeb !important;color:#92400e !important}
 .main{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:12px}
 .view{display:none;flex-direction:column;gap:12px}
 .view.on{display:flex}
 .ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl)}
 .ring{width:34px;height:34px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite}
-.slbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px}
-
-/* ── Cards genéricas ── */
 .card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}
 .card-head{padding:10px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .card-title{font-size:12px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:6px}
@@ -67,15 +57,10 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .badge.amber{background:#fffbeb;color:#92400e;border:0.5px solid #fde68a}
 .badge.blue{background:#eff4ff;color:#1e40af;border:0.5px solid #bfdbfe}
 .badge.green{background:#f0fdf4;color:#15803d;border:0.5px solid #bbf7d0}
-.badge.teal{background:#f0fdfa;color:#0f766e;border:0.5px solid #99f6e4}
-
-/* ── Greeting ── */
 .greeting{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:var(--sh)}
 .greeting-title{font-size:14px;font-weight:700;color:var(--txt)}
 .greeting-sub{font-size:11px;color:var(--txt3);margin-top:3px}
 .date-chip{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--sur2);color:var(--txt2);border:1px solid var(--bdr);white-space:nowrap}
-
-/* ── Ticket rows ── */
 .trow-grid{display:grid;grid-template-columns:24px 1fr 78px 64px 110px 46px;align-items:start;gap:8px;padding:9px 16px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .1s}
 .trow-grid:hover{background:var(--sur2)}
 .trow-grid:last-of-type{border-bottom:none}
@@ -95,14 +80,10 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .why-pill.clock{background:#fffbeb;color:#92400e;border:0.5px solid #fde68a}
 .why-pill.ghost{background:#faf5ff;color:#7c3aed;border:0.5px solid #e9d5ff}
 .sc{font-family:var(--mono);font-weight:700;font-size:12px;padding-top:2px}
-.sc.crit{color:#EF4444}
-.sc.warn{color:#F59E0B}
-.sc.ok{color:#4B9BFF}
+.sc.crit{color:#EF4444}.sc.warn{color:#F59E0B}.sc.ok{color:#4B9BFF}
 .expand-row{padding:8px 16px;font-size:11px;color:var(--acc);text-align:center;border-top:1px solid var(--bdr);background:var(--sur2);cursor:pointer}
 .expand-row:hover{background:var(--sur3)}
 .legend-row{padding:7px 16px;display:flex;align-items:center;gap:8px;font-size:10px;color:var(--txt3);border-top:1px solid var(--bdr);background:var(--sur2);flex-wrap:wrap}
-
-/* ── Agent rows Hoy ── */
 .ag-hoy-hdr{display:grid;grid-template-columns:28px 1fr 54px 64px 54px 16px;gap:8px;padding:5px 16px;background:var(--sur2);border-bottom:1px solid var(--bdr);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
 .ag-hoy-row{display:grid;grid-template-columns:28px 1fr 54px 64px 54px 16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);gap:8px;cursor:pointer;transition:background .1s}
 .ag-hoy-row:last-child{border-bottom:none}
@@ -114,15 +95,11 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .av.a{background:#fffbeb;color:#92400e}
 .av.g{background:#f0fdf4;color:#15803d}
 .ag-name{font-size:12px;font-weight:600;color:var(--txt)}
-.ag-area{font-size:10px;color:var(--txt3)}
+.ag-area-lbl{font-size:10px;color:var(--txt3)}
 .ag-metric{text-align:center}
 .ag-val{font-size:14px;font-weight:700}
-.ag-val.r{color:#dc2626}
-.ag-val.a{color:#d97706}
-.ag-val.g{color:var(--txt3)}
+.ag-val.r{color:#dc2626}.ag-val.a{color:#d97706}.ag-val.g{color:var(--txt3)}
 .ag-lbl{font-size:9px;color:var(--txt3);margin-top:1px}
-
-/* ── Predicción SLA ── */
 .pred-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
 .pred-card{border-radius:var(--rl);padding:14px;text-align:center;cursor:pointer;transition:transform .15s;border:1px solid}
 .pred-card:hover{transform:translateY(-2px)}
@@ -130,10 +107,14 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .pred-lbl{font-size:11px;font-weight:600;margin-top:4px}
 .pred-src{font-size:9px;opacity:.75;margin-top:3px}
 .pred-hint{font-size:9px;color:var(--txt3);margin-top:5px}
-
-/* ── Equipo ── */
+/* Filtros */
+.filter-bar{display:flex;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2);flex-wrap:wrap}
+.filter-select{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--bdr);background:var(--sur);color:var(--txt2);cursor:pointer;font-family:var(--font)}
+.filter-btn-clear{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;cursor:pointer;font-family:var(--font)}
+.filter-btn-clear:hover{background:#dc2626;color:#fff}
+/* Equipo */
 .area-filter{padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--bdr);background:var(--sur2);align-items:center}
-.area-btn{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bdr);background:var(--sur);color:var(--txt2);cursor:pointer;transition:all .15s}
+.area-btn{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bdr);background:var(--sur);color:var(--txt2);cursor:pointer;transition:all .15s;font-family:var(--font)}
 .area-btn:hover{border-color:var(--acc);color:var(--acc)}
 .area-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .eq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px}
@@ -147,19 +128,18 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .eq-ml{font-size:9px;color:var(--txt3);margin-top:1px}
 .al-dia-list{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
 .al-dia-chip{font-size:11px;padding:4px 12px;border-radius:20px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
-
-/* ── Panorama KPIs ── */
+/* Panorama KPIs */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:12px}
 .kc{background:var(--sur2);border-radius:var(--rl);padding:14px 16px;cursor:pointer;transition:all .18s;border:1px solid var(--bdr)}
-.kc:hover{border-color:var(--bdr2);transform:translateY(-1px)}
+.kc:hover,.kc.active{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc3);transform:translateY(-1px)}
+.kc.active{background:var(--acc2)}
 .kc.emp3-kc{border:1.5px dashed #0891b2}
 .kv{font-size:28px;font-weight:700;line-height:1;letter-spacing:-.04em;font-family:var(--mono)}
 .kl{font-size:11px;font-weight:600;color:var(--txt2);margin-top:3px}
 .kb{height:3px;border-radius:2px;margin-top:10px;background:var(--sur3);overflow:hidden}
 .kf{height:100%;border-radius:2px}
 .kh{font-size:10px;color:var(--txt3);margin-top:3px}
-
-/* ── Tendencia ── */
+/* Tendencia */
 .trend-box{padding:12px 16px}
 .trend-labels{display:flex;margin-top:4px}
 .trend-lbl{flex:1;text-align:center;font-size:9px;color:var(--txt3)}
@@ -167,10 +147,13 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .trend-li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt2)}
 .charts-row{display:grid;grid-template-columns:220px 1fr 1fr;gap:10px}
 @media(max-width:860px){.charts-row{grid-template-columns:1fr 1fr}}
-
-/* ── Detalle modal-like ── */
-.detail-open{border-top:1px solid var(--bdr)}
-.detail-head-bar{padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+/* Gráfica barras agente */
+.ag-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ag-bar-lbl{font-size:10px;color:var(--txt2);min-width:70px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag-bar-track{flex:1;height:14px;background:var(--sur3);border-radius:3px;overflow:hidden}
+.ag-bar-fill{height:100%;border-radius:3px}
+.ag-bar-val{font-size:10px;font-weight:700;color:var(--txt2);min-width:24px;font-family:var(--mono)}
+/* Tabla */
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:500px}
 thead th{padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);background:var(--sur2);border-bottom:1px solid var(--bdr);white-space:nowrap}
@@ -180,8 +163,6 @@ tbody tr:hover td{background:var(--sur2)}
 tbody tr:last-child td{border-bottom:none}
 .b{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;font-family:var(--mono)}
 .empty{padding:28px;text-align:center;color:var(--txt3);font-size:13px}
-
-/* ── Modal ── */
 .msk{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;padding-top:48px;backdrop-filter:blur(3px)}
 .msk.on{display:flex}
 .mbox{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rxl);padding:22px;max-width:520px;width:92%;max-height:82vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.12);animation:mIn .2s ease}
@@ -203,11 +184,9 @@ tbody tr:last-child td{border-bottom:none}
 .ch{padding:10px 14px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;gap:5px;flex-wrap:wrap}
 .ct{font-size:12px;font-weight:700;color:var(--txt)}
 .cb{padding:12px}
-.sel{background:var(--sur);border:1px solid var(--bdr);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;font-family:var(--font)}
 </style>
 </head>
 <body>
-
 <div class="tb">
   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
     <div class="brand">
@@ -229,25 +208,20 @@ tbody tr:last-child td{border-bottom:none}
     Actualizar datos
   </button>
 </div>
-
 <div class="nav">
   <button class="ntab on" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
   <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
   <button class="ntab" onclick="go('panorama')">📊 Panorama</button>
 </div>
-
 <div class="main">
   <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
   <div class="view" id="v-hoy"></div>
   <div class="view" id="v-equipo"></div>
   <div class="view" id="v-panorama"></div>
 </div>
-
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
-
 <script>
 const API='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv';
-const MN=['','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 const PCOLORS={urgent:'#FF5C5C',high:'#FF9A3C',normal:'#4B9BFF',low:'#8BC4FF'};
 const PC={urgent:{t:'Urgente',c:'#FF5C5C',bg:'#FFF0F0'},high:{t:'Alto',c:'#FF9A3C',bg:'#FFF8EF'},normal:{t:'Normal',c:'#4B9BFF',bg:'#EFF6FF'},low:{t:'Bajo',c:'#8BC4FF',bg:'#F0F7FF'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
 const SC={open:{t:'Abierto',c:'#dc2626',bg:'#fef2f2'},pending:{t:'Pendiente',c:'#d97706',bg:'#fffbeb'},solved:{t:'Resuelto',c:'#16a34a',bg:'#f0fdf4'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
@@ -257,8 +231,19 @@ const bdg=(t,c,bg)=>`<span class="b" style="background:${bg};color:${c}">${t}</s
 function wk(d){const s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
 function parseDias(str){if(!str)return-1;const s=str.trim().toLowerCase();if(s==='corriente')return 0;const m=s.match(/(\d+)/);return m?parseInt(m[1]):-1;}
 function isSlaVencido(str){return parseDias(str)>=7;}
-function getRangoColor(str){const d=parseDias(str);if(d<=0)return'#22C55E';if(d<=7)return'#22C55E';if(d<=30)return'#3B82F6';if(d<=90)return'#F59E0B';if(d<=365)return'#EF4444';return'#6B7280';}
+function getRangoColor(str){const d=parseDias(str);if(d<0)return'#9ca3af';if(d<=0)return'#22C55E';if(d<=7)return'#22C55E';if(d<=30)return'#3B82F6';if(d<=90)return'#F59E0B';if(d<=365)return'#EF4444';return'#6B7280';}
 function isSinSeguimiento(fechaStr,now){if(!fechaStr||fechaStr.trim()==='')return false;const d=new Date(fechaStr);if(isNaN(d))return false;return(now-d)/86400000>3;}
+
+// ── ÁREA ESTRICTA POR AGENTE ─────────────────────────────────────
+const AREA_AGENTES={Customer:['hector','héctor','andrea'],Soporte:['alejandra','ivette','karina'],Implementación:['oscar','leonardo']};
+function getAreaAgente(t){
+  const ag=(t.agente||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(const[area,lista]of Object.entries(AREA_AGENTES)){
+    if(lista.some(n=>ag===n||ag.startsWith(n)))return area;
+  }
+  if(t.dResp&&t.dResp.trim()!==''&&t.dResp.trim().toLowerCase()!=='no')return'Desarrollo';
+  return t.areaAsig||'—';
+}
 
 function mapRows(rows,headers){
   if(!rows.length)return[];
@@ -306,20 +291,19 @@ function mapRows(rows,headers){
   }).filter(Boolean);
 }
 
-// ── Helpers de análisis ──────────────────────────────────────────
+// ── ANÁLISIS ─────────────────────────────────────────────────────
 function getTicketsQuemandose(){
   return T.filter(t=>{
     const r=(t.rangoStr||'').trim().toLowerCase();
     return r==='7 días'||r==='7 dias'||r==='6 días'||r==='6 dias'||t.sinSeguimiento||(t.isSinAsignar&&(t.priority==='urgent'||t.priority==='high'));
-  }).sort((a,b)=>b.score-a.score);
+  }).sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
 }
-
 function getAgentesEnRiesgo(){
   const agMap={};
   T.forEach(t=>{
     const ag=(t.agente||'').trim();
     if(!ag||ag.toLowerCase()==='no'||ag==='')return;
-    if(!agMap[ag])agMap[ag]={tickets:[],area:t.areaAsig||''};
+    if(!agMap[ag])agMap[ag]={tickets:[],area:getAreaAgente(t)};
     agMap[ag].tickets.push(t);
   });
   return Object.entries(agMap).map(([ag,d])=>{
@@ -332,19 +316,34 @@ function getAgentesEnRiesgo(){
     return{ag,total,sinSeg,mas7,area:d.area,nivel,urghi:tks.filter(t=>t.priority==='urgent'||t.priority==='high').length,_tickets:tks};
   }).filter(Boolean).sort((a,b)=>a.nivel!==b.nivel?a.nivel==='r'?-1:1:b.sinSeg-a.sinSeg);
 }
-
+function getDesarrolladoresConRiesgo(){
+  const devMap={};
+  T.forEach(t=>{
+    const dev=(t.dResp||'').trim();
+    if(!dev||dev.toLowerCase()==='no'||dev==='')return;
+    if(!devMap[dev])devMap[dev]={tickets:[]};
+    devMap[dev].tickets.push(t);
+  });
+  return Object.entries(devMap).map(([dev,d])=>{
+    const tks=d.tickets;
+    const sinSeg=tks.filter(t=>t.sinSeguimiento).length;
+    const mas7=tks.filter(t=>parseDias(t.rangoStr)>=7).length;
+    const total=tks.length;
+    if(!sinSeg&&!mas7&&total<3)return null;
+    const nivel=(sinSeg>3||mas7>5)?'r':'a';
+    return{ag:dev,total,sinSeg,mas7,area:'Desarrollo',nivel,urghi:tks.filter(t=>t.priority==='urgent'||t.priority==='high').length,_tickets:tks};
+  }).filter(Boolean).sort((a,b)=>b.total-a.total);
+}
 function getPredSLA(){
   const now=new Date();
   const ind1=T.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='7 días'||r==='7 dias';});
   const ind2=T.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='6 días'||r==='6 dias';});
-  const ind3=T.filter(t=>{if(!t.ultimoSeg||t.ultimoSeg.trim()==='')return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;return(now-d)/86400000>3;});
-  const ind4=T.filter(t=>{if(!t.ultimoSeg||t.ultimoSeg.trim()==='')return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;const diff=(now-d)/86400000;return diff>2&&diff<=3;});
+  const ind3=T.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;return(now-d)/86400000>3;});
+  const ind4=T.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;const diff=(now-d)/86400000;return diff>2&&diff<=3;});
   return{ind1,ind2,ind3,ind4,n1:ind1.length,n2:ind2.length,n3:ind3.length,n4:ind4.length};
 }
-
 function getTrendData(){
-  const now=new Date();
-  const weeks=[];
+  const now=new Date();const weeks=[];
   for(let w=5;w>=0;w--){
     const wStart=new Date(now);wStart.setDate(now.getDate()-w*7-now.getDay());wStart.setHours(0,0,0,0);
     const wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+7);
@@ -352,20 +351,91 @@ function getTrendData(){
   }
   return weeks;
 }
-
 function getTopSolicitantes(){
   const map={};
-  T.forEach(t=>{
-    const sol=(t.sResp||t.assignee||'').trim();
-    if(!sol||sol.toLowerCase()==='no')return;
-    if(!map[sol])map[sol]={count:0,maxScore:0};
-    map[sol].count++;
-    if(t.score>map[sol].maxScore)map[sol].maxScore=t.score;
-  });
+  T.forEach(t=>{const sol=(t.sResp||t.assignee||'').trim();if(!sol||sol.toLowerCase()==='no')return;if(!map[sol])map[sol]={count:0,maxScore:0};map[sol].count++;if(t.score>map[sol].maxScore)map[sol].maxScore=t.score;});
   return Object.entries(map).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
 }
 
-// ── Render HOY ───────────────────────────────────────────────────
+// ── buildDetailBlock CON FILTROS + ÁREA + ORDEN ANTIGÜEDAD ───────
+function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
+
+function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
+  if(!tickets||!tickets.length)return'<div class="empty" style="color:#16a34a;padding:20px">✓ Sin tickets en esta categoría</div>';
+  window['_dt_'+openKey]=tickets;
+  const sorted=sortByAge(tickets);
+  const areas=[...new Set(sorted.map(t=>getAreaAgente(t)).filter(a=>a&&a!=='—'))].sort();
+  const rangos=[...new Set(sorted.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(b)-parseDias(a));
+  const filterId='filt-'+openKey;
+  const tableId='tbl-'+openKey;
+  return`<div style="background:${color}10;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr)">
+    <span style="font-size:12px;font-weight:700;color:${color}">${title}</span>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span id="${filterId}-cnt" style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:${color}25;color:${color}">${tickets.length}</span>
+      <button onclick="downloadCSV(window['_dt_${openKey}']||[],'detalle')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+      <button onclick="cerrarDetalle('${closeId}')" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Cerrar</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <select class="filter-select" id="${filterId}-area" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+      <option value="">Todas las áreas</option>${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
+    </select>
+    <select class="filter-select" id="${filterId}-rango" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+      <option value="">Toda antigüedad</option>${rangos.map(r=>`<option value="${r}">${r}</option>`).join('')}
+    </select>
+    <select class="filter-select" id="${filterId}-prior" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+      <option value="">Toda prioridad</option>
+      <option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option>
+    </select>
+    <button class="filter-btn-clear" onclick="clearDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">✕ Limpiar</button>
+    <span id="${filterId}-total" style="font-size:10px;color:var(--txt3);margin-left:auto">${tickets.length} tickets</span>
+  </div>
+  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Score'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
+  ${getDiagnosis(sorted)}`;
+}
+
+function renderDetailRows(list,showSeg){
+  if(!list.length)return'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--txt3)">Sin resultados</td></tr>';
+  return list.map((t,i)=>{
+    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
+    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
+    const sf=showSeg&&t.sinSeguimiento?'<span style="background:#fef2f2;color:#e11d48;font-size:9px;padding:1px 4px;border-radius:3px;margin-left:3px">+3d</span>':'';
+    const area=getAreaAgente(t);
+    return`<tr onclick="om(${t.id})">
+      <td>${i+1}</td>
+      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:700;color:#2563eb;text-decoration:none;font-size:11px" onclick="event.stopPropagation()">#${t.id}</a></td>
+      <td style="max-width:180px">${t.subject||'—'}</td>
+      <td>${t.org||'—'}</td>
+      <td><span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:var(--sur3);color:var(--txt2)">${area}</span></td>
+      <td>${bdg(st.t,st.c,st.bg)}</td>
+      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
+      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td>${t.agente||'—'}${sf}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+    </tr>`;
+  }).join('');
+}
+
+function applyDFilter(filterId,tableId,openKey,showSeg){
+  const area=el(filterId+'-area')?.value||'';
+  const rango=el(filterId+'-rango')?.value||'';
+  const prior=el(filterId+'-prior')?.value||'';
+  let list=sortByAge(window['_dt_'+openKey]||[]);
+  if(area)list=list.filter(t=>getAreaAgente(t)===area);
+  if(rango)list=list.filter(t=>t.rangoStr===rango);
+  if(prior)list=list.filter(t=>t.priority===prior);
+  const tbody=el(tableId)?.querySelector('tbody');
+  if(tbody)tbody.innerHTML=renderDetailRows(list,showSeg);
+  const cnt=el(filterId+'-cnt');if(cnt)cnt.textContent=list.length;
+  const tot=el(filterId+'-total');if(tot)tot.textContent=list.length+' tickets';
+}
+function clearDFilter(filterId,tableId,openKey,showSeg){
+  ['area','rango','prior'].forEach(f=>{const e=el(filterId+'-'+f);if(e)e.value='';});
+  applyDFilter(filterId,tableId,openKey,showSeg);
+}
+function cerrarDetalle(closeId){const e=el(closeId);if(e){e.style.display='none';e.dataset.open='';}}
+
+// ── RENDER HOY ───────────────────────────────────────────────────
 function renderHoy(){
   const lista=getTicketsQuemandose();
   const agRiesgo=getAgentesEnRiesgo();
@@ -385,7 +455,7 @@ function renderHoy(){
     return pills.join('');
   }
 
-  function buildRows(list,start,hidden){
+  function buildHoyRows(list,start,hidden){
     return list.map((t,i)=>{
       const sc=t.score>=350?'crit':t.score>=220?'warn':'ok';
       const pr=PC[t.priority]||PC[''];
@@ -400,12 +470,14 @@ function renderHoy(){
     }).join('');
   }
 
-  const vis=lista.slice(0,5),ocu=lista.slice(5);
+  const vis=lista.slice(0,8),ocu=lista.slice(8);
+
   const agRows=agRiesgo.map(ag=>{
     const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-    return`<div class="ag-hoy-row ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}')">
+    const areaLabel=ag.area||'—';
+    return`<div class="ag-hoy-row ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}','hoy')">
       <div class="av ${ag.nivel}">${init}</div>
-      <div><div class="ag-name">${ag.ag}</div><div class="ag-area">${ag.area||'—'}</div></div>
+      <div><div class="ag-name">${ag.ag}</div><div class="ag-area-lbl">${areaLabel}</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.nivel}">${ag.total}</div><div class="ag-lbl">tickets</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.sinSeg>0?'r':'g'}">${ag.sinSeg}</div><div class="ag-lbl">sin mover</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.mas7>0?'a':'g'}">${ag.mas7}</div><div class="ag-lbl">≥7 días</div></div>
@@ -418,21 +490,28 @@ function renderHoy(){
       <div><div class="greeting-title">Buenos días, Ale</div><div class="greeting-sub">${lista.length} tickets necesitan movimiento hoy · ${agRiesgo.length} agentes con riesgo</div></div>
       <span class="date-chip">${fechaHoy} · SEM ${wk(now)}</span>
     </div>
-
     <div class="card">
       <div class="card-head">
         <div class="card-title danger">🔥 Lo que se quema hoy</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge red">${lista.length} tickets</span>
-          <span style="font-size:10px;color:var(--txt3)">orden por score</span>
           <button onclick="downloadCSV(getTicketsQuemandose(),'hoy_riesgo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
+          <button onclick="toggleHoyDetalle()" id="hoy-toggle-btn" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▼ Ver lista</button>
         </div>
       </div>
-      <div class="trow-hdr trow-grid"># <span>Ticket · asunto · motivo</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span></div>
-      ${lista.length===0?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>':buildRows(vis,0,false)+buildRows(ocu,5,true)+(ocu.length>0?`<div class="expand-row" id="ver-mas-hoy" onclick="document.querySelectorAll('[data-extra]').forEach(r=>r.style.display='');this.style.display='none'">+ ${ocu.length} tickets más · ver todos</div>`:'')}
-      <div class="legend-row"><span class="why-pill fire">7 días</span> vence hoy (col R) &nbsp;<span class="why-pill clock">6 días</span> vence mañana (col R) &nbsp;<span class="why-pill ghost">sin seguim.</span> col E >3d</div>
+      <div id="hoy-lista-wrap">
+        <div class="filter-bar">
+          <select class="filter-select" id="hoy-farea" onchange="applyHoyFilter()"><option value="">Todas las áreas</option>${[...new Set(lista.map(t=>getAreaAgente(t)).filter(a=>a&&a!=='—'))].sort().map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+          <select class="filter-select" id="hoy-frango" onchange="applyHoyFilter()"><option value="">Toda antigüedad</option>${[...new Set(lista.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(b)-parseDias(a)).map(r=>`<option value="${r}">${r}</option>`).join('')}</select>
+          <select class="filter-select" id="hoy-fprior" onchange="applyHoyFilter()"><option value="">Toda prioridad</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
+          <button class="filter-btn-clear" onclick="clearHoyFilter()">✕ Limpiar</button>
+          <span id="hoy-cnt" style="font-size:10px;color:var(--txt3);margin-left:auto">${lista.length} tickets</span>
+        </div>
+        <div class="trow-hdr trow-grid"># <span>Ticket · asunto · motivo</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span></div>
+        <div id="hoy-rows">${lista.length===0?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>':buildHoyRows(vis,0,false)+buildHoyRows(ocu,8,true)+(ocu.length>0?`<div class="expand-row" id="ver-mas-hoy" onclick="document.querySelectorAll('[data-extra]').forEach(r=>r.style.display='');this.style.display='none'">+ ${ocu.length} tickets más · ver todos</div>`:'')}</div>
+        <div class="legend-row"><span class="why-pill fire">7 días</span> vence hoy (col R) &nbsp;<span class="why-pill clock">6 días</span> vence mañana (col R) &nbsp;<span class="why-pill ghost">sin seguim.</span> col E >3d</div>
+      </div>
     </div>
-
     <div class="card">
       <div class="card-head">
         <div class="card-title">👥 Quién necesita apoyo hoy</div>
@@ -442,101 +521,101 @@ function renderHoy(){
       `<div class="ag-hoy-hdr"><span></span><span>Agente / área</span><span style="text-align:center">Tickets</span><span style="text-align:center">Sin mover</span><span style="text-align:center">≥7 días</span><span></span></div>${agRows}`}
       <div id="hoy-agent-detail" style="display:none"></div>
     </div>
-
     <div class="card">
       <div class="card-head">
         <div class="card-title">⏱ Predicción SLA</div>
-        <span style="font-size:10px;color:var(--txt3)">col R = antigüedad · col E = último seguimiento · clic para ver detalle</span>
+        <span style="font-size:10px;color:var(--txt3)">col R = antigüedad · col E = último seguimiento</span>
       </div>
       <div class="pred-grid">
-        <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — Antigüedad 7 Días','#dc2626')">
-          <div class="pred-num" style="color:#dc2626">${pred.n1}</div>
-          <div class="pred-lbl" style="color:#dc2626">Vencen hoy</div>
-          <div class="pred-src" style="color:#dc2626">7 Días · col R</div>
-          <div class="pred-hint">▼ ver detalle</div>
-        </div>
-        <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — Antigüedad 6 Días','#d97706')">
-          <div class="pred-num" style="color:#92400e">${pred.n2}</div>
-          <div class="pred-lbl" style="color:#92400e">Vencen mañana</div>
-          <div class="pred-src" style="color:#92400e">6 Días · col R</div>
-          <div class="pred-hint">▼ ver detalle</div>
-        </div>
-        <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d hoy','#7c3aed')">
-          <div class="pred-num" style="color:#7c3aed">${pred.n3}</div>
-          <div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d hoy</div>
-          <div class="pred-src" style="color:#7c3aed">col E</div>
-          <div class="pred-hint">▼ ver detalle</div>
-        </div>
-        <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d — mañana','#2563eb')">
-          <div class="pred-num" style="color:#2563eb">${pred.n4}</div>
-          <div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div>
-          <div class="pred-src" style="color:#2563eb">col E</div>
-          <div class="pred-hint">▼ ver detalle</div>
-        </div>
+        <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')"><div class="pred-num" style="color:#dc2626">${pred.n1}</div><div class="pred-lbl" style="color:#dc2626">Vencen hoy</div><div class="pred-src" style="color:#dc2626">7 Días · col R</div><div class="pred-hint">▼ ver detalle</div></div>
+        <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')"><div class="pred-num" style="color:#92400e">${pred.n2}</div><div class="pred-lbl" style="color:#92400e">Vencen mañana</div><div class="pred-src" style="color:#92400e">6 Días · col R</div><div class="pred-hint">▼ ver detalle</div></div>
+        <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')"><div class="pred-num" style="color:#7c3aed">${pred.n3}</div><div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d hoy</div><div class="pred-src" style="color:#7c3aed">col E</div><div class="pred-hint">▼ ver detalle</div></div>
+        <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')"><div class="pred-num" style="color:#2563eb">${pred.n4}</div><div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div><div class="pred-src" style="color:#2563eb">col E</div><div class="pred-hint">▼ ver detalle</div></div>
       </div>
       <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
     </div>`;
+  window._hoyLista=lista;
 }
 
-// ── Render EQUIPO ────────────────────────────────────────────────
+let _hoyVisible=true;
+function toggleHoyDetalle(){
+  const wrap=el('hoy-lista-wrap');const btn=el('hoy-toggle-btn');
+  if(!wrap)return;
+  _hoyVisible=!_hoyVisible;
+  wrap.style.display=_hoyVisible?'':'none';
+  btn.textContent=_hoyVisible?'▲ Cerrar lista':'▼ Ver lista';
+}
+function applyHoyFilter(){
+  const area=el('hoy-farea')?.value||'';
+  const rango=el('hoy-frango')?.value||'';
+  const prior=el('hoy-fprior')?.value||'';
+  let list=sortByAge(window._hoyLista||[]);
+  if(area)list=list.filter(t=>getAreaAgente(t)===area);
+  if(rango)list=list.filter(t=>t.rangoStr===rango);
+  if(prior)list=list.filter(t=>t.priority===prior);
+  const cnt=el('hoy-cnt');if(cnt)cnt.textContent=list.length+' tickets';
+  const rows=el('hoy-rows');if(!rows)return;
+  if(!list.length){rows.innerHTML='<div class="empty" style="color:#16a34a">Sin resultados con estos filtros</div>';return;}
+  function motivoPills(t){
+    const r=(t.rangoStr||'').trim().toLowerCase();const pills=[];
+    if(r==='7 días'||r==='7 dias')pills.push('<span class="why-pill fire">7 días · vence hoy</span>');
+    else if(r==='6 días'||r==='6 dias')pills.push('<span class="why-pill clock">6 días · vence mañana</span>');
+    if(t.sinSeguimiento)pills.push('<span class="why-pill ghost">sin seguim. +3d</span>');
+    if(t.isSinAsignar)pills.push('<span class="why-pill fire">sin responsable</span>');
+    return pills.join('');
+  }
+  rows.innerHTML=list.map((t,i)=>{
+    const sc=t.score>=350?'crit':t.score>=220?'warn':'ok';const pr=PC[t.priority]||PC[''];
+    return`<div class="trow-grid" onclick="om(${t.id})">
+      <span class="t-num">${i+1}</span>
+      <div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a><span class="t-sub">${t.subject||'—'}</span></div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div></div>
+      <span class="t-ag">${t.agente||'—'}</span><span class="pr-tag ${t.priority}">${pr.t}</span><span class="t-ant">${t.rangoStr||'—'}</span><span class="sc ${sc}">${t.score}</span>
+    </div>`;
+  }).join('');
+}
+function clearHoyFilter(){
+  ['hoy-farea','hoy-frango','hoy-fprior'].forEach(id=>{const e=el(id);if(e)e.value='';});
+  applyHoyFilter();
+}
+
+// ── RENDER EQUIPO ────────────────────────────────────────────────
 function renderEquipo(){
   const agRiesgo=getAgentesEnRiesgo();
-  const allAgentes=[...new Set(T.map(t=>(t.agente||'').trim()).filter(a=>a&&a.toLowerCase()!=='no'))];
-  const riesgoNames=new Set(agRiesgo.map(a=>a.ag));
-  const alDia=allAgentes.filter(a=>!riesgoNames.has(a));
-  const areas=[...new Set(T.map(t=>t.areaAsig).filter(a=>a&&!/sin\s+asignar|ticket\s+sin/i.test(a)))].sort();
-
-  function buildEquipoCards(filtroArea){
-    const lista=filtroArea?agRiesgo.filter(ag=>ag.area===filtroArea):agRiesgo;
-    if(!lista.length)return'<div class="empty" style="color:#16a34a">✓ Sin agentes con riesgo en esta área</div>';
-    return`<div class="eq-grid">${lista.map(ag=>{
-      const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-      const color=ag.nivel==='r'?'#dc2626':'#d97706';
-      const bgColor=ag.nivel==='r'?'#fef2f2':'#fffbeb';
-      return`<div class="eq-card ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}')">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <div class="av ${ag.nivel}" style="width:32px;height:32px;font-size:11px">${init}</div>
-          <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--txt)">${ag.ag}</div><div style="font-size:10px;color:var(--txt3)">${ag.total} tickets · ${ag.area||'—'}</div></div>
-          <span style="font-size:9px;background:${bgColor};color:${color};padding:2px 7px;border-radius:4px;font-weight:600">${ag.nivel==='r'?'Carga alta':'Revisar'}</span>
-        </div>
-        <div class="eq-metrics">
-          <div class="eq-m"><div class="eq-mv" style="color:${ag.sinSeg>0?'#dc2626':'var(--txt3)'}">${ag.sinSeg}</div><div class="eq-ml">sin mover</div></div>
-          <div class="eq-m"><div class="eq-mv" style="color:${ag.mas7>0?'#d97706':'var(--txt3)'}">${ag.mas7}</div><div class="eq-ml">≥7 días</div></div>
-          <div class="eq-m"><div class="eq-mv" style="color:${ag.urghi>0?'#FF5C5C':'var(--txt3)'}">${ag.urghi}</div><div class="eq-ml">urg/alto</div></div>
-        </div>
-        <div style="height:3px;background:var(--sur3);border-radius:2px;margin-top:8px;overflow:hidden"><div style="width:${Math.min(100,Math.round((ag.sinSeg+ag.mas7)/ag.total*100))}%;height:100%;background:${color};border-radius:2px"></div></div>
-        <div style="text-align:center;margin-top:7px;font-size:10px;color:var(--acc)">▼ Ver tickets</div>
-      </div>`;
-    }).join('')}</div>`;
-  }
-
+  const devRiesgo=getDesarrolladoresConRiesgo();
+  const allAreas=['Todas las áreas','Customer','Soporte','Implementación','Desarrollo'];
   el('v-equipo').innerHTML=`
     <div class="card">
       <div class="card-head">
         <div class="card-title">🚨 Agentes con riesgo real</div>
-        <span class="badge amber">${agRiesgo.length} agentes · clic en tarjeta para ver tickets</span>
+        <span class="badge amber">${agRiesgo.length+devRiesgo.length} agentes · clic en tarjeta</span>
       </div>
-      <div class="area-filter" id="eq-area-filter">
-        <button class="area-btn on" onclick="filterEquipo('',this)">Todas las áreas</button>
-        ${areas.map(a=>`<button class="area-btn" onclick="filterEquipo('${a}',this)">${a}</button>`).join('')}
+      <div class="area-filter">
+        ${allAreas.map((a,i)=>`<button class="area-btn ${i===0?'on':''}" onclick="filterEquipo('${a}',this)">${a}</button>`).join('')}
         <button onclick="toggleSegEquipo(this)" id="eq-seg-btn" style="margin-left:auto;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--acc3);background:var(--acc2);color:var(--acc);cursor:pointer;font-family:var(--font)">📭 Sin seguimiento +3d</button>
       </div>
-      <div id="eq-cards-container">${buildEquipoCards('')}</div>
+      <div id="eq-cards-container"></div>
       <div id="equipo-agent-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
     </div>
     <div class="card">
       <div class="card-head">
         <div class="card-title">✅ Agentes al día</div>
-        <span class="badge green">${alDia.length} agentes sin riesgo</span>
       </div>
-      <div class="al-dia-list">${alDia.map(a=>{const tks=T.filter(t=>t.agente===a);return`<span class="al-dia-chip">${a} — ${tks.length} tickets</span>`;}).join('')}</div>
+      <div id="eq-aldia-list" class="al-dia-list"></div>
     </div>`;
-
-  window._eqSegActivo=false;
-  window._eqAreaActiva='';
+  window._eqSegActivo=false;window._eqAreaActiva='Todas las áreas';
+  renderEquipoCards();
+  renderAlDia();
 }
-
-window._eqSegActivo=false;window._eqAreaActiva='';
+function renderAlDia(){
+  const riesgoNames=new Set([...getAgentesEnRiesgo().map(a=>a.ag)]);
+  const devRiesgoNames=new Set(getDesarrolladoresConRiesgo().map(a=>a.ag));
+  const allAg=[...new Set(T.map(t=>(t.agente||'').trim()).filter(a=>a&&a.toLowerCase()!=='no'))];
+  const alDia=allAg.filter(a=>!riesgoNames.has(a));
+  const cont=el('eq-aldia-list');
+  if(!cont)return;
+  cont.innerHTML=alDia.length?alDia.map(a=>{const tks=T.filter(t=>t.agente===a);const area=getAreaAgente(tks[0]||{agente:a});return`<span class="al-dia-chip">${a} (${area}) — ${tks.length} tkt</span>`;}).join(''):'<span style="font-size:12px;color:var(--txt3)">Todos tienen riesgo</span>';
+}
+window._eqSegActivo=false;window._eqAreaActiva='Todas las áreas';
 function filterEquipo(area,btn){
   window._eqAreaActiva=area;
   document.querySelectorAll('.area-btn').forEach(b=>b.classList.remove('on'));
@@ -551,18 +630,24 @@ function toggleSegEquipo(btn){
 }
 function renderEquipoCards(){
   const container=el('eq-cards-container');if(!container)return;
-  let lista=getAgentesEnRiesgo();
-  if(window._eqAreaActiva)lista=lista.filter(ag=>ag.area===window._eqAreaActiva);
+  const area=window._eqAreaActiva||'Todas las áreas';
+  const isDev=area==='Desarrollo';
+  let lista=isDev?getDesarrolladoresConRiesgo():getAgentesEnRiesgo();
+  if(area!=='Todas las áreas'&&!isDev)lista=lista.filter(ag=>ag.area===area);
   if(window._eqSegActivo)lista=lista.filter(ag=>ag.sinSeg>0);
-  if(!lista.length){container.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin agentes con riesgo con estos filtros</div>';return;}
+  if(!lista.length){container.innerHTML='<div class="empty" style="color:#16a34a">✓ Sin agentes con riesgo en esta área</div>';return;}
   container.innerHTML=`<div class="eq-grid">${lista.map(ag=>{
     const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
     const color=ag.nivel==='r'?'#dc2626':'#d97706';
     const bgColor=ag.nivel==='r'?'#fef2f2':'#fffbeb';
-    return`<div class="eq-card ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}')">
+    const max=Math.max(...lista.map(a=>a.total),1);
+    const barW=Math.round(ag.total/max*100);
+    const barColor=ag.nivel==='r'?'#EF4444':'#F59E0B';
+    const devLabel=isDev?'desarrollador':'agente';
+    return`<div class="eq-card ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}','${isDev?'dev':'ag'}')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div class="av ${ag.nivel}" style="width:32px;height:32px;font-size:11px">${init}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--txt)">${ag.ag}</div><div style="font-size:10px;color:var(--txt3)">${ag.total} tickets · ${ag.area||'—'}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--txt)">${ag.ag}</div><div style="font-size:10px;color:var(--txt3)">${ag.total} tickets · ${ag.area}</div></div>
         <span style="font-size:9px;background:${bgColor};color:${color};padding:2px 7px;border-radius:4px;font-weight:600">${ag.nivel==='r'?'Carga alta':'Revisar'}</span>
       </div>
       <div class="eq-metrics">
@@ -570,13 +655,30 @@ function renderEquipoCards(){
         <div class="eq-m"><div class="eq-mv" style="color:${ag.mas7>0?'#d97706':'var(--txt3)'}">${ag.mas7}</div><div class="eq-ml">≥7 días</div></div>
         <div class="eq-m"><div class="eq-mv" style="color:${ag.urghi>0?'#FF5C5C':'var(--txt3)'}">${ag.urghi}</div><div class="eq-ml">urg/alto</div></div>
       </div>
-      <div style="height:3px;background:var(--sur3);border-radius:2px;margin-top:8px;overflow:hidden"><div style="width:${Math.min(100,Math.round((ag.sinSeg+ag.mas7)/ag.total*100))}%;height:100%;background:${color};border-radius:2px"></div></div>
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:var(--txt3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Distribución por antigüedad</div>
+        ${buildAgBarChart(ag._tickets,lista.map(a=>a.total))}
+      </div>
+      <div style="height:3px;background:var(--sur3);border-radius:2px;margin-top:8px;overflow:hidden"><div style="width:${barW}%;height:100%;background:${barColor};border-radius:2px"></div></div>
       <div style="text-align:center;margin-top:7px;font-size:10px;color:var(--acc)">▼ Ver tickets</div>
     </div>`;
   }).join('')}</div>`;
 }
 
-// ── Render PANORAMA ──────────────────────────────────────────────
+function buildAgBarChart(tickets,allTotals){
+  if(!tickets||!tickets.length)return'';
+  const grupos=[{lbl:'Corriente',fn:t=>parseDias(t.rangoStr)===0,c:'#22C55E'},{lbl:'1-7 días',fn:t=>{const d=parseDias(t.rangoStr);return d>0&&d<=7;},c:'#3B82F6'},{lbl:'8-30d',fn:t=>{const d=parseDias(t.rangoStr);return d>7&&d<=30;},c:'#F59E0B'},{lbl:'31-90d',fn:t=>{const d=parseDias(t.rangoStr);return d>30&&d<=90;},c:'#EF4444'},{lbl:'>90d',fn:t=>parseDias(t.rangoStr)>90,c:'#6B7280'}];
+  const max=Math.max(tickets.length,1);
+  return grupos.map(g=>{
+    const cnt=tickets.filter(g.fn).length;
+    if(!cnt)return'';
+    const pct=Math.round(cnt/max*100);
+    return`<div class="ag-bar-row"><span class="ag-bar-lbl">${g.lbl}</span><div class="ag-bar-track"><div class="ag-bar-fill" style="width:${pct}%;background:${g.c}"></div></div><span class="ag-bar-val">${cnt}</span></div>`;
+  }).join('');
+}
+
+// ── RENDER PANORAMA ──────────────────────────────────────────────
+let _panoKpiActivo=null;
 function renderPanorama(){
   const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
   const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
@@ -601,11 +703,12 @@ function renderPanorama(){
     {key:'sinA',label:'Sin responsable',color:'#7c3aed',fn:()=>T.filter(t=>t.isSinAsignar)},
     {key:'emp3',label:'Empresas con +3 tickets',color:'#0891b2',fn:()=>{const oc={};T.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return T.filter(t=>t.org&&(oc[t.org]||0)>=3);}},
   ];
+  window._panoKpis=kpis;
   const kpiCards=kpis.map(k=>{
     const list=k.fn();const pct=T.length?Math.round(list.length/T.length*100):0;
     let displayVal=list.length;
     if(k.key==='emp3')displayVal=[...new Set(list.map(t=>t.org).filter(Boolean))].length;
-    return`<div class="kc${k.key==='emp3'?' emp3-kc':''}" onclick="showPanoDetail('${k.key}','${k.label}','${k.color}')">
+    return`<div class="kc${k.key==='emp3'?' emp3-kc':''}" id="kc-${k.key}" onclick="showPanoDetail('${k.key}')">
       <div class="kv" style="color:${k.color}">${displayVal}</div>
       <div class="kl">${k.label}</div>
       <div class="kb"><div class="kf" style="width:${pct}%;background:${k.color}"></div></div>
@@ -615,11 +718,9 @@ function renderPanorama(){
 
   el('v-panorama').innerHTML=`
     <div class="card">
-      <div class="card-head"><div class="card-title">📊 Indicadores clave · ${T.length} tickets activos</div><span style="font-size:10px;color:var(--txt3)">clic para ver detalle</span></div>
+      <div class="card-head"><div class="card-title">📊 Indicadores clave · ${T.length} tickets activos</div><span style="font-size:10px;color:var(--txt3)">clic para ver detalle y actualizar gráficas</span></div>
       <div class="kpi-grid">${kpiCards}</div>
-      <div id="pano-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
     </div>
-
     <div class="card">
       <div class="card-head"><div class="card-title">📈 Tendencia semanal</div><span style="font-size:10px;color:var(--txt3)">últimas 6 semanas</span></div>
       <div class="trend-box">
@@ -635,118 +736,106 @@ function renderPanorama(){
         </div>
       </div>
     </div>
-
-    <div class="charts-row">
-      <div class="ccard">
-        <div class="ch"><span class="ct">Por prioridad</span></div>
-        <div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div>
-      </div>
-      <div class="ccard">
-        <div class="ch"><span class="ct">Antigüedad de tickets</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div>
-        <div class="cb"><div style="position:relative;height:200px;overflow:hidden"><canvas id="ca"></canvas></div></div>
-      </div>
-      <div class="ccard">
-        <div class="ch"><span class="ct">Tickets por empresa</span></div>
-        <div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div>
-      </div>
+    <div class="charts-row" id="pano-charts-row">
+      <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
+      <div class="ccard"><div class="ch"><span class="ct">Antigüedad</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div><div class="cb"><div style="position:relative;height:200px;overflow:hidden"><canvas id="ca"></canvas></div></div></div>
+      <div class="ccard"><div class="ch"><span class="ct">Por empresa</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div>
     </div>
-
     <div class="card">
       <div class="card-head"><div class="card-title">🏢 Top solicitantes</div><span style="font-size:10px;color:var(--txt3)">volumen · score máx.</span></div>
       <div style="padding:8px 16px">
         <div style="display:grid;grid-template-columns:1fr 36px 60px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 2px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.05em"><span>Solicitante</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span></div>
         ${topSol.map(([sol,d],i)=>`<div style="display:grid;grid-template-columns:1fr 36px 60px;align-items:center;padding:5px 2px;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:${solColors[i]}"></div><span style="font-size:11px">${sol}</span></div><span style="font-size:12px;font-weight:700;color:${solColors[i]};text-align:center">${d.count}</span><div style="text-align:right"><span style="font-size:10px;background:${solBgs[i]};color:${solColors[i]};padding:1px 6px;border-radius:4px">${d.maxScore}</span></div></div>`).join('')}
       </div>
-    </div>`;
+    </div>
+    <div id="pano-detail-wrap" style="display:none"></div>`;
 
-  CH['cp']&&CH['cp'].destroy();
+  buildPanoCharts(T);
+}
+
+function buildPanoCharts(subset){
+  const rVals=[...new Set(subset.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
+  const priData=['urgent','high','normal','low'].map(k=>subset.filter(t=>t.priority===k).length);
+  const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
+  const orgMap={};subset.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
+  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+
+  if(CH['cp'])CH['cp'].destroy();
   const cpCtx=el('cp');
-  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}});}
+  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}}})}
   const legEl=el('pri-legend');if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
-  mkChart('ca','bar',rVals,rVals.map(r=>T.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{showPanoDetail('rango_'+label,label,getRangoColor(label));});
+  mkChart('ca','bar',rVals,rVals.map(r=>subset.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{showPanoDetail('rango_'+label,label);});
   mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,null);
 }
 
-// ── Funciones de detalle ─────────────────────────────────────────
+function showPanoDetail(key,label){
+  // Marcar KPI activo
+  document.querySelectorAll('.kc').forEach(k=>k.classList.remove('active'));
+  const kc=el('kc-'+key.replace('rango_',''));if(kc)kc.classList.add('active');
+  const kpis=window._panoKpis||[];
+  const kDef=kpis.find(k=>k.key===key);
+  const color=kDef?kDef.color:'#2563eb';
+  const title=label||(kDef?kDef.label:key);
+  const kpiFns={
+    total:()=>T,urgent:()=>T.filter(t=>t.priority==='urgent'),high:()=>T.filter(t=>t.priority==='high'),
+    sla:()=>T.filter(t=>t.isSla),sinSeg:()=>T.filter(t=>t.sinSeguimiento),
+    sinA:()=>T.filter(t=>t.isSinAsignar),
+    emp3:()=>{const oc={};T.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return T.filter(t=>t.org&&(oc[t.org]||0)>=3);}
+  };
+  const fn=key.startsWith('rango_')?()=>T.filter(t=>t.rangoStr===key.replace('rango_','')):kpiFns[key];
+  const tickets=fn?fn():[];
+  // Actualizar gráficas dinámicamente
+  const titleEl=el('pano-chart-title');if(titleEl)titleEl.textContent='Por prioridad — '+title;
+  buildPanoCharts(tickets.length?tickets:T);
+  // Detalle al final
+  const wrap=el('pano-detail-wrap');
+  if(!wrap)return;
+  if(wrap.dataset.open===key){wrap.style.display='none';wrap.dataset.open='';document.querySelectorAll('.kc').forEach(k=>k.classList.remove('active'));buildPanoCharts(T);if(titleEl)titleEl.textContent='Por prioridad';return;}
+  wrap.dataset.open=key;wrap.style.display='block';
+  wrap.innerHTML=`<div class="card">${buildDetailBlock(tickets,title,color,'pano-detail-wrap',key,false)}</div>`;
+  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+// ── DETALLE AGENTE ───────────────────────────────────────────────
+function showAgentDetail(agName,type){
+  const detailId=type==='dev'?'equipo-agent-detail':(document.getElementById('hoy-agent-detail')?'hoy-agent-detail':'equipo-agent-detail');
+  const detail=el(detailId);if(!detail)return;
+  if(detail.dataset.open===agName){detail.style.display='none';detail.dataset.open='';return;}
+  detail.dataset.open=agName;detail.style.display='';
+  const lista=type==='dev'?getDesarrolladoresConRiesgo():getAgentesEnRiesgo();
+  const agData=lista.find(a=>a.ag===agName);
+  if(!agData){detail.innerHTML='<div class="empty">Sin datos</div>';return;}
+  const color=agData.nivel==='r'?'#dc2626':'#d97706';
+  const label=type==='dev'?`Tickets asignados a ${agName} (Desarrollo)`:`Tickets de ${agName} — ${agData.sinSeg} sin mover · ${agData.mas7} ≥7 días`;
+  detail.innerHTML=buildDetailBlock(agData._tickets,label,color,detailId,agName.replace(/\s/g,'_'),true);
+  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+
 function showPredDetail(key,title,color){
   const detail=el('pred-detail');if(!detail)return;
   if(detail.dataset.open===key){detail.style.display='none';detail.dataset.open='';return;}
   detail.dataset.open=key;detail.style.display='';
-  const tickets=[...(window._predTickets[key]||[])].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
-  detail.innerHTML=buildDetailBlock(tickets,title,color,'pred-detail',key);
+  const tickets=window._predTickets?window._predTickets[key]||[]:[];
+  detail.innerHTML=buildDetailBlock(tickets,title,color,'pred-detail',key+'_pred',false);
   setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 
-function showAgentDetail(agName){
-  const detailHoy=el('hoy-agent-detail');
-  const detailEq=el('equipo-agent-detail');
-  const detail=detailHoy||detailEq;if(!detail)return;
-  if(detail.dataset.open===agName){detail.style.display='none';detail.dataset.open='';return;}
-  detail.dataset.open=agName;detail.style.display='';
-  const agData=getAgentesEnRiesgo().find(a=>a.ag===agName);
-  if(!agData){detail.innerHTML='<div class="empty">Sin datos</div>';return;}
-  const tickets=[...agData._tickets].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
-  const color=agData.nivel==='r'?'#dc2626':'#d97706';
-  const detailId=detailHoy?'hoy-agent-detail':'equipo-agent-detail';
-  detail.innerHTML=buildDetailBlock(tickets,`Tickets de ${agName} — ${agData.sinSeg} sin mover · ${agData.mas7} con ≥7 días`,color,detailId,agName,true);
-  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
-}
-
-function showPanoDetail(key,label,color){
-  const detail=el('pano-detail');if(!detail)return;
-  if(detail.dataset.open===key){detail.style.display='none';detail.dataset.open='';return;}
-  detail.dataset.open=key;detail.style.display='';
-  const kpiFns={total:()=>T,urgent:()=>T.filter(t=>t.priority==='urgent'),high:()=>T.filter(t=>t.priority==='high'),sla:()=>T.filter(t=>t.isSla),sinSeg:()=>T.filter(t=>t.sinSeguimiento),sinA:()=>T.filter(t=>t.isSinAsignar),emp3:()=>{const oc={};T.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return T.filter(t=>t.org&&(oc[t.org]||0)>=3);}};
-  const fn=key.startsWith('rango_')?()=>T.filter(t=>t.rangoStr===key.replace('rango_','')):kpiFns[key];
-  const tickets=[...(fn?fn():[])].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
-  detail.innerHTML=buildDetailBlock(tickets,label,color,'pano-detail',key);
-  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
-}
-
-function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
-  if(!tickets.length)return'<div class="empty" style="color:#16a34a;padding:20px">✓ Sin tickets en esta categoría</div>';
-  const rows=tickets.map((t,i)=>{
-    const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
-    const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
-    const sf=showSeg&&t.sinSeguimiento?`<span style="background:#fef2f2;color:#e11d48;font-size:9px;padding:1px 4px;border-radius:3px;margin-left:3px">+3d</span>`:'';
-    return`<tr onclick="om(${t.id})" style="cursor:pointer">
-      <td>${i+1}</td>
-      <td><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:700;color:#2563eb;text-decoration:none;font-size:11px" onclick="event.stopPropagation()">#${t.id}</a></td>
-      <td style="max-width:180px">${t.subject||'—'}</td>
-      <td>${t.org||'—'}</td>
-      <td>${bdg(st.t,st.c,st.bg)}</td>
-      <td>${bdg(pr.t,pr.c,pr.bg)}</td>
-      <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
-      <td>${t.agente||'—'}${sf}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-    </tr>`;
-  }).join('');
-  return`<div class="detail-head-bar" style="background:${color}10">
-    <span style="font-size:12px;font-weight:700;color:${color}">${title}</span>
-    <div style="display:flex;gap:6px;align-items:center">
-      <span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:${color}25;color:${color}">${tickets.length}</span>
-      <button onclick="downloadCSV([],'detalle')" style="display:none"></button>
-      <button onclick="el('${closeId}').style.display='none';el('${closeId}').dataset.open=''" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Cerrar</button>
-    </div>
-  </div>
-  <div class="tw"><table><thead><tr>${['#','Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Score'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-// ── Chart helper ─────────────────────────────────────────────────
+// ── CHART HELPER ─────────────────────────────────────────────────
 function mkChart(id,type,labels,data,colors,horiz,onClickFn){
   if(CH[id])CH[id].destroy();const ctx=el(id);if(!ctx)return;
-  const opts={responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},scales:type==='doughnut'?{}:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}};
+  const opts={responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} tickets`},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{color:'#f0f2f780'}}}};
   if(onClickFn){opts.onClick=(e,els)=>{if(els.length>0)onClickFn(labels[els[0].index]);};ctx.style.cursor='pointer';}
-  CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:type==='bar'?4:0}]},options:opts});
+  CH[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:4}]},options:opts});
 }
 
-// ── Modal ────────────────────────────────────────────────────────
+// ── MODAL ────────────────────────────────────────────────────────
 function om(id){
   const t=T.find(x=>x.id===id);if(!t)return;
   const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#6b7280';
   const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
   const PS={urgent:400,high:300,normal:200,low:100};
   const pPts=PS[t.priority]||0;const aPts=t.score-pPts;
+  const area=getAreaAgente(t);
   el('mb').innerHTML=`
     <div class="mhdr"><div class="mttl">${t.subject||'Ticket #'+t.id}</div><button class="mx" onclick="cm()">×</button></div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">${bdg(st.t,st.c,st.bg)} ${bdg(pr.t,pr.c,pr.bg)} ${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</div>
@@ -761,8 +850,9 @@ function om(id){
     <div class="mdv"></div>
     <div class="mr"><span class="ml">ID Ticket</span><span class="mv"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" style="font-family:var(--mono);font-weight:700;color:#2563eb;text-decoration:none">#${t.id} ↗</a></span></div>
     <div class="mr"><span class="ml">Empresa</span><span class="mv">${t.org||'—'}</span></div>
+    <div class="mr"><span class="ml">Área</span><span class="mv">${area}</span></div>
     <div class="mr"><span class="ml">Creado</span><span class="mv">${fmtDateShort(t.created)}</span></div>
-    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'—')}</span></div>
+    <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'')}</span></div>
     <div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||'—'}</span></div>
     <div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||'—'}</span></div>
     <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
@@ -771,7 +861,20 @@ function om(id){
 function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 
-// ── Tabs ─────────────────────────────────────────────────────────
+// ── DIAGNÓSTICO ──────────────────────────────────────────────────
+function getDiagnosis(tickets){
+  if(!tickets||!tickets.length)return'';
+  const urg=tickets.filter(t=>t.priority==='urgent').length,hi=tickets.filter(t=>t.priority==='high').length,sla=tickets.filter(t=>t.isSla).length,sinSeg=tickets.filter(t=>t.sinSeguimiento).length,criticos=tickets.filter(t=>t.score>=350).length;
+  const items=[];
+  if(criticos>0)items.push(`<span style="color:#EF4444;font-weight:600">🚨 ${criticos} crítico${criticos>1?'s':''}</span> con score ≥350.`);
+  if(urg>0)items.push(`<span style="color:#FF5C5C;font-weight:600">⚡ ${urg} urgente${urg>1?'s':''}</span> (${Math.round((urg+hi)/tickets.length*100)}% urg/alto).`);
+  if(sla>0)items.push(`<span style="color:#F59E0B;font-weight:600">🕐 ${sla}</span> con SLA vencido (+7d).`);
+  if(sinSeg>0)items.push(`<span style="color:#e11d48;font-weight:600">📭 ${sinSeg}</span> sin seguimiento >3d.`);
+  if(!items.length)return'';
+  return`<div style="background:var(--sur2);border-top:1px solid var(--bdr);padding:12px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px">Diagnóstico</div><ul style="list-style:none;display:flex;flex-direction:column;gap:4px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2)">• ${i}</li>`).join('')}</ul></div>`;
+}
+
+// ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
   document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['hoy','equipo','panorama'][i]===tab));
@@ -782,12 +885,11 @@ function go(tab){
   else if(tab==='panorama')renderPanorama();
 }
 
-// ── Utilidades ────────────────────────────────────────────────────
+// ── UTILIDADES ───────────────────────────────────────────────────
 async function fetchCSV(url){const u=url.includes('?')?url+'&cachebust='+Date.now():url+'?cachebust='+Date.now();const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
 function fmtDate(str){if(!str||str==='—')return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function fmtDateShort(str){if(!str)return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear();}
-function downloadCSV(tickets,filename){if(!tickets||!tickets.length)return;const cols=['id','subject','org','status','priority','rangoStr','agente','dResp','areaAsig','score','created','ultimoSeg'];const heads=['Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Área','Score','Creado','Último seguimiento'];const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));a.download=filename+'.csv';a.click();}
-function getDiagnosis(tickets){if(!tickets||!tickets.length)return'';const total=tickets.length,urg=tickets.filter(t=>t.priority==='urgent').length,hi=tickets.filter(t=>t.priority==='high').length,sla=tickets.filter(t=>t.isSla).length,sinSeg=tickets.filter(t=>t.sinSeguimiento).length,sinResp=tickets.filter(t=>t.isSinAsignar).length,criticos=tickets.filter(t=>t.score>=350).length;const items=[];if(criticos>0)items.push(`<span style="color:#EF4444;font-weight:600">🚨 ${criticos} crítico${criticos>1?'s':''}</span> con score ≥350.`);if(urg>0)items.push(`<span style="color:#FF5C5C;font-weight:600">⚡ ${urg} urgente${urg>1?'s':''}</span> representan el ${Math.round((urg+hi)/total*100)}%.`);if(sla>0)items.push(`<span style="color:#F59E0B;font-weight:600">🕐 ${sla}</span> con SLA vencido (+7d).`);if(sinSeg>0)items.push(`<span style="color:#e11d48;font-weight:600">📭 ${sinSeg}</span> sin seguimiento >3d.`);if(!items.length)return'';return`<div style="background:var(--sur2);border-top:1px solid var(--bdr);padding:12px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px">Diagnóstico</div><ul style="list-style:none;display:flex;flex-direction:column;gap:4px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2)">• ${i}</li>`).join('')}</ul></div>`;}
+function downloadCSV(tickets,filename){if(!tickets||!tickets.length)return;const cols=['id','subject','org','status','priority','rangoStr','agente','dResp','areaAsig','score','created','ultimoSeg'];const heads=['Ticket','Asunto','Empresa','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Área','Score','Creado','Último seguimiento'];const rows=[heads.join(','),...tickets.map(t=>cols.map(k=>{const v=String(t[k]||'').replace(/,/g,';').replace(/\n/g,' ');return v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));a.download=(filename||'export')+'.csv';a.click();}
 function parseCSV(text){const lines=text.split('\n');function clean(v){return(v||'').replace(/^"|"$/g,'').trim();}let hi=-1;for(let i=0;i<Math.min(15,lines.length);i++){const r=csvLine(lines[i]).map(v=>clean(v).toLowerCase());const hasId=r.some(v=>v==='id'||v==='n.'||v==='n');const hasStatus=r.some(v=>['estado','status'].includes(v));const hasExtra=r.some(v=>v.includes('traducci')||v.includes('etiqueta')||v==='prioridad');if(hasId&&hasStatus&&hasExtra){hi=i;break;}if(hi<0&&hasId&&hasStatus){hi=i;}}if(hi<0)return{rows:[],headers:[]};const headers=csvLine(lines[hi]).map(v=>clean(v));const idIdx=headers.findIndex(h=>h.toLowerCase()==='id');if(idIdx<0)return{rows:[],headers:[]};const rows=[];for(let i=hi+1;i<lines.length;i++){const line=lines[i];if(!line.trim())continue;const vals=csvLine(line);const idVal=clean(vals[idIdx]||'');if(!/^\d{5,7}$/.test(idVal))continue;const row={};headers.forEach((h,j)=>{if(h)row[h]=clean(vals[j]);});rows.push(row);}return{rows,headers};}
 function csvLine(line){const r=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(ch===','&&!q){r.push(cur);cur='';}else cur+=ch;}r.push(cur);return r;}
 function safeSet(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
