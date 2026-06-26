@@ -187,6 +187,20 @@ tbody tr:last-child td{border-bottom:none}
 .ch{padding:10px 14px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;gap:5px;flex-wrap:wrap}
 .ct{font-size:12px;font-weight:700;color:var(--txt)}
 .cb{padding:12px}
+  .nivel-critico{border-left:4px solid #dc2626 !important;background:#fff8f8}
+  .nivel-atencion{border-left:4px solid #d97706 !important;background:#fffdf5}
+  .nivel-vigilancia{border-left:4px solid #2563eb !important}
+  .nivel-label{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.05em}
+  .nivel-label.c{background:#fef2f2;color:#dc2626}
+  .nivel-label.a{background:#fffbeb;color:#d97706}
+  .nivel-label.v{background:#eff4ff;color:#2563eb}
+  .rev-btn{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt3);font-family:var(--font);white-space:nowrap}
+  .rev-btn:hover{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0}
+  .cli-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .1s}
+  .cli-row:last-child{border-bottom:none}
+  .cli-row:hover{background:var(--sur2)}
+  .cli-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+  .cli-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -214,6 +228,7 @@ tbody tr:last-child td{border-bottom:none}
 <div class="nav">
   <button class="ntab on" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
   <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
+  <button class="ntab" onclick="go('clientes')">🏢 Clientes <span class="nb" id="nb-clientes">–</span></button>
   <button class="ntab" onclick="go('panorama')">📊 Panorama</button>
 </div>
 <div class="main">
@@ -221,6 +236,7 @@ tbody tr:last-child td{border-bottom:none}
   <div class="view" id="v-hoy"></div>
   <div class="view" id="v-equipo"></div>
   <div class="view" id="v-panorama"></div>
+  <div class="view" id="v-clientes"></div>
 </div>
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 <script>
@@ -293,6 +309,174 @@ function mapRows(rows,headers){
     const ultimoSegRaw=(colE?r[colE]||'':'').trim();
     return{id,status,priority,subject:kSub?r[kSub]||'':'',org:colG?r[colG]||'':'',agente:colM?r[colM]||'':'',areaAsig:areaN,dResp:colU?r[colU]||'':'',sResp:kSResp?r[kSResp]||'':'',assignee:kAssign?r[kAssign]||'':'',created,days,rangoStr,isSla:isSlaVencido(rangoStr),isSinAsignar,sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),createdFmt:fmtDateShort(crRaw),score,action:act(score),mesAnt:kMesAnt?r[kMesAnt]||'':'',ultimoSeg:ultimoSegRaw};
   }).filter(Boolean);
+}
+
+
+// ── Sistema de notas y revisados (localStorage) ──────────────────
+const STORE={
+  getNotas(id){try{return JSON.parse(localStorage.getItem('notas_'+id)||'[]');}catch{return[];}},
+  addNota(id,texto){const notas=STORE.getNotas(id);notas.unshift({ts:Date.now(),txt:texto.trim()});localStorage.setItem('notas_'+id,JSON.stringify(notas.slice(0,20)));},
+  delNota(id,ts){const notas=STORE.getNotas(id).filter(n=>n.ts!==ts);localStorage.setItem('notas_'+id,JSON.stringify(notas));},
+  isRevisado(id){return localStorage.getItem('rev_'+id)==='1';},
+  setRevisado(id,val){if(val)localStorage.setItem('rev_'+id,'1');else localStorage.removeItem('rev_'+id);},
+  getNotaCliente(org){try{return JSON.parse(localStorage.getItem('cli_'+btoa(unescape(encodeURIComponent(org||'')))||'{}'));}catch{return{};}},
+  setNotaCliente(org,data){localStorage.setItem('cli_'+btoa(unescape(encodeURIComponent(org||''))),JSON.stringify(data));},
+};
+
+function fmtTs(ts){
+  const d=new Date(ts);
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+function toggleRevisado(id,btn){
+  const val=!STORE.isRevisado(id);
+  STORE.setRevisado(id,val);
+  const row=document.querySelector('[data-tid="'+id+'"]');
+  if(row){
+    row.style.opacity=val?'0.4':'1';
+    row.style.textDecoration=val?'line-through':'none';
+  }
+  if(btn){btn.textContent=val?'↩ Desmarcar':'✓ Revisado';btn.style.background=val?'#f0fdf4':'';}
+}
+
+
+// ── Render CLIENTES ──────────────────────────────────────────────
+function renderClientes(){
+  // Agrupar tickets por empresa (col G)
+  const orgMap={};
+  T.forEach(t=>{
+    const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';
+    if(!orgMap[o])orgMap[o]={tickets:[],maxScore:0};
+    orgMap[o].tickets.push(t);
+    if(t.score>orgMap[o].maxScore)orgMap[o].maxScore=t.score;
+  });
+  const orgs=Object.entries(orgMap).sort((a,b)=>b[1].maxScore-a[1].maxScore);
+
+  const listItems=orgs.map(([org,d])=>{
+    const tks=sortByAge(d.tickets);
+    const criticos=tks.filter(t=>t.score>=350).length;
+    const urghi=tks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
+    const nota=STORE.getNotaCliente(org);
+    const hasNota=nota.situacion&&nota.situacion.trim();
+    const sc=criticos>0?'#dc2626':urghi>0?'#d97706':'#2563eb';
+    return`<div class="cli-row" onclick="showClienteDetail('${org.replace(/'/g,"\'").replace(/"/g,'&quot;')}')" data-org="${org.replace(/"/g,'&quot;')}">
+      <div class="cli-avatar" style="background:${sc}20;color:${sc}">${org.trim()[0]?.toUpperCase()||'?'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${org}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:1px">${tks.length} tickets · score máx. <span style="font-weight:700;color:${sc}">${d.maxScore}</span>${hasNota?' · <span style="color:#16a34a">📝 con nota</span>':''}</div>
+      </div>
+      ${criticos>0?`<span class="cli-badge" style="background:#fef2f2;color:#dc2626">${criticos} crítico${criticos>1?'s':''}</span>`:''}
+      ${urghi>0&&!criticos?`<span class="cli-badge" style="background:#fffbeb;color:#d97706">${urghi} urg/alto</span>`:''}
+      <span style="font-size:11px;color:var(--acc)">▶</span>
+    </div>`;
+  }).join('');
+
+  el('v-clientes').innerHTML=`
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🏢 Clientes activos en soporte</div>
+        <span style="font-size:11px;color:var(--txt3)">${orgs.length} empresas · ordenadas por urgencia · clic para ver ficha</span>
+      </div>
+      <div style="padding:8px 0">${listItems}</div>
+    </div>
+    <div id="cli-detail-wrap"></div>`;
+}
+
+function showClienteDetail(org){
+  const wrap=el('cli-detail-wrap');if(!wrap)return;
+  if(wrap.dataset.open===org){wrap.dataset.open='';wrap.innerHTML='';return;}
+  wrap.dataset.open=org;
+
+  const tks=sortByAge(T.filter(t=>(t.org||'Sin clasificar')===org));
+  const nota=STORE.getNotaCliente(org)||{situacion:'',notas:[]};
+  const criticos=tks.filter(t=>t.score>=350);
+  const atencion=tks.filter(t=>t.score>=220&&t.score<350);
+  const resto=tks.filter(t=>t.score<220);
+  const sc=criticos.length>0?'#dc2626':tks.filter(t=>t.priority==='urgent'||t.priority==='high').length>0?'#d97706':'#2563eb';
+
+  function mkTicketRow(t,i){
+    const prr=PC[t.priority]||PC[''];
+    const stt=SC[t.status]||SC[''];
+    const rev=STORE.isRevisado(t.id);
+    return`<div class="trow-grid" style="grid-template-columns:24px 1fr 70px 60px 60px 90px;opacity:${rev?'0.4':'1'};text-decoration:${rev?'line-through':'none'}" data-tid="${t.id}" onclick="om(${t.id})">
+      <span class="t-num">${i+1}</span>
+      <div><div style="display:flex;align-items:center;gap:6px"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a><span class="t-sub">${t.subject||'—'}</span></div></div>
+      <span style="font-size:11px;color:var(--txt2)">${t.agente||'—'}</span>
+      <span>${bdg(prr.t,prr.c,prr.bg)}</span>
+      <span>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</span>
+      <span style="font-family:var(--mono);font-weight:700;font-size:11px;color:${t.score>=350?'#EF4444':t.score>=220?'#F59E0B':'#4B9BFF'}">${t.score}</span>
+    </div>`;
+  }
+
+  function seccion(titulo,lista,color){
+    if(!lista.length)return'';
+    return`<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${color};background:${color}08;border-bottom:1px solid ${color}20">${titulo} (${lista.length})</div>
+    ${lista.map((t,i)=>mkTicketRow(t,i)).join('')}`;
+  }
+
+  const notasHtml=(nota.notas||[]).map(n=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--bdr)">
+    <span style="font-size:10px;color:var(--txt3);white-space:nowrap;font-family:var(--mono)">${fmtTs(n.ts)}</span>
+    <span style="font-size:11px;color:var(--txt);flex:1">${n.txt}</span>
+    <button onclick="deleteCliNota('${org.replace(/'/g,"\'")}',${n.ts})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:12px;padding:0">×</button>
+  </div>`).join('');
+
+  wrap.innerHTML=`<div class="card" style="border-top:3px solid ${sc}">
+    <div class="card-head">
+      <div class="card-title" style="font-size:14px">🏢 ${org}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 10px;border-radius:10px;background:${sc}20;color:${sc}">${tks.length} tickets</span>
+        <button onclick="wrap.dataset.open='';el('cli-detail-wrap').innerHTML=''" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Cerrar</button>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-bottom:1px solid var(--bdr)">
+      <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Situación actual</div>
+      <textarea id="cli-sit-${btoa(unescape(encodeURIComponent(org))).replace(/=/g,'')}" style="width:100%;min-height:70px;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 10px;font-family:var(--font);font-size:12px;color:var(--txt);background:var(--sur2);resize:vertical;outline:none" placeholder="Escribe aquí la situación actual del cliente, acuerdos, pendientes...">${nota.situacion||''}</textarea>
+      <button onclick="saveCliSituacion('${org.replace(/'/g,"\'")}','${btoa(unescape(encodeURIComponent(org))).replace(/=/g,'')}') " style="margin-top:6px;padding:5px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">💾 Guardar situación</button>
+    </div>
+    <div style="padding:14px 16px;border-bottom:1px solid var(--bdr)">
+      <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Agregar nota de seguimiento</div>
+      <div style="display:flex;gap:8px">
+        <input id="cli-nota-inp-${btoa(unescape(encodeURIComponent(org))).replace(/=/g,'')}" type="text" placeholder="Ej: Llamé al cliente, espera respuesta de su área de TI" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-family:var(--font);font-size:12px;outline:none">
+        <button onclick="addCliNota('${org.replace(/'/g,"\'")}','${btoa(unescape(encodeURIComponent(org))).replace(/=/g,'')}','${wrap.dataset.open}')" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+      </div>
+    </div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--bdr);max-height:200px;overflow-y:auto" id="cli-notas-list-${btoa(unescape(encodeURIComponent(org))).replace(/=/g,'')}">
+      ${notasHtml||'<div style="font-size:11px;color:var(--txt3);padding:8px 0">Sin notas aún</div>'}
+    </div>
+    <div style="border-top:1px solid var(--bdr)">
+      <div style="padding:8px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3)">Tickets activos — ${tks.length} total</div>
+      <div class="trow-hdr trow-grid" style="grid-template-columns:24px 1fr 70px 60px 60px 90px"># <span>Ticket · Asunto</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span></div>
+      ${seccion('🔴 Crítico — resolver hoy',criticos,'#dc2626')}
+      ${seccion('🟠 Atención — atender hoy',atencion,'#d97706')}
+      ${seccion('🔵 Vigilancia',resto,'#2563eb')}
+    </div>
+  </div>`;
+  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function saveCliSituacion(org,key){
+  const ta=el('cli-sit-'+key);if(!ta)return;
+  const data=STORE.getNotaCliente(org)||{};
+  data.situacion=ta.value;data.updatedAt=Date.now();
+  STORE.setNotaCliente(org,data);
+  ta.style.border='1px solid #16a34a';
+  setTimeout(()=>{if(ta)ta.style.border='1px solid var(--bdr)';},1200);
+}
+function addCliNota(org,key,currentOrg){
+  const inp=el('cli-nota-inp-'+key);if(!inp||!inp.value.trim())return;
+  const data=STORE.getNotaCliente(org)||{situacion:'',notas:[]};
+  if(!data.notas)data.notas=[];
+  data.notas.unshift({ts:Date.now(),txt:inp.value.trim()});
+  STORE.setNotaCliente(org,data);
+  inp.value='';
+  showClienteDetail(org);
+}
+function deleteCliNota(org,ts){
+  const data=STORE.getNotaCliente(org)||{situacion:'',notas:[]};
+  data.notas=(data.notas||[]).filter(n=>n.ts!==ts);
+  STORE.setNotaCliente(org,data);
+  showClienteDetail(org);
 }
 
 // ── ANÁLISIS ─────────────────────────────────────────────────────
@@ -450,6 +634,11 @@ function renderHoy(){
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const fechaHoy=dias[now.getDay()]+' '+now.getDate()+' '+meses[now.getMonth()];
 
+  // Clasificar en 3 niveles
+  const criticos=sortByAge(lista.filter(t=>(t.priority==='urgent'||t.priority==='high')&&(parseDias(t.rangoStr||'')>=7)));
+  const atencion=sortByAge(lista.filter(t=>!criticos.includes(t)&&(t.score>=300||(parseDias(t.rangoStr||'')>=6))));
+  const vigilancia=sortByAge(lista.filter(t=>!criticos.includes(t)&&!atencion.includes(t)));
+
   function motivoPills(t){
     const r=(t.rangoStr||'').trim().toLowerCase();const pills=[];
     if(r==='7 días'||r==='7 dias')pills.push('<span class="why-pill fire">7 días · vence hoy</span>');
@@ -459,29 +648,44 @@ function renderHoy(){
     return pills.join('');
   }
 
-  function buildHoyRows(list,start,hidden){
+  function buildNivelRows(list){
     return list.map((t,i)=>{
       const sc=t.score>=350?'crit':t.score>=220?'warn':'ok';
       const pr=PC[t.priority]||PC[''];
-      return`<div class="trow-grid" onclick="om(${t.id})" ${hidden?'style="display:none" data-extra="true"':''}>
-        <span class="t-num">${start+i+1}</span>
+      const rev=STORE.isRevisado(t.id);
+      return`<div class="trow-grid" style="grid-template-columns:22px 1fr 70px 64px 110px 90px 36px;align-items:start;opacity:${rev?'0.4':'1'};text-decoration:${rev?'line-through':'none'}" data-tid="${t.id}" onclick="om(${t.id})">
+        <span class="t-num">${i+1}</span>
         <div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a><span class="t-sub">${t.subject||'—'}</span></div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div></div>
-        <span class="t-ag">${t.agente||'—'}</span>
-        <span class="pr-tag ${t.priority}">${pr.t}</span>
-        <span class="t-ant">${t.rangoStr||'—'}</span>
-        <span class="sc ${sc}">${t.score}</span>
+        <span class="t-ag" style="padding-top:2px">${t.agente||'—'}</span>
+        <span class="pr-tag ${t.priority}" style="margin-top:2px;display:inline-block">${pr.t}</span>
+        <span class="t-ant" style="padding-top:2px">${t.rangoStr||'—'}</span>
+        <span class="sc ${sc}" style="padding-top:2px">${t.score}</span>
+        <button class="rev-btn" onclick="event.stopPropagation();toggleRevisado(${t.id},this)" style="${rev?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${rev?'↩ Desmarcar':'✓ Listo'}</button>
       </div>`;
     }).join('');
   }
 
-  const vis=lista.slice(0,8),ocu=lista.slice(8);
+  function nivelSection(titulo,list,colorClass,count){
+    if(!list.length)return'';
+    const id='nivel-'+colorClass;
+    return`<div>
+      <div style="padding:7px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bdr);border-top:1px solid var(--bdr);background:var(--sur2)">
+        <span style="font-size:11px;font-weight:700;color:${colorClass==='c'?'#dc2626':colorClass==='a'?'#d97706':'#2563eb'}">${titulo}</span>
+        <span class="nivel-label ${colorClass}">${list.length} tickets</span>
+        <button onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'':'none'" style="margin-left:auto;font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:1px 7px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▲▼</button>
+      </div>
+      <div id="${id}">
+        <div class="trow-hdr trow-grid" style="grid-template-columns:22px 1fr 70px 64px 110px 90px 36px"># <span>Ticket · asunto · motivo</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span><span>Estado</span></div>
+        ${buildNivelRows(list)}
+      </div>
+    </div>`;
+  }
 
   const agRows=agRiesgo.map(ag=>{
     const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-    const areaLabel=ag.area||'—';
     return`<div class="ag-hoy-row ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}','hoy')">
       <div class="av ${ag.nivel}">${init}</div>
-      <div><div class="ag-name">${ag.ag}</div><div class="ag-area-lbl">${areaLabel}</div></div>
+      <div><div class="ag-name">${ag.ag}</div><div class="ag-area-lbl">${ag.area||'—'}</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.nivel}">${ag.total}</div><div class="ag-lbl">tickets</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.sinSeg>0?'r':'g'}">${ag.sinSeg}</div><div class="ag-lbl">sin mover</div></div>
       <div class="ag-metric"><div class="ag-val ${ag.mas7>0?'a':'g'}">${ag.mas7}</div><div class="ag-lbl">≥7 días</div></div>
@@ -491,31 +695,38 @@ function renderHoy(){
 
   el('v-hoy').innerHTML=`
     <div class="greeting">
-      <div><div class="greeting-title">Buenos días, Ale</div><div class="greeting-sub">${lista.length} tickets necesitan movimiento hoy · ${agRiesgo.length} agentes con riesgo</div></div>
+      <div>
+        <div class="greeting-title">Buenos días, Ale</div>
+        <div class="greeting-sub">
+          ${criticos.length>0?`<span style="color:#dc2626;font-weight:700">${criticos.length} críticos</span> · `:''}
+          ${atencion.length>0?`<span style="color:#d97706;font-weight:700">${atencion.length} en atención</span> · `:''}
+          ${vigilancia.length>0?`<span style="color:#2563eb">${vigilancia.length} en vigilancia</span> · `:''}
+          ${agRiesgo.length} agentes con riesgo
+        </div>
+      </div>
       <span class="date-chip">${fechaHoy} · SEM ${wk(now)}</span>
     </div>
+
     <div class="card">
       <div class="card-head">
         <div class="card-title danger">🔥 Lo que se quema hoy</div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge red">${lista.length} tickets</span>
           <button onclick="downloadCSV(getTicketsQuemandose(),'hoy_riesgo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
-          <button onclick="toggleHoyDetalle()" id="hoy-toggle-btn" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▼ Ver lista</button>
+          <button onclick="toggleHoyLista()" id="hoy-toggle-btn" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▼ Ver</button>
         </div>
       </div>
       <div id="hoy-lista-wrap">
-        <div class="filter-bar">
-          <select class="filter-select" id="hoy-farea" onchange="applyHoyFilter()"><option value="">Todas las áreas</option>${[...new Set(lista.map(t=>getAreaAgente(t)).filter(a=>a&&a!=='—'))].sort().map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
-          <select class="filter-select" id="hoy-frango" onchange="applyHoyFilter()"><option value="">Toda antigüedad</option>${[...new Set(lista.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(b)-parseDias(a)).map(r=>`<option value="${r}">${r}</option>`).join('')}</select>
-          <select class="filter-select" id="hoy-fprior" onchange="applyHoyFilter()"><option value="">Toda prioridad</option><option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option></select>
-          <button class="filter-btn-clear" onclick="clearHoyFilter()">✕ Limpiar</button>
-          <span id="hoy-cnt" style="font-size:10px;color:var(--txt3);margin-left:auto">${lista.length} tickets</span>
-        </div>
-        <div class="trow-hdr trow-grid"># <span>Ticket · asunto · motivo</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span></div>
-        <div id="hoy-rows">${lista.length===0?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>':buildHoyRows(vis,0,false)+buildHoyRows(ocu,8,true)+(ocu.length>0?`<div class="expand-row" id="ver-mas-hoy" onclick="document.querySelectorAll('[data-extra]').forEach(r=>r.style.display='');this.style.display='none'">+ ${ocu.length} tickets más · ver todos</div>`:'')}</div>
-        <div class="legend-row"><span class="why-pill fire">7 días</span> vence hoy (col R) &nbsp;<span class="why-pill clock">6 días</span> vence mañana (col R) &nbsp;<span class="why-pill ghost">sin seguim.</span> col E >3d</div>
+        ${lista.length===0
+          ?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>'
+          :nivelSection('🔴 CRÍTICO — resolver HOY sin excusa',criticos,'c')
+           +nivelSection('🟠 ATENCIÓN — vencen mañana o sin seguimiento',atencion,'a')
+           +nivelSection('🔵 VIGILANCIA — mantener ojo',vigilancia,'v')
+        }
+        <div class="legend-row"><span class="why-pill fire">7 días</span> vence hoy · <span class="why-pill clock">6 días</span> vence mañana · <span class="why-pill ghost">sin seguim.</span> col E >3d</div>
       </div>
     </div>
+
     <div class="card">
       <div class="card-head">
         <div class="card-title">👥 Quién necesita apoyo hoy</div>
@@ -525,16 +736,17 @@ function renderHoy(){
       `<div class="ag-hoy-hdr"><span></span><span>Agente / área</span><span style="text-align:center">Tickets</span><span style="text-align:center">Sin mover</span><span style="text-align:center">≥7 días</span><span></span></div>${agRows}`}
       <div id="hoy-agent-detail" style="display:none"></div>
     </div>
+
     <div class="card">
       <div class="card-head">
         <div class="card-title">⏱ Predicción SLA</div>
-        <span style="font-size:10px;color:var(--txt3)">col R = antigüedad · col E = último seguimiento</span>
+        <span style="font-size:10px;color:var(--txt3)">col R · col E · clic para ver detalle</span>
       </div>
       <div class="pred-grid">
-        <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')"><div class="pred-num" style="color:#dc2626">${pred.n1}</div><div class="pred-lbl" style="color:#dc2626">Vencen hoy</div><div class="pred-src" style="color:#dc2626">7 Días · col R</div><div class="pred-hint">▼ ver detalle</div></div>
-        <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')"><div class="pred-num" style="color:#92400e">${pred.n2}</div><div class="pred-lbl" style="color:#92400e">Vencen mañana</div><div class="pred-src" style="color:#92400e">6 Días · col R</div><div class="pred-hint">▼ ver detalle</div></div>
-        <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')"><div class="pred-num" style="color:#7c3aed">${pred.n3}</div><div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d hoy</div><div class="pred-src" style="color:#7c3aed">col E</div><div class="pred-hint">▼ ver detalle</div></div>
-        <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')"><div class="pred-num" style="color:#2563eb">${pred.n4}</div><div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div><div class="pred-src" style="color:#2563eb">col E</div><div class="pred-hint">▼ ver detalle</div></div>
+        <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')"><div class="pred-num" style="color:#dc2626">${pred.n1}</div><div class="pred-lbl" style="color:#dc2626">Vencen hoy</div><div class="pred-src" style="color:#dc2626">7 Días · col R</div><div class="pred-hint">▼ detalle</div></div>
+        <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')"><div class="pred-num" style="color:#92400e">${pred.n2}</div><div class="pred-lbl" style="color:#92400e">Vencen mañana</div><div class="pred-src" style="color:#92400e">6 Días · col R</div><div class="pred-hint">▼ detalle</div></div>
+        <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')"><div class="pred-num" style="color:#7c3aed">${pred.n3}</div><div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d</div><div class="pred-src" style="color:#7c3aed">col E</div><div class="pred-hint">▼ detalle</div></div>
+        <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')"><div class="pred-num" style="color:#2563eb">${pred.n4}</div><div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div><div class="pred-src" style="color:#2563eb">col E</div><div class="pred-hint">▼ detalle</div></div>
       </div>
       <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
     </div>`;
@@ -542,45 +754,14 @@ function renderHoy(){
 }
 
 let _hoyVisible=true;
-function toggleHoyDetalle(){
+function toggleHoyLista(){
   const wrap=el('hoy-lista-wrap');const btn=el('hoy-toggle-btn');
   if(!wrap)return;
   _hoyVisible=!_hoyVisible;
   wrap.style.display=_hoyVisible?'':'none';
-  btn.textContent=_hoyVisible?'▲ Cerrar lista':'▼ Ver lista';
+  btn.textContent=_hoyVisible?'▲ Ocultar':'▼ Ver';
 }
-function applyHoyFilter(){
-  const area=el('hoy-farea')?.value||'';
-  const rango=el('hoy-frango')?.value||'';
-  const prior=el('hoy-fprior')?.value||'';
-  let list=sortByAge(window._hoyLista||[]);
-  if(area)list=list.filter(t=>getAreaAgente(t)===area);
-  if(rango)list=list.filter(t=>t.rangoStr===rango);
-  if(prior)list=list.filter(t=>t.priority===prior);
-  const cnt=el('hoy-cnt');if(cnt)cnt.textContent=list.length+' tickets';
-  const rows=el('hoy-rows');if(!rows)return;
-  if(!list.length){rows.innerHTML='<div class="empty" style="color:#16a34a">Sin resultados con estos filtros</div>';return;}
-  function motivoPills(t){
-    const r=(t.rangoStr||'').trim().toLowerCase();const pills=[];
-    if(r==='7 días'||r==='7 dias')pills.push('<span class="why-pill fire">7 días · vence hoy</span>');
-    else if(r==='6 días'||r==='6 dias')pills.push('<span class="why-pill clock">6 días · vence mañana</span>');
-    if(t.sinSeguimiento)pills.push('<span class="why-pill ghost">sin seguim. +3d</span>');
-    if(t.isSinAsignar)pills.push('<span class="why-pill fire">sin responsable</span>');
-    return pills.join('');
-  }
-  rows.innerHTML=list.map((t,i)=>{
-    const sc=t.score>=350?'crit':t.score>=220?'warn':'ok';const pr=PC[t.priority]||PC[''];
-    return`<div class="trow-grid" onclick="om(${t.id})">
-      <span class="t-num">${i+1}</span>
-      <div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a><span class="t-sub">${t.subject||'—'}</span></div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div></div>
-      <span class="t-ag">${t.agente||'—'}</span><span class="pr-tag ${t.priority}">${pr.t}</span><span class="t-ant">${t.rangoStr||'—'}</span><span class="sc ${sc}">${t.score}</span>
-    </div>`;
-  }).join('');
-}
-function clearHoyFilter(){
-  ['hoy-farea','hoy-frango','hoy-fprior'].forEach(id=>{const e=el(id);if(e)e.value='';});
-  applyHoyFilter();
-}
+
 
 // ── RENDER EQUIPO ────────────────────────────────────────────────
 function renderEquipo(){
@@ -859,8 +1040,47 @@ function om(id){
     <div class="mr"><span class="ml">Último seguimiento</span><span class="mv">${fmtDate(t.ultimoSeg||'')}</span></div>
     <div class="mr"><span class="ml">Área asignada</span><span class="mv">${t.areaAsig||'—'}</span></div>
     <div class="mr"><span class="ml">Agente</span><span class="mv">${t.agente||'—'}</span></div>
-    <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>`;
+    <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>
+    <div class="mdv"></div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Notas de seguimiento</div>
+      <div id="modal-notas-${t.id}" class="nota-timeline" style="max-height:160px;overflow-y:auto;margin-bottom:10px">
+        ${STORE.getNotas(t.id).map(n=>`<div class="nota-item" style="margin-bottom:8px">
+          <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);margin-bottom:2px">${fmtTs(n.ts)}</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+            <span style="font-size:12px;color:var(--txt)">${n.txt}</span>
+            <button onclick="STORE.delNota(${t.id},${n.ts});document.getElementById('modal-notas-${t.id}').innerHTML=renderNotasTimeline(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;line-height:1;padding:0;flex-shrink:0">×</button>
+          </div>
+        </div>`).join('')||'<div style="font-size:11px;color:var(--txt3)">Sin notas aún</div>'}
+      </div>
+      <div style="display:flex;gap:6px">
+        <input id="nota-inp-${t.id}" type="text" placeholder="Ej: Llamé al cliente, en espera de respuesta…" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-family:var(--font);font-size:12px;outline:none" onkeydown="if(event.key==='Enter')addNota(${t.id})">
+        <button onclick="addNota(${t.id})" style="padding:6px 12px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button onclick="toggleRevisado(${t.id},this);renderHoy && renderHoy()" class="rev-btn" style="${STORE.isRevisado(t.id)?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${STORE.isRevisado(t.id)?'↩ Quitar revisado':'✓ Marcar como revisado'}</button>
+      </div>
+    </div>`;
   el('msk').classList.add('on');
+}
+
+function addNota(id){
+  const inp=el('nota-inp-'+id);if(!inp||!inp.value.trim())return;
+  STORE.addNota(id,inp.value.trim());inp.value='';
+  const cont=el('modal-notas-'+id);
+  if(cont)cont.innerHTML=renderNotasTimeline(id);
+}
+
+function renderNotasTimeline(id){
+  const notas=STORE.getNotas(id);
+  if(!notas.length)return'<div style="font-size:11px;color:var(--txt3)">Sin notas aún</div>';
+  return notas.map(n=>`<div class="nota-item" style="margin-bottom:8px">
+    <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);margin-bottom:2px">${fmtTs(n.ts)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+      <span style="font-size:12px;color:var(--txt)">${n.txt}</span>
+      <button onclick="STORE.delNota(${id},${n.ts});document.getElementById('modal-notas-${id}').innerHTML=renderNotasTimeline(${id})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;line-height:1;padding:0;flex-shrink:0">×</button>
+    </div>
+  </div>`).join('');
 }
 function cm(){el('msk').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
@@ -881,11 +1101,12 @@ function getDiagnosis(tickets){
 // ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['hoy','equipo','panorama'][i]===tab));
-  ['hoy','equipo','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['hoy','equipo','clientes','panorama'][i]===tab));
+  ['hoy','equipo','clientes','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='hoy')renderHoy();
   else if(tab==='equipo')renderEquipo();
+  else if(tab==='clientes')renderClientes();
   else if(tab==='panorama')renderPanorama();
 }
 
@@ -935,7 +1156,8 @@ async function loadData(){
     safeSet('ct',T.length+' tickets');
     safeSet('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
     const _q=getTicketsQuemandose();const _ar=getAgentesEnRiesgo();
-    safeSet('nb-hoy',_q.length);safeSet('nb-equipo',_ar.length);
+    const _orgCount=new Set(T.map(t=>t.org).filter(Boolean)).size;
+    safeSet('nb-hoy',_q.length);safeSet('nb-equipo',_ar.length);safeSet('nb-clientes',_orgCount);
     el('ls').textContent='Cargando vista…';
     el('ldr').style.display='none';
     TAB='hoy';
