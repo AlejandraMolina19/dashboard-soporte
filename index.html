@@ -201,6 +201,26 @@ tbody tr:last-child td{border-bottom:none}
   .cli-row:hover{background:var(--sur2)}
   .cli-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
   .cli-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+  .mini-kpi{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);padding:12px 14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+  .mini-kpi:hover{transform:translateY(-1px);box-shadow:var(--sh2)}
+  .mini-kpi-val{font-size:26px;font-weight:700;line-height:1;font-family:var(--mono)}
+  .mini-kpi-lbl{font-size:10px;font-weight:600;color:var(--txt3);margin-top:3px}
+  .nivel-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}
+  .nivel-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s}
+  .nivel-head:hover{background:var(--sur2)}
+  .hoy-row{display:grid;grid-template-columns:22px 1fr 80px 64px 46px 70px;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .1s}
+  .hoy-row:last-child{border-bottom:none}
+  .hoy-row:hover{background:var(--sur2)}
+  .hoy-rev{opacity:.4;text-decoration:line-through}
+  .hoy-hdr{display:grid;grid-template-columns:22px 1fr 80px 64px 46px 70px;gap:8px;padding:5px 14px;background:var(--sur2);border-bottom:1px solid var(--bdr);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
+  .slack-btn{font-size:13px;background:none;border:1px solid var(--bdr);border-radius:4px;cursor:pointer;padding:1px 5px;transition:all .15s}
+  .slack-btn:hover{background:#4A154B;border-color:#4A154B}
+  .ag-chip{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--rl);border:1px solid var(--bdr);background:var(--sur);cursor:pointer;transition:all .15s;min-width:160px}
+  .ag-chip:hover{border-color:var(--bdr2);transform:translateY(-1px);box-shadow:var(--sh)}
+  .ag-chip-r{border-left:3px solid #dc2626}
+  .ag-chip-a{border-left:3px solid #d97706}
+  .cli-table-row:hover td{background:var(--sur2)}
+  .cli-table-row td{padding:8px 12px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--txt)}
 </style>
 </head>
 <body>
@@ -342,46 +362,207 @@ function toggleRevisado(id,btn){
 
 
 // ── Render CLIENTES ──────────────────────────────────────────────
-function renderClientes(){
-  // Agrupar tickets por empresa (col G)
-  const orgMap={};
-  T.forEach(t=>{
-    const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';
-    if(!orgMap[o])orgMap[o]={tickets:[],maxScore:0};
-    orgMap[o].tickets.push(t);
-    if(t.score>orgMap[o].maxScore)orgMap[o].maxScore=t.score;
-  });
-  const orgs=Object.entries(orgMap).sort((a,b)=>b[1].maxScore-a[1].maxScore);
+// Datos de clientes: leídos desde pestaña CLIENTES del mismo Google Sheets
+// Para activar: pon el GID de tu pestaña CLIENTES aquí:
+const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
+let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
-  const listItems=orgs.map(([org,d])=>{
-    const tks=sortByAge(d.tickets);
-    const criticos=tks.filter(t=>t.score>=350).length;
-    const urghi=tks.filter(t=>t.priority==='urgent'||t.priority==='high').length;
-    const nota=STORE.getNotaCliente(org);
-    const hasNota=nota.situacion&&nota.situacion.trim();
-    const sc=criticos>0?'#dc2626':urghi>0?'#d97706':'#2563eb';
-    return`<div class="cli-row" onclick="showClienteDetail('${org.replace(/'/g,"\'").replace(/"/g,'&quot;')}')" data-org="${org.replace(/"/g,'&quot;')}">
-      <div class="cli-avatar" style="background:${sc}20;color:${sc}">${org.trim()[0]?.toUpperCase()||'?'}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${org}</div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:1px">${tks.length} tickets · score máx. <span style="font-weight:700;color:${sc}">${d.maxScore}</span>${hasNota?' · <span style="color:#16a34a">📝 con nota</span>':''}</div>
+async function loadClientesSheet(){
+  const gid=CLIENTES_GID||localStorage.getItem('clientes_gid')||'';
+  if(!gid){return false;}
+  try{
+    const baseUrl='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub';
+    const url=baseUrl+'?gid='+gid+'&single=true&output=csv';
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)return false;
+    const txt=await r.text();
+    const{rows,headers}=parseCSV(txt);
+    CLIENTES_DATA=rows;
+    return true;
+  }catch(e){console.error('loadClientesSheet:',e);return false;}
+}
+
+function renderClientes(){
+  const v=el('v-clientes');if(!v)return;
+
+  // Si no hay GID configurado, mostrar configuración
+  if(!localStorage.getItem('clientes_gid')){
+    v.innerHTML=`<div class="card">
+      <div class="card-head"><div class="card-title">🏢 Clientes</div></div>
+      <div style="padding:24px;text-align:center;max-width:480px;margin:0 auto">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:6px">Conecta la pestaña de Clientes</div>
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:16px;line-height:1.6">Para mostrar tu lista de clientes del Excel, necesito el ID de la pestaña <b>CLIENTES</b> de tu Google Sheets.<br><br>Ábrelo → Clic en la pestaña CLIENTES → la URL mostrará <code style="background:var(--sur2);padding:1px 4px;border-radius:3px">gid=XXXXXXX</code> → copia ese número.</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <input id="gid-input" type="text" placeholder="Ej: 1234567890" style="border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:13px;width:200px;outline:none">
+          <button onclick="saveClientesGid()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">Conectar</button>
+        </div>
       </div>
-      ${criticos>0?`<span class="cli-badge" style="background:#fef2f2;color:#dc2626">${criticos} crítico${criticos>1?'s':''}</span>`:''}
-      ${urghi>0&&!criticos?`<span class="cli-badge" style="background:#fffbeb;color:#d97706">${urghi} urg/alto</span>`:''}
-      <span style="font-size:11px;color:var(--acc)">▶</span>
-    </div>`;
+    </div>
+    <!-- Mientras tanto: clientes desde tickets -->
+    ${renderClientesFromTickets()}`;
+    return;
+  }
+
+  // Si hay GID pero no datos aún
+  if(!CLIENTES_DATA.length){
+    v.innerHTML='<div class="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3)">Cargando clientes…</div></div>';
+    loadClientesSheet().then(ok=>{
+      if(ok)renderClientesConDatos();
+      else{localStorage.removeItem('clientes_gid');renderClientes();}
+    });
+    return;
+  }
+  renderClientesConDatos();
+}
+
+function saveClientesGid(){
+  const inp=el('gid-input');if(!inp||!inp.value.trim())return;
+  localStorage.setItem('clientes_gid',inp.value.trim());
+  CLIENTES_DATA=[];
+  renderClientes();
+}
+
+function renderClientesConDatos(){
+  const v=el('v-clientes');if(!v)return;
+  // Mapear columnas del Excel: Servidor, INSTANCIAS, empresa, encargado, Correo, Telefono...
+  const rows=CLIENTES_DATA;
+  const hdrs=Object.keys(rows[0]||{});
+
+  // Detectar columnas clave
+  const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const findH=pats=>hdrs.find(h=>pats.some(p=>norm(h).includes(p)))||'';
+  const cEmp=findH(['empresa','company']);
+  const cEnc=findH(['encargado','responsable','contacto']);
+  const cCor=findH(['correo','email','mail']);
+  const cTel=findH(['telefono','tel','phone']);
+  const cSrv=findH(['servidor','server']);
+  const cInst=findH(['instancia','instance','url']);
+
+  const tableRows=rows.map((r,i)=>{
+    const emp=r[cEmp]||'—';
+    const enc=r[cEnc]||'—';
+    const cor=r[cCor]||'—';
+    const tel=r[cTel]||'—';
+    const srv=r[cSrv]||'—';
+    const inst=r[cInst]||'';
+    // Tickets de Zendesk vinculados
+    const tks=T.filter(t=>{
+      const o=(t.org||'').toLowerCase();
+      const e=emp.toLowerCase();
+      return o.includes(e.substring(0,6))||e.includes(o.substring(0,6));
+    });
+    const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
+    const sc=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#16a34a';
+    const nota=STORE.getNotaCliente(emp)||{};
+    return`<tr class="cli-table-row" onclick="showClienteDetailPlus('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
+      <td style="font-weight:700;color:var(--txt)">${emp}</td>
+      <td style="font-size:11px">${enc}</td>
+      <td style="font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
+      <td style="font-size:11px">${tel}</td>
+      <td style="text-align:center">
+        ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:2px 7px;border-radius:4px;font-weight:600;text-decoration:none">🔗 Acceder</a>`:'—'}
+      </td>
+      <td style="text-align:center">
+        ${tks.length?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc}">${tks.length}</span>`:'<span style="color:var(--txt3);font-size:11px">0</span>'}
+      </td>
+      <td style="text-align:center">
+        ${nota.situacion?'<span style="font-size:9px;background:#f0fdf4;color:#16a34a;padding:1px 6px;border-radius:3px;font-weight:600">📝 nota</span>':'<span style="color:var(--txt3);font-size:10px">—</span>'}
+      </td>
+    </tr>`;
   }).join('');
 
-  el('v-clientes').innerHTML=`
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">🏢 Clientes activos en soporte</div>
-        <span style="font-size:11px;color:var(--txt3)">${orgs.length} empresas · ordenadas por urgencia · clic para ver ficha</span>
+  v.innerHTML=`<div class="card">
+    <div class="card-head">
+      <div class="card-title">🏢 Clientes — ${rows.length} registros</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="cli-search" placeholder="Buscar empresa…" oninput="filtrarClientes(this.value)" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;font-size:12px;font-family:var(--font);outline:none;width:180px">
+        <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
       </div>
-      <div style="padding:8px 0">${listItems}</div>
     </div>
-    <div id="cli-detail-wrap"></div>`;
+    <div style="overflow-x:auto">
+      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:700px">
+        <thead><tr style="background:var(--sur2)">
+          ${['Empresa','Encargado','Correo','Teléfono','Instancia','Tickets','Nota'].map(h=>`<th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody id="cli-tbody">${tableRows}</tbody>
+      </table>
+    </div>
+  </div>
+  <div id="cli-detail-wrap-plus"></div>`;
+
+  // Guardar para filtro
+  window._cliRows=rows;window._cliHeaders={cEmp,cEnc,cCor,cTel,cSrv,cInst};
 }
+
+function filtrarClientes(q){
+  if(!q){document.getElementById('cli-tbody').innerHTML=renderCliTableRows(window._cliRows||[]);return;}
+  const filtered=(window._cliRows||[]).filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q.toLowerCase())));
+  const tbody=document.getElementById('cli-tbody');
+  if(tbody)tbody.innerHTML=renderCliTableRows(filtered);
+}
+
+function renderCliTableRows(rows){
+  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
+  return rows.map(r=>{
+    const emp=r[cEmp]||'—';const enc=r[cEnc]||'—';const cor=r[cCor]||'—';const tel=r[cTel]||'—';const inst=r[cInst]||'';
+    const tks=T.filter(t=>{const o=(t.org||'').toLowerCase();const e=emp.toLowerCase();return o.includes(e.substring(0,6))||e.includes(o.substring(0,6));});
+    const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
+    const sc=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#16a34a';
+    const nota=STORE.getNotaCliente(emp)||{};
+    return`<tr class="cli-table-row" onclick="showClienteDetailPlus('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
+      <td style="font-weight:700;padding:8px 12px;border-bottom:1px solid var(--bdr)">${emp}</td>
+      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)">${enc}</td>
+      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
+      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)">${tel}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:2px 7px;border-radius:4px;font-weight:600;text-decoration:none">🔗</a>`:'—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${tks.length?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc}">${tks.length}</span>`:'0'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${nota.situacion?'📝':'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClientesFromTickets(){
+  // Fallback: clientes desde tickets de Zendesk
+  const orgMap={};
+  T.forEach(t=>{const o=(t.org||'Sin clasificar').trim();if(!orgMap[o])orgMap[o]=[];orgMap[o].push(t);});
+  const orgs=Object.entries(orgMap).sort((a,b)=>{const sa=Math.max(...a[1].map(t=>t.score));const sb=Math.max(...b[1].map(t=>t.score));return sb-sa;});
+  return`<div class="card" style="margin-top:10px">
+    <div class="card-head"><div class="card-title" style="color:var(--txt3);font-size:11px">Vista provisional — empresas desde tickets de Zendesk (${orgs.length} empresas)</div></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--sur2)">${['Empresa','Tickets','Score máx.','Nota'].map(h=>`<th style="padding:7px 12px;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
+      <tbody>${orgs.map(([org,tks])=>{
+        const maxSc=Math.max(...tks.map(t=>t.score));
+        const sc=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#16a34a';
+        const nota=STORE.getNotaCliente(org)||{};
+        return`<tr onclick="showClienteDetail('${org.replace(/'/g,"\\'")}') " style="cursor:pointer"><td style="padding:7px 12px;border-bottom:1px solid var(--bdr);font-weight:600">${org}</td><td style="padding:7px 12px;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${sc}">${tks.length}</td><td style="padding:7px 12px;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${sc}">${maxSc}</td><td style="padding:7px 12px;border-bottom:1px solid var(--bdr)">${nota.situacion?'📝 '+nota.situacion.substring(0,40)+'…':'—'}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function showClienteDetailPlus(org){
+  const wrap=el('cli-detail-wrap-plus');if(!wrap)return;
+  if(wrap.dataset.open===org){wrap.dataset.open='';wrap.innerHTML='';return;}
+  // Reusar showClienteDetail (ya existe)
+  wrap.dataset.open=org;
+  const oldWrap=el('cli-detail-wrap');
+  const savedOpen=oldWrap?oldWrap.dataset.open:'';
+  // Crear un div temporal para el detalle
+  wrap.innerHTML='<div id="cli-detail-tmp"></div>';
+  const tmp=el('cli-detail-tmp');
+  // Llamar showClienteDetail que escribe en cli-detail-wrap
+  if(oldWrap)oldWrap.style.display='none';
+  showClienteDetail(org);
+  // Mover el contenido al wrap-plus
+  if(oldWrap&&oldWrap.innerHTML){
+    wrap.innerHTML=oldWrap.innerHTML;
+    oldWrap.innerHTML='';
+    if(savedOpen)oldWrap.dataset.open=savedOpen;
+  }
+  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
 
 function showClienteDetail(org){
   const wrap=el('cli-detail-wrap');if(!wrap)return;
@@ -629,138 +810,228 @@ function renderHoy(){
   const agRiesgo=getAgentesEnRiesgo();
   const pred=getPredSLA();
   window._predTickets={ind1:pred.ind1,ind2:pred.ind2,ind3:pred.ind3,ind4:pred.ind4};
+  window._hoyLista=lista;
   const now=new Date();
   const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const fechaHoy=dias[now.getDay()]+' '+now.getDate()+' '+meses[now.getMonth()];
 
-  // Clasificar en 3 niveles
-  const criticos=sortByAge(lista.filter(t=>(t.priority==='urgent'||t.priority==='high')&&(parseDias(t.rangoStr||'')>=7)));
-  const atencion=sortByAge(lista.filter(t=>!criticos.includes(t)&&(t.score>=300||(parseDias(t.rangoStr||'')>=6))));
+  // Clasificar niveles
+  const criticos=sortByAge(lista.filter(t=>(t.priority==='urgent'||t.priority==='high')&&parseDias(t.rangoStr||'')>=7));
+  const atencion=sortByAge(lista.filter(t=>!criticos.includes(t)&&(t.score>=300||parseDias(t.rangoStr||'')>=6)));
   const vigilancia=sortByAge(lista.filter(t=>!criticos.includes(t)&&!atencion.includes(t)));
 
+  // Mini KPIs
+  const revisadosHoy=lista.filter(t=>STORE.isRevisado(t.id)).length;
+  const pendientes=lista.length-revisadosHoy;
+  const conNotas=lista.filter(t=>STORE.getNotas(t.id).length>0).length;
+
   function motivoPills(t){
-    const r=(t.rangoStr||'').trim().toLowerCase();const pills=[];
-    if(r==='7 días'||r==='7 dias')pills.push('<span class="why-pill fire">7 días · vence hoy</span>');
-    else if(r==='6 días'||r==='6 dias')pills.push('<span class="why-pill clock">6 días · vence mañana</span>');
-    if(t.sinSeguimiento)pills.push('<span class="why-pill ghost">sin seguim. +3d</span>');
-    if(t.isSinAsignar)pills.push('<span class="why-pill fire">sin responsable</span>');
-    return pills.join('');
+    const r=(t.rangoStr||'').trim().toLowerCase();const p=[];
+    if(r==='7 días'||r==='7 dias')p.push('<span class="why-pill fire">7d · vence hoy</span>');
+    else if(r==='6 días'||r==='6 dias')p.push('<span class="why-pill clock">6d · mañana</span>');
+    if(t.sinSeguimiento)p.push('<span class="why-pill ghost">sin seguim.</span>');
+    if(t.isSinAsignar)p.push('<span class="why-pill fire">sin resp.</span>');
+    return p.join('');
   }
 
-  function buildNivelRows(list){
+  function buildRows(list){
     return list.map((t,i)=>{
-      const sc=t.score>=350?'crit':t.score>=220?'warn':'ok';
+      const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':'#4B9BFF';
       const pr=PC[t.priority]||PC[''];
       const rev=STORE.isRevisado(t.id);
-      return`<div class="trow-grid" style="grid-template-columns:22px 1fr 70px 64px 110px 90px 36px;align-items:start;opacity:${rev?'0.4':'1'};text-decoration:${rev?'line-through':'none'}" data-tid="${t.id}" onclick="om(${t.id})">
+      const tieneNotas=STORE.getNotas(t.id).length>0;
+      return`<div class="hoy-row${rev?' hoy-rev':''}" data-tid="${t.id}" onclick="om(${t.id})">
         <span class="t-num">${i+1}</span>
-        <div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a><span class="t-sub">${t.subject||'—'}</span></div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div></div>
-        <span class="t-ag" style="padding-top:2px">${t.agente||'—'}</span>
-        <span class="pr-tag ${t.priority}" style="margin-top:2px;display:inline-block">${pr.t}</span>
-        <span class="t-ant" style="padding-top:2px">${t.rangoStr||'—'}</span>
-        <span class="sc ${sc}" style="padding-top:2px">${t.score}</span>
-        <button class="rev-btn" onclick="event.stopPropagation();toggleRevisado(${t.id},this)" style="${rev?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${rev?'↩ Desmarcar':'✓ Listo'}</button>
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a>
+            <span class="t-sub">${t.subject||'—'}</span>
+            ${tieneNotas?'<span style="font-size:9px;background:#f0fdf4;color:#16a34a;padding:1px 5px;border-radius:3px;font-weight:600">📝 nota</span>':''}
+          </div>
+          <div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div>
+        </div>
+        <span style="font-size:11px;color:var(--txt2);white-space:nowrap">${t.agente||'—'}</span>
+        <span class="pr-tag ${t.priority}">${pr.t}</span>
+        <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${sc}">${t.score}</span>
+        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <button class="rev-btn" onclick="toggleRevisado(${t.id},this)" style="${rev?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${rev?'↩':'✓'}</button>
+          <button class="slack-btn" onclick="sendSlackTicket(${t.id})" title="Notificar en Slack">💬</button>
+        </div>
       </div>`;
     }).join('');
   }
 
-  function nivelSection(titulo,list,colorClass,count){
+  function nivelCard(emoji,titulo,list,color,id,collapsed){
     if(!list.length)return'';
-    const id='nivel-'+colorClass;
-    return`<div>
-      <div style="padding:7px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bdr);border-top:1px solid var(--bdr);background:var(--sur2)">
-        <span style="font-size:11px;font-weight:700;color:${colorClass==='c'?'#dc2626':colorClass==='a'?'#d97706':'#2563eb'}">${titulo}</span>
-        <span class="nivel-label ${colorClass}">${list.length} tickets</span>
-        <button onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'':'none'" style="margin-left:auto;font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:1px 7px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▲▼</button>
+    return`<div class="nivel-card" style="border-left:4px solid ${color}">
+      <div class="nivel-head" onclick="toggleNivel('${id}')">
+        <span style="font-size:13px;font-weight:700;color:${color}">${emoji} ${titulo}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;background:${color}20;color:${color}">${list.length}</span>
+          <span id="${id}-arr" style="font-size:11px;color:${color};transition:transform .2s">${collapsed?'▼':'▲'}</span>
+        </div>
       </div>
-      <div id="${id}">
-        <div class="trow-hdr trow-grid" style="grid-template-columns:22px 1fr 70px 64px 110px 90px 36px"># <span>Ticket · asunto · motivo</span><span>Agente</span><span>Prioridad</span><span>Antigüedad</span><span>Score</span><span>Estado</span></div>
-        ${buildNivelRows(list)}
+      <div id="${id}" style="display:${collapsed?'none':'block'}">
+        <div class="hoy-hdr"><span>#</span><span>Ticket · Asunto · Motivo</span><span>Agente</span><span>Prioridad</span><span>Score</span><span style="text-align:right">Acción</span></div>
+        ${buildRows(list)}
       </div>
     </div>`;
   }
 
-  const agRows=agRiesgo.map(ag=>{
+  const agRows=agRiesgo.slice(0,5).map(ag=>{
     const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-    return`<div class="ag-hoy-row ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}','hoy')">
-      <div class="av ${ag.nivel}">${init}</div>
-      <div><div class="ag-name">${ag.ag}</div><div class="ag-area-lbl">${ag.area||'—'}</div></div>
-      <div class="ag-metric"><div class="ag-val ${ag.nivel}">${ag.total}</div><div class="ag-lbl">tickets</div></div>
-      <div class="ag-metric"><div class="ag-val ${ag.sinSeg>0?'r':'g'}">${ag.sinSeg}</div><div class="ag-lbl">sin mover</div></div>
-      <div class="ag-metric"><div class="ag-val ${ag.mas7>0?'a':'g'}">${ag.mas7}</div><div class="ag-lbl">≥7 días</div></div>
-      <span style="font-size:11px;color:var(--acc)">▼</span>
+    return`<div class="ag-chip ${ag.nivel==='r'?'ag-chip-r':'ag-chip-a'}" onclick="go('equipo')" title="${ag.ag} — ${ag.sinSeg} sin mover · ${ag.mas7} ≥7d">
+      <div class="av ${ag.nivel}" style="width:24px;height:24px;font-size:9px">${init}</div>
+      <div>
+        <div style="font-size:11px;font-weight:700">${ag.ag}</div>
+        <div style="font-size:9px;color:var(--txt3)">${ag.sinSeg} sin mover · ${ag.total} tkt</div>
+      </div>
+      ${ag.nivel==='r'?'<span style="font-size:9px;background:#fef2f2;color:#dc2626;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:auto">🔴</span>':'<span style="font-size:9px;background:#fffbeb;color:#d97706;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:auto">🟠</span>'}
     </div>`;
   }).join('');
 
   el('v-hoy').innerHTML=`
     <div class="greeting">
       <div>
-        <div class="greeting-title">Buenos días, Ale</div>
-        <div class="greeting-sub">
-          ${criticos.length>0?`<span style="color:#dc2626;font-weight:700">${criticos.length} críticos</span> · `:''}
-          ${atencion.length>0?`<span style="color:#d97706;font-weight:700">${atencion.length} en atención</span> · `:''}
-          ${vigilancia.length>0?`<span style="color:#2563eb">${vigilancia.length} en vigilancia</span> · `:''}
-          ${agRiesgo.length} agentes con riesgo
+        <div class="greeting-title">Buenos días, Ale 👋</div>
+        <div class="greeting-sub" style="margin-top:4px">
+          ${criticos.length?`<span style="color:#dc2626;font-weight:700">${criticos.length} críticos</span> · `:''}
+          ${atencion.length?`<span style="color:#d97706;font-weight:700">${atencion.length} en atención</span> · `:''}
+          ${vigilancia.length?`<span style="color:#2563eb">${vigilancia.length} vigilancia</span> · `:''}
+          <span>${agRiesgo.length} agentes con riesgo</span>
         </div>
       </div>
       <span class="date-chip">${fechaHoy} · SEM ${wk(now)}</span>
     </div>
 
+    <!-- Mini KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+      <div class="mini-kpi" style="border-top:3px solid #dc2626" onclick="document.getElementById('nivel-c')?.scrollIntoView({behavior:'smooth'})">
+        <div class="mini-kpi-val" style="color:#dc2626">${criticos.length}</div>
+        <div class="mini-kpi-lbl">Críticos</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #d97706">
+        <div class="mini-kpi-val" style="color:#d97706">${atencion.length}</div>
+        <div class="mini-kpi-lbl">En atención</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #2563eb">
+        <div class="mini-kpi-val" style="color:#2563eb">${vigilancia.length}</div>
+        <div class="mini-kpi-lbl">Vigilancia</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #7c3aed">
+        <div class="mini-kpi-val" style="color:#7c3aed">${pred.n1+pred.n2}</div>
+        <div class="mini-kpi-lbl">Vencen 48h</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #16a34a">
+        <div class="mini-kpi-val" style="color:#16a34a">${revisadosHoy}</div>
+        <div class="mini-kpi-lbl">Revisados hoy</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #0891b2">
+        <div class="mini-kpi-val" style="color:#0891b2">${pendientes}</div>
+        <div class="mini-kpi-lbl">Pendientes</div>
+      </div>
+    </div>
+
+    <!-- Agentes en riesgo (chips compactos) -->
+    ${agRiesgo.length?`<div class="card">
+      <div class="card-head" style="padding:8px 14px">
+        <div class="card-title" style="font-size:11px">👥 Agentes que necesitan apoyo</div>
+        <button onclick="go('equipo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--acc);font-family:var(--font)">Ver equipo completo →</button>
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap">${agRows}${agRiesgo.length>5?`<div class="ag-chip ag-chip-a" style="cursor:pointer" onclick="go('equipo')"><span style="font-size:11px;color:var(--txt3)">+${agRiesgo.length-5} más →</span></div>`:''}</div>
+    </div>`:''}
+
+    <!-- Niveles de tickets -->
     <div class="card">
       <div class="card-head">
         <div class="card-title danger">🔥 Lo que se quema hoy</div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;gap:6px;align-items:center">
           <span class="badge red">${lista.length} tickets</span>
-          <button onclick="downloadCSV(getTicketsQuemandose(),'hoy_riesgo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
-          <button onclick="toggleHoyLista()" id="hoy-toggle-btn" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">▼ Ver</button>
+          <button onclick="downloadCSV(window._hoyLista||[],'hoy_riesgo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
         </div>
       </div>
-      <div id="hoy-lista-wrap">
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
         ${lista.length===0
           ?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>'
-          :nivelSection('🔴 CRÍTICO — resolver HOY sin excusa',criticos,'c')
-           +nivelSection('🟠 ATENCIÓN — vencen mañana o sin seguimiento',atencion,'a')
-           +nivelSection('🔵 VIGILANCIA — mantener ojo',vigilancia,'v')
+          :nivelCard('🔴','CRÍTICO — resolver HOY sin excusa',criticos,'#dc2626','nivel-c',false)
+           +nivelCard('🟠','ATENCIÓN — vencen mañana o sin seguimiento',atencion,'#d97706','nivel-a',true)
+           +nivelCard('🔵','VIGILANCIA — mantener ojo',vigilancia,'#2563eb','nivel-v',true)
         }
-        <div class="legend-row"><span class="why-pill fire">7 días</span> vence hoy · <span class="why-pill clock">6 días</span> vence mañana · <span class="why-pill ghost">sin seguim.</span> col E >3d</div>
+      </div>
+      <div class="legend-row">
+        <span class="why-pill fire">7d</span> vence hoy &nbsp;
+        <span class="why-pill clock">6d</span> vence mañana &nbsp;
+        <span class="why-pill ghost">sin seguim.</span> col E >3d &nbsp;
+        <span style="font-size:10px;color:var(--txt3)">· ✓ = marcar revisado &nbsp; 💬 = notificar Slack</span>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">👥 Quién necesita apoyo hoy</div>
-        <span class="badge amber">${agRiesgo.length} agentes · clic para ver tickets</span>
+    <!-- Predicción SLA compacta -->
+    <div class="pred-grid">
+      <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')">
+        <div class="pred-num" style="color:#dc2626">${pred.n1}</div>
+        <div class="pred-lbl" style="color:#dc2626">Vencen hoy</div>
+        <div class="pred-src" style="color:#dc2626">7 Días · col R</div>
+        <div class="pred-hint">▼ detalle</div>
       </div>
-      ${agRiesgo.length===0?'<div class="empty" style="color:#16a34a">✓ Todo el equipo al día</div>':
-      `<div class="ag-hoy-hdr"><span></span><span>Agente / área</span><span style="text-align:center">Tickets</span><span style="text-align:center">Sin mover</span><span style="text-align:center">≥7 días</span><span></span></div>${agRows}`}
-      <div id="hoy-agent-detail" style="display:none"></div>
+      <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')">
+        <div class="pred-num" style="color:#92400e">${pred.n2}</div>
+        <div class="pred-lbl" style="color:#92400e">Vencen mañana</div>
+        <div class="pred-src" style="color:#92400e">6 Días · col R</div>
+        <div class="pred-hint">▼ detalle</div>
+      </div>
+      <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')">
+        <div class="pred-num" style="color:#7c3aed">${pred.n3}</div>
+        <div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d</div>
+        <div class="pred-src" style="color:#7c3aed">col E</div>
+        <div class="pred-hint">▼ detalle</div>
+      </div>
+      <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')">
+        <div class="pred-num" style="color:#2563eb">${pred.n4}</div>
+        <div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div>
+        <div class="pred-src" style="color:#2563eb">col E</div>
+        <div class="pred-hint">▼ detalle</div>
+      </div>
     </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">⏱ Predicción SLA</div>
-        <span style="font-size:10px;color:var(--txt3)">col R · col E · clic para ver detalle</span>
-      </div>
-      <div class="pred-grid">
-        <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')"><div class="pred-num" style="color:#dc2626">${pred.n1}</div><div class="pred-lbl" style="color:#dc2626">Vencen hoy</div><div class="pred-src" style="color:#dc2626">7 Días · col R</div><div class="pred-hint">▼ detalle</div></div>
-        <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')"><div class="pred-num" style="color:#92400e">${pred.n2}</div><div class="pred-lbl" style="color:#92400e">Vencen mañana</div><div class="pred-src" style="color:#92400e">6 Días · col R</div><div class="pred-hint">▼ detalle</div></div>
-        <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')"><div class="pred-num" style="color:#7c3aed">${pred.n3}</div><div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d</div><div class="pred-src" style="color:#7c3aed">col E</div><div class="pred-hint">▼ detalle</div></div>
-        <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')"><div class="pred-num" style="color:#2563eb">${pred.n4}</div><div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div><div class="pred-src" style="color:#2563eb">col E</div><div class="pred-hint">▼ detalle</div></div>
-      </div>
-      <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>
-    </div>`;
-  window._hoyLista=lista;
+    <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>`;
 }
 
-let _hoyVisible=true;
-function toggleHoyLista(){
-  const wrap=el('hoy-lista-wrap');const btn=el('hoy-toggle-btn');
-  if(!wrap)return;
-  _hoyVisible=!_hoyVisible;
-  wrap.style.display=_hoyVisible?'':'none';
-  btn.textContent=_hoyVisible?'▲ Ocultar':'▼ Ver';
+function toggleNivel(id){
+  const el2=el(id);const arr=el(id+'-arr');
+  if(!el2)return;
+  const hidden=el2.style.display==='none';
+  el2.style.display=hidden?'block':'none';
+  if(arr)arr.textContent=hidden?'▲':'▼';
 }
+
+// ── Slack integration ─────────────────────────────────────────────
+const SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
+function sendSlackTicket(id){
+  const t=T.find(x=>x.id===id);if(!t)return;
+  const wh=localStorage.getItem('slack_webhook');
+  if(!wh){
+    const url=prompt('Pega aquí el Webhook URL de Slack (se guarda solo una vez):');
+    if(!url||!url.startsWith('https://'))return;
+    localStorage.setItem('slack_webhook',url);
+  }
+  const webhook=localStorage.getItem('slack_webhook');
+  const sc=t.score>=350?'danger':t.score>=220?'warning':'good';
+  const msg={text:`🔔 *Ticket que requiere atención* — <https://dual.zendesk.com/agent/tickets/${t.id}|#${t.id}>`,attachments:[{color:sc,fields:[{title:'Asunto',value:t.subject||'—',short:false},{title:'Empresa',value:t.org||'—',short:true},{title:'Agente',value:t.agente||'Sin asignar',short:true},{title:'Antigüedad',value:t.rangoStr||'—',short:true},{title:'Score',value:String(t.score),short:true}],footer:'Dashboard Soporte · Santi Soluciones',ts:Math.floor(Date.now()/1000)}]};
+  fetch(webhook,{method:'POST',body:JSON.stringify(msg)})
+    .then(r=>{if(r.ok||r.type==='opaque')showToast('✓ Mensaje enviado a Slack','#16a34a');else showToast('✗ Error al enviar','#dc2626');})
+    .catch(()=>showToast('✓ Enviado (revisa Slack)','#16a34a'));
+}
+
+function showToast(msg,color){
+  let t=el('toast-msg');
+  if(!t){t=document.createElement('div');t.id='toast-msg';t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:999;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg;t.style.background=color;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+
+
 
 
 // ── RENDER EQUIPO ────────────────────────────────────────────────
@@ -835,17 +1106,33 @@ function renderEquipoCards(){
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--txt)">${ag.ag}</div><div style="font-size:10px;color:var(--txt3)">${ag.total} tickets · ${ag.area}</div></div>
         <span style="font-size:9px;background:${bgColor};color:${color};padding:2px 7px;border-radius:4px;font-weight:600">${ag.nivel==='r'?'Carga alta':'Revisar'}</span>
       </div>
-      <div class="eq-metrics">
-        <div class="eq-m"><div class="eq-mv" style="color:${ag.sinSeg>0?'#dc2626':'var(--txt3)'}">${ag.sinSeg}</div><div class="eq-ml">sin mover</div></div>
-        <div class="eq-m"><div class="eq-mv" style="color:${ag.mas7>0?'#d97706':'var(--txt3)'}">${ag.mas7}</div><div class="eq-ml">≥7 días</div></div>
-        <div class="eq-m"><div class="eq-mv" style="color:${ag.urghi>0?'#FF5C5C':'var(--txt3)'}">${ag.urghi}</div><div class="eq-ml">urg/alto</div></div>
+      <!-- Mini KPIs agente -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+        <div style="background:${ag.sinSeg>0?'#fef2f2':'var(--sur3)'};border-radius:6px;padding:6px;text-align:center">
+          <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${ag.sinSeg>0?'#dc2626':'var(--txt3)'}">${ag.sinSeg}</div>
+          <div style="font-size:9px;color:var(--txt3)">sin mover</div>
+        </div>
+        <div style="background:${ag.mas7>0?'#fffbeb':'var(--sur3)'};border-radius:6px;padding:6px;text-align:center">
+          <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${ag.mas7>0?'#d97706':'var(--txt3)'}">${ag.mas7}</div>
+          <div style="font-size:9px;color:var(--txt3)">≥7 días</div>
+        </div>
+        <div style="background:${ag.urghi>0?'#fff0f0':'var(--sur3)'};border-radius:6px;padding:6px;text-align:center">
+          <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${ag.urghi>0?'#FF5C5C':'var(--txt3)'}">${ag.urghi}</div>
+          <div style="font-size:9px;color:var(--txt3)">urg/alto</div>
+        </div>
       </div>
-      <div style="margin-top:10px">
-        <div style="font-size:9px;color:var(--txt3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Distribución por antigüedad</div>
+      <!-- Barra de antigüedad -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:9px;color:var(--txt3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Distribución antigüedad</div>
         ${buildAgBarChart(ag._tickets,lista.map(a=>a.total))}
       </div>
-      <div style="height:3px;background:var(--sur3);border-radius:2px;margin-top:8px;overflow:hidden"><div style="width:${barW}%;height:100%;background:${barColor};border-radius:2px"></div></div>
-      <div style="text-align:center;margin-top:7px;font-size:10px;color:var(--acc)">▼ Ver tickets</div>
+      <!-- Score promedio -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--bdr);margin-top:4px">
+        <span style="font-size:10px;color:var(--txt3)">Score promedio</span>
+        <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${color}">${Math.round(ag._tickets.reduce((s,t)=>s+t.score,0)/Math.max(ag._tickets.length,1))}</span>
+      </div>
+      <div style="height:3px;background:var(--sur3);border-radius:2px;margin-top:6px;overflow:hidden"><div style="width:${barW}%;height:100%;background:${barColor};border-radius:2px"></div></div>
+      <div style="text-align:center;margin-top:7px;font-size:10px;color:var(--acc);font-weight:600">▼ Ver tickets detallados</div>
     </div>`;
   }).join('')}</div>`;
 }
