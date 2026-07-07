@@ -246,10 +246,10 @@ tbody tr:last-child td{border-bottom:none}
   </button>
 </div>
 <div class="nav">
-  <button class="ntab on" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
+  <button class="ntab on" onclick="go('panorama')">📊 Panorama</button>
+  <button class="ntab" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
   <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
   <button class="ntab" onclick="go('clientes')">🏢 Clientes <span class="nb" id="nb-clientes">–</span></button>
-  <button class="ntab" onclick="go('panorama')">📊 Panorama</button>
 </div>
 <div class="main">
   <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
@@ -686,19 +686,24 @@ function getAgentesEnRiesgo(){
   }).filter(Boolean).sort((a,b)=>a.nivel!==b.nivel?a.nivel==='r'?-1:1:b.sinSeg-a.sinSeg);
 }
 function getDesarrolladoresConRiesgo(){
+  // Filtra SOLO tickets donde col N (areaAsig) sea exactamente 'Desarrollo'
+  const devTickets=T.filter(t=>{
+    const area=(t.areaAsig||'').trim().toLowerCase();
+    return area==='desarrollo'||area.includes('desarrollo');
+  });
   const devMap={};
-  T.forEach(t=>{
+  devTickets.forEach(t=>{
     const dev=(t.dResp||'').trim();
-    if(!dev||dev.toLowerCase()==='no'||dev==='')return;
-    if(!devMap[dev])devMap[dev]={tickets:[]};
-    devMap[dev].tickets.push(t);
+    const key=dev&&dev.toLowerCase()!=='no'&&dev!==''?dev:'Sin asignar';
+    if(!devMap[key])devMap[key]={tickets:[]};
+    devMap[key].tickets.push(t);
   });
   return Object.entries(devMap).map(([dev,d])=>{
     const tks=d.tickets;
     const sinSeg=tks.filter(t=>t.sinSeguimiento).length;
     const mas7=tks.filter(t=>parseDias(t.rangoStr)>=7).length;
     const total=tks.length;
-    if(!sinSeg&&!mas7&&total<3)return null;
+    if(!sinSeg&&!mas7&&total<1)return null;
     const nivel=(sinSeg>3||mas7>5)?'r':'a';
     return{ag:dev,total,sinSeg,mas7,area:'Desarrollo',nivel,urghi:tks.filter(t=>t.priority==='urgent'||t.priority==='high').length,_tickets:tks};
   }).filter(Boolean).sort((a,b)=>b.total-a.total);
@@ -759,7 +764,7 @@ function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
     <button class="filter-btn-clear" onclick="clearDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">✕ Limpiar</button>
     <span id="${filterId}-total" style="font-size:10px;color:var(--txt3);margin-left:auto">${tickets.length} tickets</span>
   </div>
-  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Score'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
+  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Score'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
   ${getDiagnosis(sorted)}`;
 }
 
@@ -780,6 +785,7 @@ function renderDetailRows(list,showSeg){
       <td>${bdg(pr.t,pr.c,pr.bg)}</td>
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td>${t.agente||'—'}${sf}</td>
+      <td style="font-size:10px;color:var(--txt2)">${t.dResp&&t.dResp.toLowerCase()!=='no'&&t.dResp.trim()!==''?t.dResp:'—'}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
     </tr>`;
   }).join('');
@@ -905,31 +911,32 @@ function renderHoy(){
       <span class="date-chip">${fechaHoy} · SEM ${wk(now)}</span>
     </div>
 
-    <!-- Mini KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
-      <div class="mini-kpi" style="border-top:3px solid #dc2626" onclick="document.getElementById('nivel-c')?.scrollIntoView({behavior:'smooth'})">
-        <div class="mini-kpi-val" style="color:#dc2626">${criticos.length}</div>
-        <div class="mini-kpi-lbl">Críticos</div>
+    <!-- Mini KPIs — 4 indicadores SLA + revisados -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+      <div class="mini-kpi" style="border-top:3px solid #dc2626;cursor:pointer" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')">
+        <div class="mini-kpi-val" style="color:#dc2626">${pred.n1}</div>
+        <div class="mini-kpi-lbl">Vencen hoy (7 Días)</div>
+        <div style="font-size:9px;color:#dc2626;margin-top:2px;opacity:.7">col R · ▼ detalle</div>
       </div>
-      <div class="mini-kpi" style="border-top:3px solid #d97706">
-        <div class="mini-kpi-val" style="color:#d97706">${atencion.length}</div>
-        <div class="mini-kpi-lbl">En atención</div>
+      <div class="mini-kpi" style="border-top:3px solid #d97706;cursor:pointer" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')">
+        <div class="mini-kpi-val" style="color:#d97706">${pred.n2}</div>
+        <div class="mini-kpi-lbl">Vencen mañana (6 Días)</div>
+        <div style="font-size:9px;color:#d97706;margin-top:2px;opacity:.7">col R · ▼ detalle</div>
       </div>
-      <div class="mini-kpi" style="border-top:3px solid #2563eb">
-        <div class="mini-kpi-val" style="color:#2563eb">${vigilancia.length}</div>
-        <div class="mini-kpi-lbl">Vigilancia</div>
+      <div class="mini-kpi" style="border-top:3px solid #7c3aed;cursor:pointer" onclick="showPredDetail('ind3','Sin seguimiento >3d hoy','#7c3aed')">
+        <div class="mini-kpi-val" style="color:#7c3aed">${pred.n3}</div>
+        <div class="mini-kpi-lbl">Sin seguim. >3d hoy</div>
+        <div style="font-size:9px;color:#7c3aed;margin-top:2px;opacity:.7">col E · ▼ detalle</div>
       </div>
-      <div class="mini-kpi" style="border-top:3px solid #7c3aed">
-        <div class="mini-kpi-val" style="color:#7c3aed">${pred.n1+pred.n2}</div>
-        <div class="mini-kpi-lbl">Vencen 48h</div>
+      <div class="mini-kpi" style="border-top:3px solid #2563eb;cursor:pointer" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')">
+        <div class="mini-kpi-val" style="color:#2563eb">${pred.n4}</div>
+        <div class="mini-kpi-lbl">Sin seguim. mañana</div>
+        <div style="font-size:9px;color:#2563eb;margin-top:2px;opacity:.7">col E · ▼ detalle</div>
       </div>
       <div class="mini-kpi" style="border-top:3px solid #16a34a">
         <div class="mini-kpi-val" style="color:#16a34a">${revisadosHoy}</div>
         <div class="mini-kpi-lbl">Revisados hoy</div>
-      </div>
-      <div class="mini-kpi" style="border-top:3px solid #0891b2">
-        <div class="mini-kpi-val" style="color:#0891b2">${pendientes}</div>
-        <div class="mini-kpi-lbl">Pendientes</div>
+        <div style="font-size:9px;color:#16a34a;margin-top:2px;opacity:.7">marcados ✓ hoy</div>
       </div>
     </div>
 
@@ -967,33 +974,6 @@ function renderHoy(){
       </div>
     </div>
 
-    <!-- Predicción SLA compacta -->
-    <div class="pred-grid">
-      <div class="pred-card" style="background:#fef2f2;border-color:#fecaca" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')">
-        <div class="pred-num" style="color:#dc2626">${pred.n1}</div>
-        <div class="pred-lbl" style="color:#dc2626">Vencen hoy</div>
-        <div class="pred-src" style="color:#dc2626">7 Días · col R</div>
-        <div class="pred-hint">▼ detalle</div>
-      </div>
-      <div class="pred-card" style="background:#fffbeb;border-color:#fde68a" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')">
-        <div class="pred-num" style="color:#92400e">${pred.n2}</div>
-        <div class="pred-lbl" style="color:#92400e">Vencen mañana</div>
-        <div class="pred-src" style="color:#92400e">6 Días · col R</div>
-        <div class="pred-hint">▼ detalle</div>
-      </div>
-      <div class="pred-card" style="background:#faf5ff;border-color:#e9d5ff" onclick="showPredDetail('ind3','Sin seguimiento >3d','#7c3aed')">
-        <div class="pred-num" style="color:#7c3aed">${pred.n3}</div>
-        <div class="pred-lbl" style="color:#7c3aed">Sin seguim. >3d</div>
-        <div class="pred-src" style="color:#7c3aed">col E</div>
-        <div class="pred-hint">▼ detalle</div>
-      </div>
-      <div class="pred-card" style="background:#eff4ff;border-color:#bfdbfe" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')">
-        <div class="pred-num" style="color:#2563eb">${pred.n4}</div>
-        <div class="pred-lbl" style="color:#2563eb">Sin seguim. mañana</div>
-        <div class="pred-src" style="color:#2563eb">col E</div>
-        <div class="pred-hint">▼ detalle</div>
-      </div>
-    </div>
     <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>`;
 }
 
@@ -1007,6 +987,45 @@ function toggleNivel(id){
 
 // ── Slack integration ─────────────────────────────────────────────
 const SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
+function configSlack(){
+  const current=localStorage.getItem('slack_webhook')||'';
+  const url=prompt('Webhook URL de Slack:\n\nCómo obtenerlo:\n1. Ve a api.slack.com/apps\n2. Crea una app → Incoming Webhooks → Activar\n3. Add New Webhook → copia la URL\n\nURL actual: '+(current?current.substring(0,40)+'...':'no configurado')+'\n\nPega la nueva URL (o deja vacío para mantener):');
+  if(url===null)return;
+  if(url.startsWith('https://hooks.slack.com')){
+    localStorage.setItem('slack_webhook',url.trim());
+    showToast('✓ Slack configurado correctamente','#16a34a');
+  } else if(url===''){
+    showToast('Slack sin cambios','#6b7280');
+  } else {
+    showToast('URL inválida — debe empezar con https://hooks.slack.com','#dc2626');
+  }
+}
+
+function sendSlackPreset(id,tipo){
+  const t=T.find(x=>x.id===id);if(!t)return;
+  const wh=localStorage.getItem('slack_webhook');
+  if(!wh){
+    const ok=confirm('Slack no está configurado.\n\n¿Quieres configurarlo ahora?');
+    if(ok)configSlack();
+    return;
+  }
+  const base=`https://dual.zendesk.com/agent/tickets/${t.id}`;
+  const emp=t.org||'—';const ag=t.agente||'Sin asignar';
+  const rango=t.rangoStr||'—';
+  let texto='';
+  if(tipo==='seguimiento'){
+    texto=`Hola, este ticket <${base}|#${t.id}> (${emp}) lleva *${rango}* sin resolverse y está asignado a *${ag}*. Necesitamos actualización de seguimiento. ¿Hay algún avance o bloqueo? 🙏`;
+  } else if(tipo==='marcar'){
+    texto=`Hola, favor de marcar o actualizar el estado del ticket <${base}|#${t.id}> (${emp} · ${ag}). Antigüedad: *${rango}*. Si ya fue resuelto, por favor ciérralo en Zendesk. ✅`;
+  } else if(tipo==='documentar'){
+    texto=`Hola, el ticket <${base}|#${t.id}> (${emp}) requiere documentación para solución definitiva. Agente asignado: *${ag}* · Antigüedad: *${rango}*. Por favor agrega los pasos de solución en Zendesk. 📄`;
+  }
+  const msg={text:texto,username:'Dashboard Soporte',icon_emoji:':ticket:'};
+  fetch(wh,{method:'POST',body:JSON.stringify(msg),mode:'no-cors'})
+    .then(()=>showToast('✓ Mensaje enviado a Slack','#16a34a'))
+    .catch(()=>showToast('✓ Enviado (verifica Slack)','#16a34a'));
+}
+
 function sendSlackTicket(id){
   const t=T.find(x=>x.id===id);if(!t)return;
   const wh=localStorage.getItem('slack_webhook');
@@ -1100,6 +1119,8 @@ function renderEquipoCards(){
     const barW=Math.round(ag.total/max*100);
     const barColor=ag.nivel==='r'?'#EF4444':'#F59E0B';
     const devLabel=isDev?'desarrollador':'agente';
+    // Para Desarrollo: total de tickets col N = Desarrollo
+    const totalDesarrollo=isDev?T.filter(t=>{const a=(t.areaAsig||'').toLowerCase();return a==='desarrollo'||a.includes('desarrollo');}).length:0;
     return`<div class="eq-card ${ag.nivel==='r'?'rl':'al'}" onclick="showAgentDetail('${ag.ag.replace(/'/g,"\\'")}','${isDev?'dev':'ag'}')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div class="av ${ag.nivel}" style="width:32px;height:32px;font-size:11px">${init}</div>
@@ -1330,6 +1351,13 @@ function om(id){
     <div class="mr"><span class="ml">Desarrollador</span><span class="mv">${t.dResp||'—'}</span></div>
     <div class="mdv"></div>
     <div>
+      <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Notificar en Slack</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+        <button onclick="sendSlackPreset(${t.id},'seguimiento')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">💬 Pedir seguimiento</button>
+        <button onclick="sendSlackPreset(${t.id},'marcar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">✓ Solicitar marcaje</button>
+        <button onclick="sendSlackPreset(${t.id},'documentar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">📄 Solicitar documentación</button>
+        <button onclick="configSlack()" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid #e9d5ff;background:#faf5ff;cursor:pointer;color:#7c3aed;font-family:var(--font)">${localStorage.getItem('slack_webhook')?'⚙ Slack conectado':'⚙ Configurar Slack'}</button>
+      </div>
       <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Notas de seguimiento</div>
       <div id="modal-notas-${t.id}" class="nota-timeline" style="max-height:160px;overflow-y:auto;margin-bottom:10px">
         ${STORE.getNotas(t.id).map(n=>`<div class="nota-item" style="margin-bottom:8px">
@@ -1388,7 +1416,7 @@ function getDiagnosis(tickets){
 // ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['hoy','equipo','clientes','panorama'][i]===tab));
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','hoy','equipo','clientes'][i]===tab));
   ['hoy','equipo','clientes','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='hoy')renderHoy();
@@ -1447,11 +1475,11 @@ async function loadData(){
     safeSet('nb-hoy',_q.length);safeSet('nb-equipo',_ar.length);safeSet('nb-clientes',_orgCount);
     el('ls').textContent='Cargando vista…';
     el('ldr').style.display='none';
-    TAB='hoy';
+    TAB='panorama';
     document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',i===0));
-    const v=el('v-hoy');if(v)v.classList.add('on');
+    const v=el('v-panorama');if(v)v.classList.add('on');
     setTimeout(()=>{
-      try{renderHoy();}catch(re){
+      try{renderPanorama();}catch(re){
         const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;color:#dc2626;font-weight:600">Error al renderizar: '+re.message+'<br><small style=\'font-family:monospace;font-weight:400\'>'+re.stack+'</small></div>';}
         console.error('renderHoy error:',re);
       }
