@@ -250,6 +250,7 @@ tbody tr:last-child td{border-bottom:none}
   <button class="ntab" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
   <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
   <button class="ntab" onclick="go('clientes')">🏢 Clientes <span class="nb" id="nb-clientes">–</span></button>
+  <button class="ntab" onclick="go('reportes')">📈 Reportes</button>
 </div>
 <div class="main">
   <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
@@ -257,6 +258,7 @@ tbody tr:last-child td{border-bottom:none}
   <div class="view" id="v-equipo"></div>
   <div class="view" id="v-panorama"></div>
   <div class="view" id="v-clientes"></div>
+  <div class="view" id="v-reportes"></div>
 </div>
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 <script>
@@ -368,38 +370,65 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
-  const gid=CLIENTES_GID||localStorage.getItem('clientes_gid')||'';
-  if(!gid){return false;}
-  try{
-    const baseUrl='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub';
-    const url=baseUrl+'?gid='+gid+'&single=true&output=csv';
-    const r=await fetch(url,{cache:'no-store'});
-    if(!r.ok)return false;
-    const txt=await r.text();
-    const{rows,headers}=parseCSV(txt);
-    CLIENTES_DATA=rows;
-    return true;
-  }catch(e){console.error('loadClientesSheet:',e);return false;}
+  // Intentar en orden: URL directa guardada, luego URL con GID del mismo Sheets
+  const savedUrl=localStorage.getItem('clientes_pub_url')||'';
+  const gid=localStorage.getItem('clientes_gid')||'';
+  const sheetBD='177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4';
+
+  const candidatos=[
+    savedUrl,
+    // Sheets BD con varios GIDs posibles para pestaña CLIENTES
+    gid?`https://docs.google.com/spreadsheets/d/${sheetBD}/pub?gid=${gid}&single=true&output=csv`:'',
+    // Primer hoja del Sheets BD
+    `https://docs.google.com/spreadsheets/d/${sheetBD}/pub?single=true&output=csv`,
+  ].filter(Boolean);
+
+  for(const url of candidatos){
+    try{
+      const r=await fetch(url,{cache:'no-store'});
+      if(!r.ok)continue;
+      const txt=await r.text();
+      if(!txt||txt.trim().length<20)continue;
+      const{rows,headers}=parseCSV(txt);
+      if(!rows.length)continue;
+      CLIENTES_DATA=rows;
+      return true;
+    }catch(e){continue;}
+  }
+  return false;
 }
 
 function renderClientes(){
   const v=el('v-clientes');if(!v)return;
 
   // Si no hay GID configurado, mostrar configuración
-  if(!localStorage.getItem('clientes_gid')){
+  if(!localStorage.getItem('clientes_gid')&&!localStorage.getItem('clientes_pub_url')){
     v.innerHTML=`<div class="card">
-      <div class="card-head"><div class="card-title">🏢 Clientes</div></div>
-      <div style="padding:24px;text-align:center;max-width:480px;margin:0 auto">
-        <div style="font-size:32px;margin-bottom:12px">📋</div>
-        <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:6px">Conecta la pestaña de Clientes</div>
-        <div style="font-size:12px;color:var(--txt3);margin-bottom:16px;line-height:1.6">Para mostrar tu lista de clientes del Excel, necesito el ID de la pestaña <b>CLIENTES</b> de tu Google Sheets.<br><br>Ábrelo → Clic en la pestaña CLIENTES → la URL mostrará <code style="background:var(--sur2);padding:1px 4px;border-radius:3px">gid=XXXXXXX</code> → copia ese número.</div>
-        <div style="display:flex;gap:8px;justify-content:center">
-          <input id="gid-input" type="text" placeholder="Ej: 1234567890" style="border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:13px;width:200px;outline:none">
-          <button onclick="saveClientesGid()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font)">Conectar</button>
+      <div class="card-head"><div class="card-title">🏢 Clientes — Configuración</div></div>
+      <div style="padding:20px;max-width:560px">
+        <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px">Conectar hoja de Clientes</div>
+        <div style="font-size:11px;color:var(--txt3);margin-bottom:14px;line-height:1.7">
+          El archivo Excel de clientes debe estar publicado como CSV en Google Sheets.<br>
+          <b>Pasos:</b><br>
+          1. Abre el Sheets con la pestaña CLIENTES<br>
+          2. <b>Archivo → Compartir → Publicar en la web</b><br>
+          3. Selecciona la pestaña <b>CLIENTES</b> y formato <b>CSV</b><br>
+          4. Clic en <b>Publicar</b> y copia la URL que aparece<br>
+          5. Pégala aquí:
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="cli-url-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-..." style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-size:12px;font-family:var(--font);outline:none">
+          <button onclick="saveClientesUrl()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">Conectar</button>
+        </div>
+        <div style="border-top:1px solid var(--bdr);padding-top:12px;margin-top:4px">
+          <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">O si ya tienes el GID de la pestaña del Sheets <code style="background:var(--sur2);padding:1px 4px;border-radius:3px;font-family:var(--mono)">177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4</code>:</div>
+          <div style="display:flex;gap:8px">
+            <input id="gid-input" type="text" placeholder="GID de pestaña CLIENTES (ej: 123456)" style="width:220px;border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;font-family:var(--mono);font-size:12px;outline:none">
+            <button onclick="saveClientesGid()" style="padding:7px 14px;background:none;border:1px solid var(--acc);color:var(--acc);border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">Probar GID</button>
+          </div>
         </div>
       </div>
     </div>
-    <!-- Mientras tanto: clientes desde tickets -->
     ${renderClientesFromTickets()}`;
     return;
   }
@@ -416,10 +445,24 @@ function renderClientes(){
   renderClientesConDatos();
 }
 
+function saveClientesUrl(){
+  const inp=el('cli-url-input');
+  if(!inp||!inp.value.trim()){showToast('Pega la URL primero','#dc2626');return;}
+  const url=inp.value.trim();
+  if(!url.includes('google')){showToast('URL inválida','#dc2626');return;}
+  localStorage.setItem('clientes_pub_url',url);
+  localStorage.removeItem('clientes_gid');
+  CLIENTES_DATA=[];
+  showToast('✓ URL guardada, cargando…','#2563eb');
+  renderClientes();
+}
+
 function saveClientesGid(){
   const inp=el('gid-input');if(!inp||!inp.value.trim())return;
   localStorage.setItem('clientes_gid',inp.value.trim());
+  localStorage.removeItem('clientes_pub_url');
   CLIENTES_DATA=[];
+  showToast('Probando GID…','#2563eb');
   renderClientes();
 }
 
@@ -1679,16 +1722,285 @@ function getDiagnosis(tickets){
   return`<div style="background:var(--sur2);border-top:1px solid var(--bdr);padding:12px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px">Diagnóstico</div><ul style="list-style:none;display:flex;flex-direction:column;gap:4px">${items.map(i=>`<li style="font-size:12px;color:var(--txt2)">• ${i}</li>`).join('')}</ul></div>`;
 }
 
+
+// ── RENDER REPORTES ───────────────────────────────────────────────
+const BD_URL_BASE='https://docs.google.com/spreadsheets/d/177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4/pub';
+let BD_LOADED=false;
+
+async function ensureBD(){
+  if(BD_DATA.length)return true;
+  const gid=localStorage.getItem('bd_gid')||'1776545593';
+  // Intentar la URL publicada tipo /e/2PACX guardada
+  const savedUrl=localStorage.getItem('bd_pub_url');
+  const urls=[
+    savedUrl,
+    BD_URL_BASE+'?gid='+gid+'&single=true&output=csv',
+    BD_URL_BASE+'?output=csv&gid='+gid,
+  ].filter(Boolean);
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{cache:'no-store'});
+      if(!r.ok)continue;
+      const txt=await r.text();
+      if(!txt||txt.length<50)continue;
+      const{rows,headers}=parseCSV(txt);
+      if(!rows.length)continue;
+      BD_DATA=rows;
+      BD_ANALISIS=analizarBD(rows,headers);
+      BD_LOADED=true;
+      return true;
+    }catch(e){continue;}
+  }
+  return false;
+}
+
+function renderReportes(){
+  const v=el('v-reportes');if(!v)return;
+
+  // Si no hay BD, mostrar config + indicadores desde tickets actuales
+  const usarActual=!BD_DATA.length;
+
+  // ── Indicadores desde tickets actuales (siempre disponibles) ──
+  const now=new Date();
+  const inicioSemana=new Date(now);
+  inicioSemana.setDate(now.getDate()-now.getDay());
+  inicioSemana.setHours(0,0,0,0);
+  const inicioMes=new Date(now.getFullYear(),now.getMonth(),1);
+  const inicioAnt=new Date(inicioSemana);
+  inicioAnt.setDate(inicioAnt.getDate()-7);
+
+  function enRango(fechaStr,desde,hasta){
+    const d=new Date(fechaStr);
+    return !isNaN(d)&&d>=desde&&d<=(hasta||now);
+  }
+
+  const tksSemana=T.filter(t=>enRango(t.created,inicioSemana));
+  const tksSemAnt=T.filter(t=>enRango(t.created,inicioAnt,inicioSemana));
+  const tksMes=T.filter(t=>enRango(t.created,inicioMes));
+
+  // Por agente esta semana
+  const agSem={};
+  tksSemana.forEach(t=>{const a=t.agente||'Sin asignar';if(!agSem[a])agSem[a]={total:0,cerrados:0,urghi:0};agSem[a].total++;if(t.status==='solved'||t.status==='closed')agSem[a].cerrados++;if(t.priority==='urgent'||t.priority==='high')agSem[a].urghi++;});
+  const agSemList=Object.entries(agSem).sort((a,b)=>b[1].total-a[1].total);
+
+  // Por cliente esta semana
+  const cliSem={};
+  T.forEach(t=>{const o=t.org||'Sin clasificar';if(!cliSem[o])cliSem[o]=0;cliSem[o]++;});
+  const cliTop=Object.entries(cliSem).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Reincidentes (clientes con ≥3 tickets en total)
+  const reinc=Object.entries(cliSem).filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]);
+
+  // Tendencia semanal desde BD o desde actual
+  const trendSrc=BD_ANALISIS?BD_ANALISIS.semanas:getTrendData().map(w=>({label:w.label,abiertos:w.open,resueltos:w.sla}));
+  const maxTrend=Math.max(...trendSrc.map(s=>s.abiertos),1);
+  const W=560,H=80;
+  const ptA=trendSrc.map((s,i)=>`${10+i*(W/Math.max(trendSrc.length-1,1))},${H-(s.abiertos/maxTrend*(H-10))}`).join(' ');
+  const ptR=trendSrc.map((s,i)=>`${10+i*(W/Math.max(trendSrc.length-1,1))},${H-((s.resueltos||0)/maxTrend*(H-10))}`).join(' ');
+
+  // Por agente desde BD si hay
+  const agBD=BD_ANALISIS?BD_ANALISIS.porAgente:agSemList.map(([a,d])=>[a,d.total]);
+
+  function delta(a,b){
+    if(!b)return'';
+    const d=a-b;const pct=Math.round(d/b*100);
+    const col=d>=0?'#dc2626':'#16a34a';
+    const sym=d>=0?'▲':'▼';
+    return`<span style="font-size:10px;color:${col};margin-left:4px">${sym}${Math.abs(pct)}%</span>`;
+  }
+
+  v.innerHTML=`
+    <!-- Cabecera -->
+    <div class="greeting">
+      <div>
+        <div class="greeting-title">📈 Reportes & Análisis histórico</div>
+        <div class="greeting-sub">${BD_DATA.length?'BD: '+BD_DATA.length+' tickets históricos conectados':'Solo tickets activos — conecta BD para histórico completo'}</div>
+      </div>
+      <button onclick="conectarBDReportes()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid ${BD_DATA.length?'#bbf7d0':'var(--bdr)'};background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#15803d':'var(--txt2)'};cursor:pointer;font-family:var(--font);font-weight:600">
+        ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
+      </button>
+    </div>
+
+    <!-- KPIs resumen -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="mini-kpi" style="border-top:3px solid #2563eb">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Esta semana</div>
+        <div class="mini-kpi-val" style="color:#2563eb">${tksSemana.length}</div>
+        <div class="mini-kpi-lbl">Tickets activos${delta(tksSemana.length,tksSemAnt.length)}</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #16a34a">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Este mes</div>
+        <div class="mini-kpi-val" style="color:#16a34a">${tksMes.length}</div>
+        <div class="mini-kpi-lbl">Tickets del mes</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #dc2626">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Reincidentes</div>
+        <div class="mini-kpi-val" style="color:#dc2626">${reinc.length}</div>
+        <div class="mini-kpi-lbl">Clientes con ≥3 tickets</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #7c3aed">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Total activos</div>
+        <div class="mini-kpi-val" style="color:#7c3aed">${T.length}</div>
+        <div class="mini-kpi-lbl">En Zendesk ahora</div>
+      </div>
+    </div>
+
+    <!-- Tendencia semanal -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📊 Tendencia semanal — ${BD_DATA.length?'BD histórica ('+trendSrc.length+' semanas)':'últimas '+trendSrc.length+' semanas'}</div>
+        <span style="font-size:10px;color:var(--txt3)">${BD_DATA.length?BD_DATA.length+' tickets en BD':'datos desde CSV activo'}</span>
+      </div>
+      <div class="trend-box">
+        <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block">
+          <polyline points="${ptA}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>
+          <polyline points="${ptR}" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>
+          ${trendSrc.map((s,i)=>`<circle cx="${10+i*(W/Math.max(trendSrc.length-1,1))}" cy="${H-(s.abiertos/maxTrend*(H-10))}" r="3.5" fill="#2563eb"/><title>${s.label}: ${s.abiertos} abiertos</title>`).join('')}
+        </svg>
+        <div class="trend-labels">${trendSrc.map(s=>`<span class="trend-lbl">${s.label}</span>`).join('')}</div>
+        <div class="trend-legend">
+          <div class="trend-li"><div style="width:14px;height:2.5px;background:#2563eb;border-radius:1px"></div>Tickets abiertos</div>
+          <div class="trend-li"><div style="width:14px;height:2px;background:#16a34a;border-radius:1px"></div>Resueltos</div>
+          ${tksSemAnt.length?`<span style="font-size:10px;color:var(--txt3);margin-left:auto">Sem. ant.: ${tksSemAnt.length} tickets</span>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila: Por agente + Reincidentes -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+      <!-- Por agente -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">👤 Por agente${BD_DATA.length?' — histórico':' — activos'}</div>
+          <span style="font-size:10px;color:var(--txt3)">tickets asignados</span>
+        </div>
+        <div style="padding:10px 14px">
+          ${agBD.map(([ag,cnt],i)=>{
+            const maxCnt=agBD[0]?agBD[0][1]:1;
+            const pct=Math.round((typeof cnt==='object'?cnt.total:cnt)/maxCnt*100);
+            const val=typeof cnt==='object'?cnt.total:cnt;
+            const col=i===0?'#dc2626':i<=2?'#d97706':'#2563eb';
+            return`<div class="ag-bar-row" style="margin-bottom:7px">
+              <span class="ag-bar-lbl" style="font-size:11px">${ag}</span>
+              <div class="ag-bar-track" style="height:16px">
+                <div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div>
+              </div>
+              <span class="ag-bar-val" style="font-size:12px;font-weight:700;color:${col}">${val}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Clientes reincidentes -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">🔄 Clientes reincidentes</div>
+          <span style="font-size:10px;color:var(--txt3)">≥3 tickets activos · ${reinc.length} empresas</span>
+        </div>
+        <div style="padding:10px 0">
+          <div style="display:grid;grid-template-columns:1fr 44px 60px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 14px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.05em">
+            <span>Empresa</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span>
+          </div>
+          ${reinc.slice(0,10).map(([org,cnt])=>{
+            const tks=T.filter(t=>(t.org||'Sin clasificar')===org);
+            const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
+            const col=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#2563eb';
+            return`<div style="display:grid;grid-template-columns:1fr 44px 60px;align-items:center;padding:6px 14px;border-bottom:0.5px solid var(--bdr);cursor:pointer" onclick="showPanoDetalleCarta('org_${org.replace(/'/g,"\\'")}','Empresa: ${org.replace(/'/g,"\\'")}','#2563eb',T.filter(t=>(t.org||'Sin clasificar')==='${org.replace(/'/g,"\\'")}'));go('panorama')">
+              <span style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${org}</span>
+              <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${col};text-align:center">${cnt}</span>
+              <span style="font-size:10px;font-weight:700;font-family:var(--mono);text-align:right;padding:1px 6px;border-radius:4px;background:${col}15;color:${col}">${maxSc}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Por cliente top volumne esta semana -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🏢 Empresas con más tickets activos</div>
+        <span style="font-size:10px;color:var(--txt3)">todas las empresas en Zendesk ahora</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--sur2)">
+            ${['Empresa','Tickets','Urgentes','Score máx.','Sin seguim.'].map(h=>`<th style="padding:7px 14px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${cliTop.map(([org,cnt])=>{
+              const tks=T.filter(t=>(t.org||'Sin clasificar')===org);
+              const urg=tks.filter(t=>t.priority==='urgent').length;
+              const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
+              const sinSeg=tks.filter(t=>t.sinSeguimiento).length;
+              const col=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#2563eb';
+              return`<tr style="cursor:pointer" onclick="showPanoDetalleCarta('rep_org_${org.replace(/'/g,"\\'")}','${org.replace(/'/g,"\\'")}','${col}',T.filter(t=>(t.org||'Sin clasificar')==='${org.replace(/'/g,"\\'")}'));go('panorama')">
+                <td style="padding:7px 14px;border-bottom:0.5px solid var(--bdr);font-weight:600">${org}</td>
+                <td style="padding:7px 14px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${col}">${cnt}</td>
+                <td style="padding:7px 14px;border-bottom:0.5px solid var(--bdr)">${urg>0?`<span style="font-size:10px;background:#fef2f2;color:#dc2626;padding:1px 6px;border-radius:4px;font-weight:600">${urg}</span>`:'—'}</td>
+                <td style="padding:7px 14px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${col}">${maxSc}</td>
+                <td style="padding:7px 14px;border-bottom:0.5px solid var(--bdr)">${sinSeg>0?`<span style="font-size:10px;background:#faf5ff;color:#7c3aed;padding:1px 6px;border-radius:4px;font-weight:600">${sinSeg}</span>`:'✓'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BD histórica: análisis extra si está conectada -->
+    ${BD_ANALISIS?`
+    <div class="card" style="border:1.5px solid #bbf7d0">
+      <div class="card-head" style="background:#f0fdf4">
+        <div class="card-title" style="color:#15803d">🗄 Análisis BD histórica — ${BD_DATA.length} tickets</div>
+        <span style="font-size:10px;color:#15803d">${BD_ANALISIS.semanas.length} semanas de datos</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px">
+        <div style="background:#f0fdf4;border-radius:var(--rl);padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#15803d">${BD_DATA.length}</div>
+          <div style="font-size:11px;color:#15803d;margin-top:2px">Total tickets históricos</div>
+        </div>
+        <div style="background:#eff4ff;border-radius:var(--rl);padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#2563eb">${BD_ANALISIS.reincidentes.length}</div>
+          <div style="font-size:11px;color:#2563eb;margin-top:2px">Empresas reincidentes (≥3)</div>
+        </div>
+        <div style="background:#faf5ff;border-radius:var(--rl);padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#7c3aed">${BD_ANALISIS.extraCols.length}</div>
+          <div style="font-size:11px;color:#7c3aed;margin-top:2px">Columnas extra disponibles</div>
+        </div>
+      </div>
+      ${BD_ANALISIS.extraCols.length?`<div style="padding:8px 14px;font-size:10px;color:var(--txt3);border-top:1px solid var(--bdr)">Columnas I-AL disponibles: ${BD_ANALISIS.extraCols.slice(0,10).join(', ')}${BD_ANALISIS.extraCols.length>10?'…':''}</div>`:''}
+    </div>`:''}
+
+    <div id="reportes-detail"></div>`;
+}
+
+function conectarBDReportes(){
+  if(BD_DATA.length){
+    if(!confirm('BD ya conectada ('+BD_DATA.length+' tickets históricos).\n¿Quieres reconectar con otra URL?'))return;
+    BD_DATA=[];BD_ANALISIS=null;
+  }
+  const url=prompt('Pega la URL CSV de tu Sheets publicado.\n\nCómo obtenerla:\n1. Sheets → Archivo → Compartir → Publicar en la web\n2. Selecciona pestaña "Tickets BD" + formato CSV\n3. Clic en Publicar → copia la URL\n\nDebe empezar con: https://docs.google.com/spreadsheets/d/e/2PACX...');
+  if(!url||!url.includes('google'))return;
+  localStorage.setItem('bd_pub_url',url.trim());
+  const btnEl=document.querySelector('[onclick="conectarBDReportes()"]');
+  if(btnEl)btnEl.textContent='⏳ Conectando…';
+  ensureBD().then(function(ok){
+    if(ok){showToast('✓ BD conectada: '+BD_DATA.length+' tickets','#16a34a');renderReportes();}
+    else{showToast('✗ No se pudo conectar. Verifica la URL.','#dc2626');}
+  });
+}
+
 // ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','hoy','equipo','clientes'][i]===tab));
-  ['hoy','equipo','clientes','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','hoy','equipo','clientes','reportes'][i]===tab));
+  ['hoy','equipo','clientes','panorama','reportes'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='hoy')renderHoy();
   else if(tab==='equipo')renderEquipo();
   else if(tab==='clientes')renderClientes();
   else if(tab==='panorama')renderPanorama();
+  else if(tab==='reportes')renderReportes();
 }
 
 // ── UTILIDADES ───────────────────────────────────────────────────
