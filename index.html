@@ -425,49 +425,63 @@ function saveClientesGid(){
 
 function renderClientesConDatos(){
   const v=el('v-clientes');if(!v)return;
-  // Mapear columnas del Excel: Servidor, INSTANCIAS, empresa, encargado, Correo, Telefono...
   const rows=CLIENTES_DATA;
   const hdrs=Object.keys(rows[0]||{});
-
-  // Detectar columnas clave
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const findH=pats=>hdrs.find(h=>pats.some(p=>norm(h).includes(p)))||'';
-  const cEmp=findH(['empresa','company']);
-  const cEnc=findH(['encargado','responsable','contacto']);
-  const cCor=findH(['correo','email','mail']);
-  const cTel=findH(['telefono','tel','phone']);
-  const cSrv=findH(['servidor','server']);
-  const cInst=findH(['instancia','instance','url']);
+  const findHIdx=pats=>{const h=findH(pats);return h?hdrs.indexOf(h):-1;};
+
+  // Columnas por posición: C=2, D=3, E=4, F=5, G=6 (índice base 0)
+  // También por nombre como fallback
+  const cInst=hdrs[2]||findH(['instancia','instance','url','https']);
+  const cEmp=hdrs[3]||findH(['empresa','company']);
+  const cEnc=hdrs[4]||findH(['encargado','responsable','contacto']);
+  const cCor=hdrs[5]||findH(['correo','email','mail']);
+  const cTel=hdrs[6]||findH(['telefono','tel','phone']);
+
+  function getNotas(emp){
+    try{return JSON.parse(localStorage.getItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))))||'[]');}catch{return[];}
+  }
+  function saveNota(emp,txt){
+    const notas=getNotas(emp);
+    notas.unshift({ts:Date.now(),txt:txt.trim()});
+    localStorage.setItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))),JSON.stringify(notas.slice(0,50)));
+  }
+  function delNotaCli(emp,ts){
+    const notas=getNotas(emp).filter(n=>n.ts!==ts);
+    localStorage.setItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))),JSON.stringify(notas));
+  }
+  window._cliGetNotas=getNotas;
+  window._cliSaveNota=saveNota;
+  window._cliDelNota=delNotaCli;
+  window._cliHeaders={cInst,cEmp,cEnc,cCor,cTel};
+  window._cliRows=rows;
 
   const tableRows=rows.map((r,i)=>{
-    const emp=r[cEmp]||'—';
+    const emp=(r[cEmp]||'—').trim();
     const enc=r[cEnc]||'—';
     const cor=r[cCor]||'—';
     const tel=r[cTel]||'—';
-    const srv=r[cSrv]||'—';
-    const inst=r[cInst]||'';
-    // Tickets de Zendesk vinculados
-    const tks=T.filter(t=>{
-      const o=(t.org||'').toLowerCase();
-      const e=emp.toLowerCase();
-      return o.includes(e.substring(0,6))||e.includes(o.substring(0,6));
-    });
-    const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
-    const sc=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#16a34a';
-    const nota=STORE.getNotaCliente(emp)||{};
-    return`<tr class="cli-table-row" onclick="showClienteDetailPlus('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
-      <td style="font-weight:700;color:var(--txt)">${emp}</td>
-      <td style="font-size:11px">${enc}</td>
-      <td style="font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
-      <td style="font-size:11px">${tel}</td>
-      <td style="text-align:center">
+    const inst=(r[cInst]||'').trim();
+    const notas=getNotas(emp);
+    const hasNota=notas.length>0;
+    return`<tr class="cli-table-row" onclick="toggleCliRow('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
+      <td style="font-weight:500;padding:7px 12px;border-bottom:0.5px solid var(--bdr)">${emp}</td>
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px">${enc}</td>
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px">${tel}</td>
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
         ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:2px 7px;border-radius:4px;font-weight:600;text-decoration:none">🔗 Acceder</a>`:'—'}
       </td>
-      <td style="text-align:center">
-        ${tks.length?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc}">${tks.length}</span>`:'<span style="color:var(--txt3);font-size:11px">0</span>'}
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
+        ${hasNota
+          ?`<span style="font-size:10px;font-weight:600;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:10px">📝 ${notas.length}</span>`
+          :`<span style="font-size:10px;color:var(--txt3)">+ agregar</span>`}
       </td>
-      <td style="text-align:center">
-        ${nota.situacion?'<span style="font-size:9px;background:#f0fdf4;color:#16a34a;padding:1px 6px;border-radius:3px;font-weight:600">📝 nota</span>':'<span style="color:var(--txt3);font-size:10px">—</span>'}
+    </tr>
+    <tr id="cli-row-${i}" style="display:none">
+      <td colspan="6" style="padding:0;background:var(--sur2)">
+        ${buildCliNotaPanel(emp,i)}
       </td>
     </tr>`;
   }).join('');
@@ -477,23 +491,123 @@ function renderClientesConDatos(){
       <div class="card-title">🏢 Clientes — ${rows.length} registros</div>
       <div style="display:flex;gap:8px;align-items:center">
         <input type="text" id="cli-search" placeholder="Buscar empresa…" oninput="filtrarClientes(this.value)" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;font-size:12px;font-family:var(--font);outline:none;width:180px">
+        <button onclick="exportarNotasExcel()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ Notas Excel</button>
         <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
       </div>
     </div>
     <div style="overflow-x:auto">
       <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:700px">
         <thead><tr style="background:var(--sur2)">
-          ${['Empresa','Encargado','Correo','Teléfono','Instancia','Tickets','Nota'].map(h=>`<th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
+          ${['Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
         </tr></thead>
         <tbody id="cli-tbody">${tableRows}</tbody>
       </table>
     </div>
-  </div>
-  <div id="cli-detail-wrap-plus"></div>`;
+  </div>`;
 
-  // Guardar para filtro
-  window._cliRows=rows;window._cliHeaders={cEmp,cEnc,cCor,cTel,cSrv,cInst};
+  // Guardar índice para filtros
+  window._cliFullRows=rows;
 }
+
+function buildCliNotaPanel(emp,idx){
+  const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
+  const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
+  const notasHtml=notas.length
+    ?notas.map(n=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--bdr)">
+        <span style="font-size:10px;color:var(--txt3);white-space:nowrap;font-family:var(--mono);min-width:110px">${fmtTs(n.ts)}</span>
+        <span style="font-size:11px;color:var(--txt);flex:1">${n.txt}</span>
+        <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;padding:0;line-height:1;flex-shrink:0">×</button>
+      </div>`).join('')
+    :'<div style="font-size:11px;color:var(--txt3);padding:4px 0">Sin notas aún</div>';
+  return`<div style="padding:12px 16px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px">Notas de seguimiento — ${emp}</div>
+    <div id="cli-notas-${key}" style="max-height:180px;overflow-y:auto;border-left:2px solid var(--bdr);padding-left:12px;margin-bottom:10px">${notasHtml}</div>
+    <div style="display:flex;gap:6px">
+      <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}',${idx})" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:12px;font-family:var(--font);outline:none">
+      <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}',${idx})" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+    </div>
+  </div>`;
+}
+
+function toggleCliRow(emp){
+  const rows=window._cliRows||[];
+  const idx=rows.findIndex(r=>{
+    const{cEmp}=window._cliHeaders||{};
+    return (r[cEmp]||'').trim()===emp;
+  });
+  if(idx<0)return;
+  const tr=el('cli-row-'+idx);
+  if(!tr)return;
+  const hidden=tr.style.display==='none';
+  tr.style.display=hidden?'':'none';
+  if(hidden){
+    const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
+    const cont=el('cli-notas-'+key);
+    if(cont)refreshCliRow(emp,idx);
+    const inp=el('cli-inp-'+key);
+    if(inp)setTimeout(()=>inp.focus(),50);
+  }
+}
+
+function refreshCliRow(emp,idx){
+  const tr=el('cli-row-'+idx);if(!tr)return;
+  const td=tr.querySelector('td');if(!td)return;
+  td.innerHTML=buildCliNotaPanel(emp,idx);
+  // Actualizar badge en la fila principal
+  const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
+  const allTrs=document.querySelectorAll('#cli-tbody tr');
+  // Buscar el tr anterior (fila principal)
+  const prevTr=tr.previousElementSibling;
+  if(prevTr){
+    const notaCell=prevTr.querySelector('td:last-child');
+    if(notaCell){
+      notaCell.innerHTML=notas.length
+        ?`<span style="font-size:10px;font-weight:600;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:10px">📝 ${notas.length}</span>`
+        :`<span style="font-size:10px;color:var(--txt3)">+ agregar</span>`;
+    }
+  }
+}
+
+function addCliNotaRow(emp,key,idx){
+  const inp=el('cli-inp-'+key);
+  if(!inp||!inp.value.trim())return;
+  if(window._cliSaveNota)window._cliSaveNota(emp,inp.value.trim());
+  inp.value='';
+  refreshCliRow(emp,idx);
+}
+
+function exportarNotasExcel(){
+  const rows=window._cliRows||[];
+  const{cEmp,cEnc}=window._cliHeaders||{};
+  if(!rows.length){showToast('Sin datos de clientes','#dc2626');return;}
+  const csvRows=[['Empresa','Encargado','Fecha','Hora','Nota']];
+  rows.forEach(r=>{
+    const emp=(r[cEmp]||'').trim();
+    const enc=r[cEnc]||'—';
+    const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
+    if(!notas.length)return;
+    notas.forEach(n=>{
+      const d=new Date(n.ts);
+      const fecha=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+      const hora=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      csvRows.push([emp,enc,fecha,hora,n.txt.replace(/,/g,';')]);
+    });
+  });
+  if(csvRows.length<2){showToast('Sin notas que exportar','#d97706');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csvRows.map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='notas_clientes.csv';a.click();
+  showToast('✓ Notas exportadas','#16a34a');
+}
+
+function filtrarClientes(q){
+  const rows=window._cliFullRows||window._cliRows||[];
+  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
+  const filtered=q?rows.filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q.toLowerCase()))):rows;
+  // Re-renderizar solo el tbody
+  renderClientesConDatos();
+}
+
 
 function filtrarClientes(q){
   if(!q){document.getElementById('cli-tbody').innerHTML=renderCliTableRows(window._cliRows||[]);return;}
@@ -1053,6 +1167,57 @@ function showToast(msg,color){
 
 
 
+
+function renderTendenciaActual(trendData,tPts,sPts,tH,tMax){
+  return '<div class="trend-box"><svg width="100%" height="'+tH+'" viewBox="0 540 '+tH+'" preserveAspectRatio="none" style="display:block"><polyline points="'+tPts+'" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><polyline points="'+sPts+'" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>'+trendData.map(function(w,i){return '<circle cx="'+(10+i*92)+'" cy="'+(tH-(w.open/tMax*(tH-8)))+'" r="3" fill="#2563eb"/>';}).join('')+'</svg><div class="trend-labels">'+trendData.map(function(w){return '<span class="trend-lbl">'+w.label+'</span>';}).join('')+'</div><div class="trend-legend"><div class="trend-li"><div style="width:14px;height:2px;background:#2563eb;border-radius:1px"></div>Abiertos (semana actual)</div><div class="trend-li"><div style="width:14px;height:2px;background:#F59E0B;border-radius:1px"></div>SLA vencidos</div><div style="font-size:10px;color:var(--txt3);margin-left:auto">Conecta BD histórica para más semanas</div></div></div>';
+}
+
+function renderTendenciaBD(){
+  if(!BD_ANALISIS||!BD_ANALISIS.semanas.length)return'<div class="empty">Sin datos de tendencia en BD</div>';
+  const sem=BD_ANALISIS.semanas;
+  const maxA=Math.max.apply(null,sem.map(function(s){return s.abiertos;}),1)||1;
+  const H=80,W=580;
+  const ptA=sem.map(function(s,i){return (10+i*(W/(sem.length||1)))+','+(H-(s.abiertos/maxA*(H-10)));}).join(' ');
+  const ptR=sem.map(function(s,i){return (10+i*(W/(sem.length||1)))+','+(H-(s.resueltos/maxA*(H-10)));}).join(' ');
+  const labels=sem.map(function(s){return '<span class="trend-lbl">'+s.label+'</span>';}).join('');
+  const reincHTML=BD_ANALISIS.reincidentes.slice(0,5).map(function(e,i){
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid var(--bdr);font-size:11px"><span>'+e[0]+'</span><span style="font-family:var(--mono);font-weight:600;color:'+(e[1]>=10?'#dc2626':e[1]>=5?'#d97706':'#2563eb')+'">'+e[1]+'</span></div>';
+  }).join('');
+  return '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;padding:12px">'+
+    '<div><div style="font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Tickets por semana — últimas '+sem.length+'</div>'+
+    '<svg width="100%" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block">'+
+    '<polyline points="'+ptA+'" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>'+
+    '<polyline points="'+ptR+'" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round" stroke-dasharray="4,2"/>'+
+    sem.map(function(s,i){return '<circle cx="'+(10+i*(W/(sem.length||1)))+'" cy="'+(H-(s.abiertos/maxA*(H-10)))+'" r="3" fill="#2563eb"/>';}).join('')+
+    '</svg><div class="trend-labels">'+labels+'</div>'+
+    '<div class="trend-legend"><div class="trend-li"><div style="width:14px;height:2px;background:#2563eb;border-radius:1px"></div>Abiertos</div><div class="trend-li"><div style="width:14px;height:2px;background:#16a34a;border-radius:1px"></div>Resueltos</div></div></div>'+
+    '<div><div style="font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Reincidentes (≥3 tickets)</div>'+
+    '<div style="font-size:9px;font-weight:700;display:grid;grid-template-columns:1fr auto;padding:0 0 4px;color:var(--txt3);border-bottom:1px solid var(--bdr)"><span>Empresa</span><span>Tickets</span></div>'+
+    reincHTML+'<div style="margin-top:8px;font-size:10px;color:var(--txt3)">Total BD: '+BD_DATA.length+' tickets · '+BD_ANALISIS.reincidentes.length+' empresas reincidentes</div>'+
+    '</div></div>';
+}
+
+function conectarBD(){
+  if(BD_DATA.length){
+    if(!confirm('BD ya conectada ('+BD_DATA.length+' tickets).\n¿Reconectar?'))return;
+    BD_DATA=[];BD_ANALISIS=null;
+  }
+  const gid=prompt('Para conectar la BD histórica:\n\n1. Abre tu Google Sheets de tickets\n2. En la pestaña "Tickets BD" → Archivo → Compartir → Publicar en la web\n3. Elige "Tickets BD" y formato CSV → Publicar\n4. Ve a la URL del Sheets → anota el GID de la pestaña (en la URL: ...#gid=XXXXXX)\n\nIngresa el GID de la pestaña Tickets BD:','1776545593');
+  if(!gid)return;
+  localStorage.setItem('bd_gid',gid.trim());
+  const btn=document.querySelector('[onclick="conectarBD()"]');
+  if(btn)btn.textContent='⏳ Conectando…';
+  loadBDSheet().then(function(res){
+    if(res.ok){
+      showToast('✓ BD conectada: '+res.count+' tickets','#16a34a');
+      renderPanorama();
+    } else {
+      showToast('✗ Error: '+res.error,'#dc2626');
+      alert('No se pudo conectar.\n\nError: '+res.error+'\n\nAsegúrate de haber publicado el Sheets como CSV:\nArchivo → Compartir → Publicar en la web → Elegir pestaña → CSV → Publicar');
+    }
+  });
+}
+
 // ── RENDER EQUIPO ────────────────────────────────────────────────
 function renderEquipo(){
   const agRiesgo=getAgentesEnRiesgo();
@@ -1171,6 +1336,67 @@ function buildAgBarChart(tickets,allTotals){
 }
 
 // ── RENDER PANORAMA ──────────────────────────────────────────────
+
+// ── BD histórica desde Google Sheets ─────────────────────────────
+const BD_SHEET_ID='177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4';
+let BD_DATA=[];let BD_ANALISIS=null;
+
+async function loadBDSheet(){
+  const gid=localStorage.getItem('bd_gid')||'1776545593';
+  const url='https://docs.google.com/spreadsheets/d/'+BD_SHEET_ID+'/pub?gid='+gid+'&single=true&output=csv';
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status+' — El archivo debe estar publicado como CSV');
+    const txt=await r.text();
+    if(!txt||txt.length<50)throw new Error('Respuesta vacía');
+    const{rows,headers}=parseCSV(txt);
+    BD_DATA=rows;
+    BD_ANALISIS=analizarBD(rows,headers);
+    return{ok:true,count:rows.length};
+  }catch(e){return{ok:false,error:e.message};}
+}
+
+function analizarBD(rows,hdrs){
+  if(!rows||!rows.length)return null;
+  const allHdrs=hdrs||Object.keys(rows[0]||{});
+  const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const findH=pats=>allHdrs.find(h=>pats.some(p=>norm(h).includes(p)))||'';
+  const cId=findH(['id','folio']);
+  const cFecha=findH(['fecha','created','inicio','creado']);
+  const cEmp=findH(['empresa','company','org']);
+  const cAgente=findH(['agente','agent']);
+  const cPrioridad=findH(['prioridad','priority']);
+  const cEstado=findH(['estado','status']);
+  const extraCols=allHdrs.slice(8,38); // columnas I-AL
+
+  // Tendencia por semana
+  const semMap={};
+  rows.forEach(r=>{
+    const d=new Date(r[cFecha]||'');
+    if(isNaN(d))return;
+    const sem=d.getFullYear()+'-W'+String(wk(d)).padStart(2,'0');
+    if(!semMap[sem])semMap[sem]={label:sem,abiertos:0,resueltos:0,empresas:new Set()};
+    semMap[sem].abiertos++;
+    const est=(r[cEstado]||'').toLowerCase();
+    if(['solved','resuelto','closed','cerrado'].includes(est))semMap[sem].resueltos++;
+    if(r[cEmp])semMap[sem].empresas.add(r[cEmp]);
+  });
+  const semanas=Object.entries(semMap).sort((a,b)=>a[0].localeCompare(b[0])).slice(-12).map(([k,v])=>({...v,empresas:v.empresas.size}));
+
+  // Reincidencias por empresa
+  const empMap={};
+  rows.forEach(r=>{const e=(r[cEmp]||'').trim();if(e)empMap[e]=(empMap[e]||0)+1;});
+  const reincidentes=Object.entries(empMap).filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  // Por agente
+  const agMap={};
+  rows.forEach(r=>{const a=(r[cAgente]||'').trim();if(a&&a.toLowerCase()!=='no')agMap[a]=(agMap[a]||0)+1;});
+  const porAgente=Object.entries(agMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  return{semanas,reincidentes,porAgente,total:rows.length,extraCols,cEmp,cFecha,cAgente,cPrioridad,cEstado};
+}
+
+
 let _panoKpiActivo=null;
 function renderPanorama(){
   const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
@@ -1214,20 +1440,17 @@ function renderPanorama(){
       <div class="card-head"><div class="card-title">📊 Indicadores clave · ${T.length} tickets activos</div><span style="font-size:10px;color:var(--txt3)">clic para ver detalle y actualizar gráficas</span></div>
       <div class="kpi-grid">${kpiCards}</div>
     </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">📈 Tendencia semanal</div><span style="font-size:10px;color:var(--txt3)">últimas 6 semanas</span></div>
-      <div class="trend-box">
-        <svg width="100%" height="${tH}" viewBox="0 540 ${tH}" preserveAspectRatio="none" style="display:block">
-          <polyline points="${tPts}" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>
-          <polyline points="${sPts}" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>
-          ${trendData.map((w,i)=>`<circle cx="${10+i*92}" cy="${tH-(w.open/tMax*(tH-8))}" r="3" fill="#2563eb"/>`).join('')}
-        </svg>
-        <div class="trend-labels">${trendData.map(w=>`<span class="trend-lbl">${w.label}</span>`).join('')}</div>
-        <div class="trend-legend">
-          <div class="trend-li"><div style="width:14px;height:2px;background:#2563eb;border-radius:1px"></div>Tickets abiertos</div>
-          <div class="trend-li"><div style="width:14px;height:2px;background:#F59E0B;border-radius:1px"></div>SLA vencidos</div>
+    <div class="card" id="trend-card">
+      <div class="card-head">
+        <div class="card-title">📈 Tendencia semanal — Tickets BD</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${BD_DATA.length?`<span style="font-size:10px;color:var(--txt3)">${BD_DATA.length} tickets históricos</span>`:''}
+          <button onclick="conectarBD()" style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:var(--font);background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#16a34a':'var(--txt2)'}">
+            ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
+          </button>
         </div>
       </div>
+      ${BD_DATA.length&&BD_ANALISIS?renderTendenciaBD():renderTendenciaActual(trendData,tPts,sPts,tH,tMax)}
     </div>
     <div class="charts-row" id="pano-charts-row">
       <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
@@ -1250,16 +1473,59 @@ function buildPanoCharts(subset){
   const rVals=[...new Set(subset.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
   const priData=['urgent','high','normal','low'].map(k=>subset.filter(t=>t.priority===k).length);
   const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
-  const orgMap={};subset.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
-  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const orgMap={};
+  subset.forEach(function(t){var o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
+  const orgS=Object.entries(orgMap).sort(function(a,b){return b[1]-a[1];}).slice(0,12);
+  window._panoSubset=subset;
 
   if(CH['cp'])CH['cp'].destroy();
   const cpCtx=el('cp');
-  if(cpCtx){CH['cp']=new Chart(cpCtx,{type:'doughnut',data:{labels:['Urgente','Alto','Normal','Bajo'],datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw;}},backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}})}
-  const legEl=el('pri-legend');if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${priColors[i]}"></div>${l}: ${priData[i]}</div>`).join('');
-  mkChart('ca','bar',rVals,rVals.map(r=>subset.filter(t=>t.rangoStr===r).length),rVals.map(r=>getRangoColor(r)),false,(label)=>{showPanoDetail('rango_'+label,label);});
-  mkChart('cag','bar',orgS.map(x=>x[0]),orgS.map(x=>x[1]),orgS.map(()=>'#4B9BFF'),true,null);
+  if(cpCtx){
+    CH['cp']=new Chart(cpCtx,{
+      type:'doughnut',
+      data:{
+        labels:['Urgente','Alto','Normal','Bajo'],
+        datasets:[{data:priData,backgroundColor:priColors,borderWidth:2,borderColor:'#ffffff'}]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        cutout:'68%',
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw;}},
+            backgroundColor:'#111827',
+            bodyColor:'#f9fafb',
+            cornerRadius:6,
+            padding:8
+          }
+        }
+      }
+    });
+  }
+  const legEl=el('pri-legend');
+  if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map(function(l,i){return '<div class="legend-item"><div class="legend-dot" style="background:'+priColors[i]+'"></div>'+l+': '+priData[i]+'</div>';}).join('');
+
+  mkChart('ca','bar',rVals,rVals.map(function(r){return subset.filter(function(t){return t.rangoStr===r;}).length;}),rVals.map(function(r){return getRangoColor(r);}),false,function(label){
+    var tickets=sortByAge((window._panoSubset||T).filter(function(t){return t.rangoStr===label;}));
+    showPanoDetalleCarta('rango_'+label,'Antigüedad: '+label,getRangoColor(label),tickets);
+  });
+
+  mkChart('cag','bar',orgS.map(function(x){return x[0];}),orgS.map(function(x){return x[1];}),orgS.map(function(){return '#4B9BFF';}),true,function(label){
+    var tickets=sortByAge((window._panoSubset||T).filter(function(t){return (t.org||'').trim()===label||(t.org||'Sin clasificar').trim()===label;}));
+    showPanoDetalleCarta('org_'+label,'Empresa: '+label,'#2563eb',tickets);
+  });
 }
+
+function showPanoDetalleCarta(key,titulo,color,tickets){
+  const wrap=el('pano-detail-wrap');if(!wrap)return;
+  if(wrap.dataset.open===key&&wrap.style.display!=='none'){wrap.style.display='none';wrap.dataset.open='';return;}
+  wrap.dataset.open=key;wrap.style.display='block';
+  wrap.innerHTML=`<div class="card">${buildDetailBlock(sortByAge(tickets||[]),titulo,color,'pano-detail-wrap',key.replace(/[^a-z0-9_]/gi,'_'),false)}</div>`;
+  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
 
 function showPanoDetail(key,label){
   // Marcar KPI activo
@@ -1505,7 +1771,7 @@ async function loadData(){
 }
 loadData();
 
-</script></script>
+</script>
 
 </body>
 </html>
