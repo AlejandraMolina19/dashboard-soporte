@@ -302,8 +302,6 @@ function mapRows(rows,headers){
   const colG=findCol(['traduccion organizacion','traduccion org'])||HDR[6]||'';
   const colK=findCol(['fecha inicio'])||HDR[10]||'';
   const colU=HDR[20]||'';
-  // Col AG (índice 32) = D-Estatus de replicacion
-  const colAG=HDR[32]||'';
   function fkv(pats){return HDR.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
   const kId=fkv(['^ID$','^Id$','^id$']);
   const kSt=fkv(['^Estado$','^Status$']);
@@ -331,7 +329,7 @@ function mapRows(rows,headers){
     const areaN=(colN?r[colN]||'':'').trim();
     const isSinAsignar=/sin\s+asignar|sin\s+clasificar|ticket\s+sin|^nuevo$/i.test(areaN)||areaN==='';
     const ultimoSegRaw=(colE?r[colE]||'':'').trim();
-    return{id,status,priority,subject:kSub?r[kSub]||'':'',org:colG?r[colG]||'':'',agente:colM?r[colM]||'':'',areaAsig:areaN,dResp:colU?r[colU]||'':'',dEstatusRep:colAG?r[colAG]||'':'',sResp:kSResp?r[kSResp]||'':'',assignee:kAssign?r[kAssign]||'':'',created,days,rangoStr,isSla:isSlaVencido(rangoStr),isSinAsignar,sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),createdFmt:fmtDateShort(crRaw),score,action:act(score),mesAnt:kMesAnt?r[kMesAnt]||'':'',ultimoSeg:ultimoSegRaw};
+    return{id,status,priority,subject:kSub?r[kSub]||'':'',org:colG?r[colG]||'':'',agente:colM?r[colM]||'':'',areaAsig:areaN,dResp:colU?r[colU]||'':'',sResp:kSResp?r[kSResp]||'':'',assignee:kAssign?r[kAssign]||'':'',created,days,rangoStr,isSla:isSlaVencido(rangoStr),isSinAsignar,sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),createdFmt:fmtDateShort(crRaw),score,action:act(score),mesAnt:kMesAnt?r[kMesAnt]||'':'',ultimoSeg:ultimoSegRaw};
   }).filter(Boolean);
 }
 
@@ -372,17 +370,18 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
-  // Sheet de clientes: 1rXU21wvhL2R49FClG6zB9GlUEzmj0OSqGl5IgXqTM5Y pestaña EMPRESAS gid=1715906212
+  // Intentar en orden: URL directa guardada, luego URL con GID del mismo Sheets
   const savedUrl=localStorage.getItem('clientes_pub_url')||'';
-  const gid=localStorage.getItem('clientes_gid')||'1715906212';
-  const sheetId='1rXU21wvhL2R49FClG6zB9GlUEzmj0OSqGl5IgXqTM5Y';
+  const gid=localStorage.getItem('clientes_gid')||'';
+  const sheetBD='177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4';
 
   const candidatos=[
     savedUrl,
-    // URL de publicación directa (funciona si el archivo está publicado)
-    `https://docs.google.com/spreadsheets/d/${sheetId}/pub?gid=${gid}&single=true&output=csv`,
-    `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`,
-  ].filter((u,i,a)=>u&&a.indexOf(u)===i);
+    // Sheets BD con varios GIDs posibles para pestaña CLIENTES
+    gid?`https://docs.google.com/spreadsheets/d/${sheetBD}/pub?gid=${gid}&single=true&output=csv`:'',
+    // Primer hoja del Sheets BD
+    `https://docs.google.com/spreadsheets/d/${sheetBD}/pub?single=true&output=csv`,
+  ].filter(Boolean);
 
   for(const url of candidatos){
     try{
@@ -393,53 +392,16 @@ async function loadClientesSheet(){
       const{rows,headers}=parseCSV(txt);
       if(!rows.length)continue;
       CLIENTES_DATA=rows;
-      localStorage.setItem('clientes_gid',gid);
       return true;
     }catch(e){continue;}
   }
   return false;
 }
 
-function renderClientesMostrarConfig(){
-  const v=el('v-clientes');if(!v)return;
-  v.innerHTML=`<div class="card">
-    <div class="card-head"><div class="card-title">🏢 Clientes — Configurar fuente de datos</div></div>
-    <div style="padding:20px;max-width:560px">
-      <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px">Conectar hoja de Clientes</div>
-      <div style="font-size:11px;color:var(--txt3);margin-bottom:14px;line-height:1.7">
-        El archivo ya está publicado. Solo necesita el GID de la pestaña <b>CLIENTES</b>.<br>
-        El archivo ya tiene GID configurado (1715906212). Solo falta publicarlo como CSV:<br>
-        <b>Archivo → Compartir → Publicar en la web</b> → selecciona pestaña <b>CLIENTES</b> → formato <b>CSV</b> → <b>Publicar</b> → copia la URL y pégala abajo.
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input id="gid-input" type="text" placeholder="GID configurado: 1715906212" value="1715906212" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:12px;outline:none">
-        <button onclick="saveClientesGid()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">Conectar</button>
-      </div>
-      <div style="border-top:1px solid var(--bdr);padding-top:12px">
-        <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">O pega la URL CSV publicada directamente:</div>
-        <div style="display:flex;gap:8px">
-          <input id="cli-url-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-..." style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;font-size:11px;font-family:var(--font);outline:none">
-          <button onclick="saveClientesUrl()" style="padding:7px 14px;background:none;border:1px solid var(--acc);color:var(--acc);border-radius:var(--r);cursor:pointer;font-size:11px;font-weight:600;font-family:var(--font)">Usar URL</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  \${renderClientesFromTickets()}`;
-}
-
 function renderClientes(){
   const v=el('v-clientes');if(!v)return;
 
-  // Auto-intentar con URL base si no hay config pero tampoco hemos intentado aún
-  // Siempre intentar cargar si no hay datos
-  if(!CLIENTES_DATA.length){
-    v.innerHTML='<div class="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3)">Cargando clientes…</div></div>';
-    loadClientesSheet().then(ok=>{
-      if(ok)renderClientesConDatos();
-      else renderClientesMostrarConfig();
-    });
-    return;
-  }
+  // Si no hay GID configurado, mostrar configuración
   if(!localStorage.getItem('clientes_gid')&&!localStorage.getItem('clientes_pub_url')){
     v.innerHTML=`<div class="card">
       <div class="card-head"><div class="card-title">🏢 Clientes — Configuración</div></div>
@@ -500,11 +462,8 @@ function saveClientesGid(){
   localStorage.setItem('clientes_gid',inp.value.trim());
   localStorage.removeItem('clientes_pub_url');
   CLIENTES_DATA=[];
-  showToast('Conectando…','#2563eb');
-  loadClientesSheet().then(ok=>{
-    if(ok){showToast('✓ Clientes cargados: '+CLIENTES_DATA.length+' registros','#16a34a');renderClientesConDatos();}
-    else{showToast('✗ No se pudo cargar. Publica el Sheets como CSV.','#dc2626');renderClientesMostrarConfig();}
-  });
+  showToast('Probando GID…','#2563eb');
+  renderClientes();
 }
 
 function renderClientesConDatos(){
@@ -515,13 +474,13 @@ function renderClientesConDatos(){
   const findH=pats=>hdrs.find(h=>pats.some(p=>norm(h).includes(p)))||'';
   const findHIdx=pats=>{const h=findH(pats);return h?hdrs.indexOf(h):-1;};
 
-  // Columnas del Sheets EMPRESAS:
-  // [0]=num [1]=Servidor [2]=INSTANCIAS(URL) [3]=EMPRESA [4]=Encargado General [5]=Correo [6]=Teléfono
-  const cInst=findH(['instancia','instance','url','https'])||hdrs[2]||'';
-  const cEmp=findH(['empresa','company','nombre'])||hdrs[3]||'';
-  const cEnc=findH(['encargado','responsable','contacto','general'])||hdrs[4]||'';
-  const cCor=findH(['correo','email','mail'])||hdrs[5]||'';
-  const cTel=findH(['telefono','tel','phone','celular'])||hdrs[6]||'';
+  // Columnas por posición: C=2, D=3, E=4, F=5, G=6 (índice base 0)
+  // También por nombre como fallback
+  const cInst=hdrs[2]||findH(['instancia','instance','url','https']);
+  const cEmp=hdrs[3]||findH(['empresa','company']);
+  const cEnc=hdrs[4]||findH(['encargado','responsable','contacto']);
+  const cCor=hdrs[5]||findH(['correo','email','mail']);
+  const cTel=hdrs[6]||findH(['telefono','tel','phone']);
 
   function getNotas(emp){
     try{return JSON.parse(localStorage.getItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))))||'[]');}catch{return[];}
@@ -962,7 +921,7 @@ function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
     <button class="filter-btn-clear" onclick="clearDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">✕ Limpiar</button>
     <span id="${filterId}-total" style="font-size:10px;color:var(--txt3);margin-left:auto">${tickets.length} tickets</span>
   </div>
-  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Desarrollador','D-Estatus Rep.','Score','Slack'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
+  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Desarrollador','Score'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
   ${getDiagnosis(sorted)}`;
 }
 
@@ -984,9 +943,7 @@ function renderDetailRows(list,showSeg){
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
       <td>${t.agente||'—'}${sf}</td>
       <td style="font-size:10px;color:var(--txt2)">${t.dResp&&t.dResp.toLowerCase()!=='no'&&t.dResp.trim()!==''?t.dResp:'—'}</td>
-      <td style="font-size:10px">${t.dEstatusRep?`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:${t.dEstatusRep.includes('listo')?'#f0fdf4':t.dEstatusRep.includes('pendiente')?'#fef2f2':t.dEstatusRep.includes('atencion')||t.dEstatusRep.includes('atención')?'#fffbeb':'var(--sur3)'};color:${t.dEstatusRep.includes('listo')?'#15803d':t.dEstatusRep.includes('pendiente')?'#dc2626':t.dEstatusRep.includes('atencion')||t.dEstatusRep.includes('atención')?'#92400e':'var(--txt2)'}">${t.dEstatusRep}</span>`:'—'}</td>
       <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
-      <td onclick="event.stopPropagation()"><button onclick="mostrarSelectorCanal(${t.id},'seguimiento')" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer" title="Notificar en Slack">💬</button></td>
     </tr>`;
   }).join('');
 }
@@ -1062,7 +1019,7 @@ function renderHoy(){
         <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${sc}">${t.score}</span>
         <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
           <button class="rev-btn" onclick="toggleRevisado(${t.id},this)" style="${rev?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${rev?'↩':'✓'}</button>
-          <button class="slack-btn" onclick="mostrarSelectorCanal(${t.id},'seguimiento')" title="Notificar en Slack">💬</button>
+          <button class="slack-btn" onclick="sendSlackTicket(${t.id})" title="Notificar en Slack">💬</button>
         </div>
       </div>`;
     }).join('');
@@ -1187,120 +1144,43 @@ function toggleNivel(id){
 
 // ── Slack integration ─────────────────────────────────────────────
 const SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
-// ── Sistema de canales Slack ─────────────────────────────────────
-function getSlackCanales(){
-  try{return JSON.parse(localStorage.getItem('slack_canales')||'[]');}catch{return[];}
-}
-function saveSlackCanales(canales){
-  localStorage.setItem('slack_canales',JSON.stringify(canales));
-}
-
 function configSlack(){
-  const canales=getSlackCanales();
-  const lista=canales.length?canales.map((c,i)=>`${i+1}. ${c.nombre} (${c.webhook.substring(0,40)}...)`).join('\n'):'(sin canales configurados)';
-  const opcion=prompt(
-    'Configurar canales de Slack\n\n'+
-    'Canales actuales:\n'+lista+'\n\n'+
-    'Opciones:\n'+
-    '  A — Agregar nuevo canal\n'+
-    '  B — Eliminar canal (escribe el número)\n'+
-    '  C — Cancelar\n\n'+
-    'Escribe A, B+número (ej: B2) o C:'
-  );
-  if(!opcion||opcion.toUpperCase()==='C')return;
-  if(opcion.toUpperCase()==='A'){
-    const nombre=prompt('Nombre del canal (ej: Soporte, Desarrollo, General):');
-    if(!nombre)return;
-    const url=prompt('Webhook URL de Slack para "'+nombre+'":\n(Slack → api.slack.com/apps → Incoming Webhooks → Add New)');
-    if(!url||!url.startsWith('https://hooks.slack.com')){showToast('URL inválida','#dc2626');return;}
-    canales.push({nombre:nombre.trim(),webhook:url.trim()});
-    saveSlackCanales(canales);
-    // También guardar el primero como default
-    if(canales.length===1)localStorage.setItem('slack_webhook',url.trim());
-    showToast('✓ Canal "'+nombre+'" agregado','#16a34a');
-  } else if(opcion.toUpperCase().startsWith('B')){
-    const num=parseInt(opcion.substring(1))-1;
-    if(num>=0&&num<canales.length){
-      const eliminado=canales.splice(num,1)[0];
-      saveSlackCanales(canales);
-      showToast('Canal "'+eliminado.nombre+'" eliminado','#d97706');
-    }
+  const current=localStorage.getItem('slack_webhook')||'';
+  const url=prompt('Webhook URL de Slack:\n\nCómo obtenerlo:\n1. Ve a api.slack.com/apps\n2. Crea una app → Incoming Webhooks → Activar\n3. Add New Webhook → copia la URL\n\nURL actual: '+(current?current.substring(0,40)+'...':'no configurado')+'\n\nPega la nueva URL (o deja vacío para mantener):');
+  if(url===null)return;
+  if(url.startsWith('https://hooks.slack.com')){
+    localStorage.setItem('slack_webhook',url.trim());
+    showToast('✓ Slack configurado correctamente','#16a34a');
+  } else if(url===''){
+    showToast('Slack sin cambios','#6b7280');
+  } else {
+    showToast('URL inválida — debe empezar con https://hooks.slack.com','#dc2626');
   }
 }
 
-function mostrarSelectorCanal(id,tipo){
-  const canales=getSlackCanales();
+function sendSlackPreset(id,tipo){
+  const t=T.find(x=>x.id===id);if(!t)return;
   const wh=localStorage.getItem('slack_webhook');
-  // Si no hay canales configurados, usar el webhook default o pedir
-  if(!canales.length){
-    if(wh){
-      // Hay webhook default, enviar directo
-      sendSlackPreset(id,tipo);
-    } else {
-      const ok=confirm('Slack no está configurado.\n\n¿Quieres agregar un canal ahora?');
-      if(ok)configSlack();
-    }
+  if(!wh){
+    const ok=confirm('Slack no está configurado.\n\n¿Quieres configurarlo ahora?');
+    if(ok)configSlack();
     return;
   }
-  // Si hay exactamente 1 canal, enviar directo
-  if(canales.length===1){
-    sendSlackPresetACanalIndex(id,tipo,0);
-    return;
-  }
-  // Múltiples canales: mostrar modal de selección
-  showSlackModal(id,tipo,canales);
-}
-
-function showSlackModal(id,tipo,canales){
-  // Crear modal de selección de canal
-  let modal=document.getElementById('slack-canal-modal');
-  if(!modal){
-    modal=document.createElement('div');
-    modal.id='slack-canal-modal';
-    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center';
-    modal.onclick=function(e){if(e.target===modal)modal.remove();};
-    document.body.appendChild(modal);
-  }
-  const t=window.T&&window.T.find(x=>x.id===id);
-  const subject=t?t.subject||'#'+id:'#'+id;
-  modal.innerHTML=`<div style="background:var(--sur);border-radius:var(--rl);padding:20px;max-width:380px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.15)">
-    <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">Enviar a Slack</div>
-    <div style="font-size:11px;color:var(--txt3);margin-bottom:14px">${subject}</div>
-    <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:8px">Selecciona el canal:</div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-      ${canales.map((canal,i)=>`<button onclick="sendSlackPresetACanalIndex(${id},'${tipo}',${i});document.getElementById('slack-canal-modal').remove()" style="padding:8px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);cursor:pointer;text-align:left;font-size:12px;font-weight:600;color:var(--txt);font-family:var(--font);transition:all .15s" onmouseover="this.style.background='var(--acc2)';this.style.borderColor='var(--acc)'" onmouseout="this.style.background='var(--sur2)';this.style.borderColor='var(--bdr)'">
-        <span style="font-size:16px;margin-right:8px">#</span>${canal.nombre}
-      </button>`).join('')}
-    </div>
-    <button onclick="document.getElementById('slack-canal-modal').remove()" style="width:100%;padding:7px;border-radius:var(--r);border:1px solid var(--bdr);background:none;cursor:pointer;font-size:12px;color:var(--txt3);font-family:var(--font)">Cancelar</button>
-  </div>`;
-}
-
-function sendSlackPresetACanalIndex(id,tipo,canalIdx){
-  const canales=getSlackCanales();
-  const canal=canales[canalIdx];
-  const webhook=canal?canal.webhook:localStorage.getItem('slack_webhook');
-  if(!webhook){showToast('Sin webhook configurado','#dc2626');return;}
-  const t=window.T&&window.T.find(x=>x.id===id);if(!t)return;
   const base=`https://dual.zendesk.com/agent/tickets/${t.id}`;
-  const emp=t.org||'—';const ag=t.agente||'Sin asignar';const rango=t.rangoStr||'—';
+  const emp=t.org||'—';const ag=t.agente||'Sin asignar';
+  const rango=t.rangoStr||'—';
   let texto='';
   if(tipo==='seguimiento'){
     texto=`Hola, este ticket <${base}|#${t.id}> (${emp}) lleva *${rango}* sin resolverse y está asignado a *${ag}*. Necesitamos actualización de seguimiento. ¿Hay algún avance o bloqueo? 🙏`;
   } else if(tipo==='marcar'){
     texto=`Hola, favor de marcar o actualizar el estado del ticket <${base}|#${t.id}> (${emp} · ${ag}). Antigüedad: *${rango}*. Si ya fue resuelto, por favor ciérralo en Zendesk. ✅`;
   } else if(tipo==='documentar'){
-    texto=`Hola, el ticket <${base}|#${t.id}> (${emp}) requiere documentación para solución definitiva. Agente: *${ag}* · Antigüedad: *${rango}*. Por favor agrega los pasos de solución en Zendesk. 📄`;
+    texto=`Hola, el ticket <${base}|#${t.id}> (${emp}) requiere documentación para solución definitiva. Agente asignado: *${ag}* · Antigüedad: *${rango}*. Por favor agrega los pasos de solución en Zendesk. 📄`;
   }
-  const destino=canal?` → #${canal.nombre}`:'';
   const msg={text:texto,username:'Dashboard Soporte',icon_emoji:':ticket:'};
-  fetch(webhook,{method:'POST',body:JSON.stringify(msg),mode:'no-cors'})
-    .then(()=>showToast(`✓ Enviado a Slack${destino}`,'#16a34a'))
-    .catch(()=>showToast(`✓ Enviado${destino} (verifica Slack)`,'#16a34a'));
-}
-
-function sendSlackPreset(id,tipo){
-  mostrarSelectorCanal(id,tipo);
+  fetch(wh,{method:'POST',body:JSON.stringify(msg),mode:'no-cors'})
+    .then(()=>showToast('✓ Mensaje enviado a Slack','#16a34a'))
+    .catch(()=>showToast('✓ Enviado (verifica Slack)','#16a34a'));
 }
 
 function sendSlackTicket(id){
@@ -1782,10 +1662,10 @@ function om(id){
     <div>
       <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Notificar en Slack</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
-        <button onclick="mostrarSelectorCanal(${t.id},'seguimiento')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">💬 Pedir seguimiento</button>
-        <button onclick="mostrarSelectorCanal(${t.id},'marcar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">✓ Solicitar marcaje</button>
-        <button onclick="mostrarSelectorCanal(${t.id},'documentar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">📄 Solicitar documentación</button>
-        <button onclick="configSlack()" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid #e9d5ff;background:#faf5ff;cursor:pointer;color:#7c3aed;font-family:var(--font)">${getSlackCanales().length?'⚙ Canales ('+getSlackCanales().length+')':'⚙ Config Slack'}</button>
+        <button onclick="sendSlackPreset(${t.id},'seguimiento')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">💬 Pedir seguimiento</button>
+        <button onclick="sendSlackPreset(${t.id},'marcar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">✓ Solicitar marcaje</button>
+        <button onclick="sendSlackPreset(${t.id},'documentar')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--txt2);font-family:var(--font)">📄 Solicitar documentación</button>
+        <button onclick="configSlack()" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid #e9d5ff;background:#faf5ff;cursor:pointer;color:#7c3aed;font-family:var(--font)">${localStorage.getItem('slack_webhook')?'⚙ Slack conectado':'⚙ Configurar Slack'}</button>
       </div>
       <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Notas de seguimiento</div>
       <div id="modal-notas-${t.id}" class="nota-timeline" style="max-height:160px;overflow-y:auto;margin-bottom:10px">
@@ -1844,19 +1724,19 @@ function getDiagnosis(tickets){
 
 
 // ── RENDER REPORTES ───────────────────────────────────────────────
-const BD_URL_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub';
-const BD_GID_TICKETS='1776545593';
+const BD_URL_BASE='https://docs.google.com/spreadsheets/d/177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4/pub';
 let BD_LOADED=false;
 
 async function ensureBD(){
   if(BD_DATA.length)return true;
-  const savedUrl=localStorage.getItem('bd_pub_url')||'';
-  const gid=localStorage.getItem('bd_gid')||BD_GID_TICKETS;
+  const gid=localStorage.getItem('bd_gid')||'1776545593';
+  // Intentar la URL publicada tipo /e/2PACX guardada
+  const savedUrl=localStorage.getItem('bd_pub_url');
   const urls=[
     savedUrl,
     BD_URL_BASE+'?gid='+gid+'&single=true&output=csv',
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
-  ].filter((u,i,a)=>u&&a.indexOf(u)===i);
+    BD_URL_BASE+'?output=csv&gid='+gid,
+  ].filter(Boolean);
   for(const url of urls){
     try{
       const r=await fetch(url,{cache:'no-store'});
@@ -1865,7 +1745,9 @@ async function ensureBD(){
       if(!txt||txt.length<50)continue;
       const{rows,headers}=parseCSV(txt);
       if(!rows.length)continue;
-      BD_DATA=rows;BD_ANALISIS=analizarBD(rows,headers);BD_LOADED=true;
+      BD_DATA=rows;
+      BD_ANALISIS=analizarBD(rows,headers);
+      BD_LOADED=true;
       return true;
     }catch(e){continue;}
   }
@@ -1874,11 +1756,8 @@ async function ensureBD(){
 
 function renderReportes(){
   const v=el('v-reportes');if(!v)return;
-  // Auto-cargar BD si no está cargada
-  if(!BD_DATA.length&&!BD_LOADED){
-    BD_LOADED=true; // evitar loops
-    ensureBD().then(ok=>{if(ok)renderReportes();});
-  }
+
+  // Si no hay BD, mostrar config + indicadores desde tickets actuales
   const usarActual=!BD_DATA.length;
 
   // ── Indicadores desde tickets actuales (siempre disponibles) ──
