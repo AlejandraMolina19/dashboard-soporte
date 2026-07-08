@@ -1341,7 +1341,7 @@ function showToast(msg,color){
 
 
 function renderTendenciaActual(trendData,tPts,sPts,tH,tMax){
-  return '<div class="trend-box"><svg width="100%" height="'+tH+'" viewBox="0 540 '+tH+'" preserveAspectRatio="none" style="display:block"><polyline points="'+tPts+'" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><polyline points="'+sPts+'" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>'+trendData.map(function(w,i){return '<circle cx="'+(10+i*92)+'" cy="'+(tH-(w.open/tMax*(tH-8)))+'" r="3" fill="#2563eb"/>';}).join('')+'</svg><div class="trend-labels">'+trendData.map(function(w){return '<span class="trend-lbl">'+w.label+'</span>';}).join('')+'</div><div class="trend-legend"><div class="trend-li"><div style="width:14px;height:2px;background:#2563eb;border-radius:1px"></div>Abiertos (semana actual)</div><div class="trend-li"><div style="width:14px;height:2px;background:#F59E0B;border-radius:1px"></div>SLA vencidos</div><div style="font-size:10px;color:var(--txt3);margin-left:auto">Conecta BD histórica para más semanas</div></div></div>';
+  return '<div class="trend-box"><svg width="100%" height="'+tH+'" viewBox="0 0 540 '+tH+'" preserveAspectRatio="none" style="display:block"><polyline points="'+tPts+'" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><polyline points="'+sPts+'" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,3"/>'+trendData.map(function(w,i){return '<circle cx="'+(10+i*92)+'" cy="'+(tH-(w.open/tMax*(tH-8)))+'" r="3" fill="#2563eb"/>';}).join('')+'</svg><div class="trend-labels">'+trendData.map(function(w){return '<span class="trend-lbl">'+w.label+'</span>';}).join('')+'</div><div class="trend-legend"><div class="trend-li"><div style="width:14px;height:2px;background:#2563eb;border-radius:1px"></div>Abiertos (semana actual)</div><div class="trend-li"><div style="width:14px;height:2px;background:#F59E0B;border-radius:1px"></div>SLA vencidos</div><div style="font-size:10px;color:var(--txt3);margin-left:auto">Conecta BD histórica para más semanas</div></div></div>';
 }
 
 function renderTendenciaBD(){
@@ -1862,9 +1862,9 @@ async function ensureBD(){
   const savedUrl=localStorage.getItem('bd_pub_url')||'';
   const gid=localStorage.getItem('bd_gid')||BD_GID_TICKETS;
   const urls=[
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
     savedUrl,
     BD_URL_BASE+'?gid='+gid+'&single=true&output=csv',
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
   ].filter((u,i,a)=>u&&a.indexOf(u)===i);
   for(const url of urls){
     try{
@@ -2179,6 +2179,7 @@ async function loadData(){
     const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar. Ve al Sheets de Ant_Tickets → Archivo → Publicar en la web → selecciona Ant_Tickets → CSV → Publicar → copia la URL y pégala abajo.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
     btn.disabled=false;btn.classList.remove('spin');
   },12000);
+  if(!localStorage.getItem('clientes_pub_url')){localStorage.setItem('clientes_pub_url','https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv');}
   try{
     el('ls').textContent='Conectando con Google Sheets…';
     const{rows,headers:hdrs}=await fetchCSV(API);
