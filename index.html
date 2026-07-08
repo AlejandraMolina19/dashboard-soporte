@@ -263,7 +263,9 @@ tbody tr:last-child td{border-bottom:none}
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 <script>
 
-const API='https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv';
+const API_SHEET_ID='1lJBxtNTycO7ooPyHfSYsvWr6Rz5UW0Dw21Bvbg6zaTE';
+const API_GID='1757881997';
+const API=localStorage.getItem('api_pub_url')||'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv';
 const PCOLORS={urgent:'#FF5C5C',high:'#FF9A3C',normal:'#4B9BFF',low:'#8BC4FF'};
 const PC={urgent:{t:'Urgente',c:'#FF5C5C',bg:'#FFF0F0'},high:{t:'Alto',c:'#FF9A3C',bg:'#FFF8EF'},normal:{t:'Normal',c:'#4B9BFF',bg:'#EFF6FF'},low:{t:'Bajo',c:'#8BC4FF',bg:'#F0F7FF'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
 const SC={open:{t:'Abierto',c:'#dc2626',bg:'#fef2f2'},pending:{t:'Pendiente',c:'#d97706',bg:'#fffbeb'},solved:{t:'Resuelto',c:'#16a34a',bg:'#f0fdf4'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
@@ -2127,30 +2129,31 @@ function go(tab){
 // ── UTILIDADES ───────────────────────────────────────────────────
 async function fetchCSV(url){
   const delay=ms=>new Promise(res=>setTimeout(res,ms));
-  const intentar=async(u,modo)=>{
-    const r=await fetch(u,{cache:modo||'no-store',mode:'cors'});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const txt=await r.text();
-    if(!txt||txt.trim().length<10)throw new Error('Respuesta vacía');
-    return parseCSV(txt);
-  };
-  // 3 intentos con delay progresivo
+  const sheetId=API_SHEET_ID||'';
+  const gid=API_GID||'1757881997';
+  // Variantes: pub URL guardada, pub URL directa, export URL
   const variantes=[
     url,
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0f2wmDr_QSUDaZKujOMQl3jZ4Vdo0cSz-k2_CT7usxjjXezyo1HSzPqxQRnNP-aL7VowJ5q2BmjA6/pub?gid=1757881997&single=true&output=csv',
     url+(url.includes('?')?'&':'?')+'t='+Date.now(),
-    url.replace('&single=true','').replace('?single=true&','?'),
-  ];
+  ].filter((u,i,a)=>u&&a.indexOf(u)===i);
   let lastErr;
   for(let i=0;i<variantes.length;i++){
     try{
-      if(i>0)await delay(800*i);
-      return await intentar(variantes[i]);
+      if(i>0)await delay(800);
+      const r=await fetch(variantes[i],{cache:'no-store'});
+      if(!r.ok)throw new Error('HTTP '+r.status+' en '+variantes[i].substring(0,60));
+      const txt=await r.text();
+      if(!txt||txt.trim().length<10)throw new Error('Respuesta vacía');
+      // Si funcionó con una URL diferente, guardarla para próximas veces
+      if(i>0&&variantes[i]!==url)localStorage.setItem('api_pub_url',variantes[i]);
+      return parseCSV(txt);
     }catch(e){
       lastErr=e;
-      console.warn('fetchCSV intento '+(i+1)+' falló:',e.message);
+      console.warn('fetchCSV intento '+(i+1)+'/'+variantes.length+' falló:',e.message);
     }
   }
-  throw new Error('No se pudo conectar con Google Sheets después de 3 intentos. '+(lastErr?.message||''));
+  throw new Error('No se pudo conectar al CSV. Republica el Sheets: Archivo → Publicar en la web → Ant_Tickets → CSV. ('+lastErr?.message+')');
 }
 function fmtDate(str){if(!str||str==='—')return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function fmtDateShort(str){if(!str)return'—';const d=new Date(str);if(isNaN(d))return str;const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return String(d.getDate()).padStart(2,'0')+' '+m[d.getMonth()]+' '+d.getFullYear();}
@@ -2166,7 +2169,7 @@ async function loadData(){
   // Timeout de seguridad: si tarda más de 12s mostrar error
   const _timeout=setTimeout(()=>{
     el('ldr').style.display='none';
-    const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar con Google Sheets después de 12 segundos. Verifica tu conexión y que el archivo siga publicado como CSV.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
+    const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar. Ve al Sheets de Ant_Tickets → Archivo → Publicar en la web → selecciona Ant_Tickets → CSV → Publicar → copia la URL y pégala abajo.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
     btn.disabled=false;btn.classList.remove('spin');
   },12000);
   try{
