@@ -374,10 +374,13 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
+  // Limpiar localStorage si tiene valor inválido (HTML en lugar de URL)
+  const savedCli=localStorage.getItem('clientes_pub_url')||'';
+  if(savedCli&&(savedCli.includes('<!DOCTYPE')||savedCli.includes('<html'))){{localStorage.removeItem('clientes_pub_url');}}
   const URLS=[
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv',
-    localStorage.getItem('clientes_pub_url')||'',
-  ].filter((u,i,a)=>u&&a.indexOf(u)===i);
+    (localStorage.getItem('clientes_pub_url')||''),
+  ].filter((u,i,a)=>u&&a.indexOf(u)===i&&!u.includes('<!DOCTYPE'));
   for(const url of URLS){
     try{
       const r=await fetch(url,{cache:'no-cache'});
@@ -398,23 +401,42 @@ async function loadClientesSheet(){
   return false;
 }
 
-// Parser CSV simple — para hojas que NO son de tickets
+// Parser CSV simple — busca la fila de headers que contenga palabras clave
 function parseCSVSimple(text){
-  const lines=text.split('\n').filter(l=>l.trim());
-  if(!lines.length)return[];
-  // Encontrar la fila de headers (primera fila no vacía)
+  const lines=text.split('\n');
   function clean(v){return(v||'').replace(/^"|"$/g,'').trim();}
-  const headers=csvLine(lines[0]).map(v=>clean(v));
+  const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  // Buscar fila de headers: debe contener 'empresa' o 'instancia'
+  let hi=-1;
+  for(let i=0;i<Math.min(10,lines.length);i++){
+    if(!lines[i].trim())continue;
+    const cols=csvLine(lines[i]).map(v=>norm(clean(v)));
+    const hasEmp=cols.some(v=>v==='empresa'||v.includes('empresa para'));
+    const hasInst=cols.some(v=>v.includes('instancia')||v.includes('instanc'));
+    if(hasEmp||hasInst){hi=i;break;}
+  }
+  // Si no encontró por keywords, usar primera fila no vacía
+  if(hi<0){
+    for(let i=0;i<lines.length;i++){
+      if(lines[i].trim()){hi=i;break;}
+    }
+  }
+  if(hi<0)return[];
+  const headers=csvLine(lines[hi]).map(v=>clean(v));
+  console.log('parseCSVSimple headers (L'+hi+'):',headers.slice(0,10));
   const rows=[];
-  for(let i=1;i<lines.length;i++){
+  for(let i=hi+1;i<lines.length;i++){
     if(!lines[i].trim())continue;
     const vals=csvLine(lines[i]);
-    // Saltar filas completamente vacías
     if(vals.every(v=>!clean(v)))continue;
+    // Saltar filas que parezcan de subtítulo (solo 1-2 celdas con contenido)
+    const nonEmpty=vals.filter(v=>clean(v)).length;
+    if(nonEmpty<2)continue;
     const row={};
-    headers.forEach((h,j)=>{row[h]=clean(vals[j]||'');});
+    headers.forEach((h,j)=>{if(h)row[h]=clean(vals[j]||'');});
     rows.push(row);
   }
+  console.log('parseCSVSimple: '+rows.length+' filas, primera:',JSON.stringify(rows[0]||{}).substring(0,200));
   return rows;
 }
 
