@@ -1577,8 +1577,9 @@ async function loadBDSheet(){
     const r=await fetch(url,{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status+' — El archivo debe estar publicado como CSV');
     const txt=await r.text();
-    if(!txt||txt.length<50)throw new Error('Respuesta vacía');
+    if(!txt||txt.length<50)throw new Error('Respuesta vacía — revisa que el GID '+gid+' corresponda a una pestaña publicada con datos');
     const{rows,headers}=parseCSV(txt);
+    if(!rows.length)throw new Error('El GID '+gid+' respondió pero sin filas de datos. Encabezados detectados: '+(headers.slice(0,6).join(', ')||'ninguno')+'. Verifica que sea el GID de la pestaña "Tickets BD" (ábrela en Sheets y copia el número después de #gid= en la URL).');
     BD_DATA=rows;
     BD_HEADERS=headers;
     BD_ANALISIS=analizarBD(rows,headers);
