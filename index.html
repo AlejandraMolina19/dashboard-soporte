@@ -374,31 +374,48 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
-  // URL hardcodeada directamente — no depende de localStorage
   const URLS=[
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv',
     localStorage.getItem('clientes_pub_url')||'',
   ].filter((u,i,a)=>u&&a.indexOf(u)===i);
   for(const url of URLS){
     try{
-      console.log('Intentando clientes URL:',url.substring(0,80));
       const r=await fetch(url,{cache:'no-cache'});
-      console.log('Response status:',r.status,r.ok);
       if(!r.ok)continue;
       const txt=await r.text();
-      console.log('Texto recibido:',txt.length,'chars, preview:',txt.substring(0,100));
       if(!txt||txt.trim().length<20)continue;
-      const{rows,headers}=parseCSV(txt);
-      console.log('Filas parseadas:',rows.length);
+      // Usar parser simple (sin validación de ID numérico)
+      const rows=parseCSVSimple(txt);
+      console.log('Clientes filas:',rows.length,'preview:',JSON.stringify(rows[0]||{}).substring(0,150));
       if(!rows.length)continue;
       CLIENTES_DATA=rows;
       return true;
     }catch(e){
-      console.error('loadClientesSheet error con URL',url.substring(0,60),e.message);
+      console.error('loadClientesSheet error:',e.message);
       continue;
     }
   }
   return false;
+}
+
+// Parser CSV simple — para hojas que NO son de tickets
+function parseCSVSimple(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(!lines.length)return[];
+  // Encontrar la fila de headers (primera fila no vacía)
+  function clean(v){return(v||'').replace(/^"|"$/g,'').trim();}
+  const headers=csvLine(lines[0]).map(v=>clean(v));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const vals=csvLine(lines[i]);
+    // Saltar filas completamente vacías
+    if(vals.every(v=>!clean(v)))continue;
+    const row={};
+    headers.forEach((h,j)=>{row[h]=clean(vals[j]||'');});
+    rows.push(row);
+  }
+  return rows;
 }
 
 function renderClientesMostrarConfig(){
@@ -539,11 +556,16 @@ function renderClientesConDatos(){
 
   // Columnas del Sheets EMPRESAS:
   // [0]=num [1]=Servidor [2]=INSTANCIAS(URL) [3]=EMPRESA [4]=Encargado General [5]=Correo [6]=Teléfono
-  const cInst=findH(['instancia','instance','url','https'])||hdrs[2]||'';
-  const cEmp=findH(['empresa','company','nombre'])||hdrs[3]||'';
-  const cEnc=findH(['encargado','responsable','contacto','general'])||hdrs[4]||'';
-  const cCor=findH(['correo','email','mail'])||hdrs[5]||'';
-  const cTel=findH(['telefono','tel','phone','celular'])||hdrs[6]||'';
+  // Columnas del sheet EMPRESAS:
+  // buscar por nombre primero, luego por posición como fallback
+  // Headers observados: ,Servidor,Notif Correo,Persona Notif,INSTANCIA TEMPORAL,INSTANCIAS,EMPRESA PARA PUBLICACIÓN,EMPRESA,Encargado General,...
+  const cInst=findH(['instancias','instancia temporal','instance','url','https'])||hdrs[5]||hdrs[2]||'';
+  const cEmp=findH(['empresa para publicacion','empresa','company'])||hdrs[7]||hdrs[3]||'';
+  const cEnc=findH(['encargado','responsable','contacto','general'])||hdrs[8]||hdrs[4]||'';
+  const cCor=findH(['notif correo','correo','email','mail'])||hdrs[2]||hdrs[5]||'';
+  const cTel=findH(['telefono','tel','phone','celular'])||hdrs[9]||hdrs[6]||'';
+  console.log('Cols detectadas — emp:',cEmp,'enc:',cEnc,'cor:',cCor,'inst:',cInst,'tel:',cTel);
+  console.log('Headers disponibles:',hdrs.slice(0,12));
 
   function getNotas(emp){
     try{return JSON.parse(localStorage.getItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))))||'[]');}catch{return[];}
