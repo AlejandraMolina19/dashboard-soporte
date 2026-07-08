@@ -374,22 +374,29 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
-  const savedUrl=localStorage.getItem('clientes_pub_url')||'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv';
-  const candidatos=[
-    savedUrl,
+  // URL hardcodeada directamente — no depende de localStorage
+  const URLS=[
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv',
+    localStorage.getItem('clientes_pub_url')||'',
   ].filter((u,i,a)=>u&&a.indexOf(u)===i);
-  for(const url of candidatos){
+  for(const url of URLS){
     try{
-      const r=await fetch(url,{cache:'no-store'});
+      console.log('Intentando clientes URL:',url.substring(0,80));
+      const r=await fetch(url,{cache:'no-cache'});
+      console.log('Response status:',r.status,r.ok);
       if(!r.ok)continue;
       const txt=await r.text();
+      console.log('Texto recibido:',txt.length,'chars, preview:',txt.substring(0,100));
       if(!txt||txt.trim().length<20)continue;
       const{rows,headers}=parseCSV(txt);
+      console.log('Filas parseadas:',rows.length);
       if(!rows.length)continue;
       CLIENTES_DATA=rows;
       return true;
-    }catch(e){continue;}
+    }catch(e){
+      console.error('loadClientesSheet error con URL',url.substring(0,60),e.message);
+      continue;
+    }
   }
   return false;
 }
