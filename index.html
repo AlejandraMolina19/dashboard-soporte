@@ -374,18 +374,11 @@ const CLIENTES_GID = localStorage.getItem('clientes_gid') || '';
 let CLIENTES_DATA = []; // Se carga una vez con loadClientesSheet()
 
 async function loadClientesSheet(){
-  // Sheet de clientes: 1rXU21wvhL2R49FClG6zB9GlUEzmj0OSqGl5IgXqTM5Y pestaña EMPRESAS gid=1715906212
-  const savedUrl=localStorage.getItem('clientes_pub_url')||'';
-  const gid=localStorage.getItem('clientes_gid')||'1715906212';
-  const sheetId='1rXU21wvhL2R49FClG6zB9GlUEzmj0OSqGl5IgXqTM5Y';
-
+  const savedUrl=localStorage.getItem('clientes_pub_url')||'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv';
   const candidatos=[
     savedUrl,
-    // URL de publicación directa (funciona si el archivo está publicado)
-    `https://docs.google.com/spreadsheets/d/${sheetId}/pub?gid=${gid}&single=true&output=csv`,
-    `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`,
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv',
   ].filter((u,i,a)=>u&&a.indexOf(u)===i);
-
   for(const url of candidatos){
     try{
       const r=await fetch(url,{cache:'no-store'});
@@ -395,7 +388,6 @@ async function loadClientesSheet(){
       const{rows,headers}=parseCSV(txt);
       if(!rows.length)continue;
       CLIENTES_DATA=rows;
-      localStorage.setItem('clientes_gid',gid);
       return true;
     }catch(e){continue;}
   }
@@ -404,30 +396,29 @@ async function loadClientesSheet(){
 
 function renderClientesMostrarConfig(){
   const v=el('v-clientes');if(!v)return;
-  v.innerHTML=`<div class="card">
-    <div class="card-head"><div class="card-title">🏢 Clientes — Configurar fuente de datos</div></div>
-    <div style="padding:20px;max-width:560px">
-      <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px">Conectar hoja de Clientes</div>
-      <div style="font-size:11px;color:var(--txt3);margin-bottom:14px;line-height:1.7">
-        El archivo ya está publicado. Solo necesita el GID de la pestaña <b>CLIENTES</b>.<br>
-        El archivo ya tiene GID configurado (1715906212). Solo falta publicarlo como CSV:<br>
-        <b>Archivo → Compartir → Publicar en la web</b> → selecciona pestaña <b>CLIENTES</b> → formato <b>CSV</b> → <b>Publicar</b> → copia la URL y pégala abajo.
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input id="gid-input" type="text" placeholder="GID configurado: 1715906212" value="1715906212" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:12px;outline:none">
-        <button onclick="saveClientesGid()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">Conectar</button>
-      </div>
-      <div style="border-top:1px solid var(--bdr);padding-top:12px">
-        <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">O pega la URL CSV publicada directamente:</div>
-        <div style="display:flex;gap:8px">
-          <input id="cli-url-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-..." style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;font-size:11px;font-family:var(--font);outline:none">
-          <button onclick="saveClientesUrl()" style="padding:7px 14px;background:none;border:1px solid var(--acc);color:var(--acc);border-radius:var(--r);cursor:pointer;font-size:11px;font-weight:600;font-family:var(--font)">Usar URL</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  ${renderClientesFromTickets()}`;
+  const fromTkts=renderClientesFromTickets();
+  v.innerHTML='<div class="card">'
+    +'<div class="card-head"><div class="card-title">🏢 Clientes — Configurar fuente de datos</div></div>'
+    +'<div style="padding:20px;max-width:560px">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px">Conectar hoja de Clientes</div>'
+    +'<div style="font-size:11px;color:var(--txt3);margin-bottom:14px;line-height:1.7">'
+    +'El archivo ya tiene GID configurado (1715906212). Solo falta publicarlo como CSV:<br>'
+    +'<b>Archivo → Compartir → Publicar en la web</b> → selecciona pestaña <b>EMPRESAS</b> → formato <b>CSV</b> → <b>Publicar</b> → copia la URL y pégala abajo.'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:14px">'
+    +'<input id="gid-input" type="text" placeholder="GID de pestaña CLIENTES" value="1715906212" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:12px;outline:none">'
+    +'<button onclick="saveClientesGid()" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">Conectar</button>'
+    +'</div>'
+    +'<div style="border-top:1px solid var(--bdr);padding-top:12px">'
+    +'<div style="font-size:11px;color:var(--txt3);margin-bottom:8px">O pega la URL CSV publicada directamente:</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<input id="cli-url-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-..." style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;font-size:11px;font-family:var(--font);outline:none">'
+    +'<button onclick="saveClientesUrl()" style="padding:7px 14px;background:none;border:1px solid var(--acc);color:var(--acc);border-radius:var(--r);cursor:pointer;font-size:11px;font-weight:600;font-family:var(--font)">Usar URL</button>'
+    +'</div></div></div></div>'
+    +fromTkts;
 }
+
+
 
 function renderClientes(){
   const v=el('v-clientes');if(!v)return;
@@ -478,7 +469,7 @@ function renderClientes(){
         </div>
       </div>
     </div>
-    ${renderClientesFromTickets()}`;
+`+renderClientesFromTickets();
     return;
   }
 
