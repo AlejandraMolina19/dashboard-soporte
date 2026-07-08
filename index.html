@@ -2035,6 +2035,7 @@ async function ensureBD(){
   const savedUrl=localStorage.getItem('bd_pub_url')||'';
   const gid=localStorage.getItem('bd_gid')||BD_GID_TICKETS;
   const urls=[
+    'https://docs.google.com/spreadsheets/d/'+BD_SHEET_ID+'/pub?gid='+gid+'&single=true&output=csv',
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0iBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
     savedUrl,
     BD_URL_BASE+'?gid='+gid+'&single=true&output=csv',
@@ -2407,17 +2408,23 @@ function renderAnalisisRango(){
 
 function conectarBDReportes(){
   if(BD_DATA.length){
-    if(!confirm('BD ya conectada ('+BD_DATA.length+' tickets históricos).\n¿Quieres reconectar con otra URL?'))return;
+    if(!confirm('BD ya conectada ('+BD_DATA.length+' tickets históricos).\n¿Quieres reconectar?'))return;
     BD_DATA=[];BD_ANALISIS=null;BD_HEADERS=[];REP_INI=null;REP_FIN=null;
   }
-  const url=prompt('Pega la URL CSV de tu Sheets publicado.\n\nCómo obtenerla:\n1. Sheets → Archivo → Compartir → Publicar en la web\n2. Selecciona pestaña "Tickets BD" + formato CSV\n3. Clic en Publicar → copia la URL\n\nDebe empezar con: https://docs.google.com/spreadsheets/d/e/2PACX...');
-  if(!url||!url.includes('google'))return;
-  localStorage.setItem('bd_pub_url',url.trim());
+  const gid=prompt('Para conectar la BD histórica:\n\n1. Abre tu Google Sheets de tickets\n2. En la pestaña "Tickets BD" → Archivo → Compartir → Publicar en la web\n3. Elige "Tickets BD" y formato CSV → Publicar\n4. Ve a la URL del Sheets → anota el GID de la pestaña (en la URL: ...#gid=XXXXXX)\n\nIngresa el GID de la pestaña Tickets BD:','1776545593');
+  if(!gid)return;
+  localStorage.setItem('bd_gid',gid.trim());
   const btnEl=document.querySelector('[onclick="conectarBDReportes()"]');
   if(btnEl)btnEl.textContent='⏳ Conectando…';
-  ensureBD().then(function(ok){
-    if(ok){showToast('✓ BD conectada: '+BD_DATA.length+' tickets','#16a34a');renderReportes();}
-    else{showToast('✗ No se pudo conectar. Verifica la URL.','#dc2626');}
+  loadBDSheet().then(function(res){
+    if(res.ok){
+      showToast('✓ BD conectada: '+res.count+' tickets','#16a34a');
+      renderReportes();
+    } else {
+      showToast('✗ Error: '+res.error,'#dc2626');
+      alert('No se pudo conectar.\n\nError: '+res.error+'\n\nAsegúrate de haber publicado el Sheets como CSV:\nArchivo → Compartir → Publicar en la web → Elegir pestaña → CSV → Publicar');
+      renderReportes();
+    }
   });
 }
 
