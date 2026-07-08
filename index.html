@@ -1568,7 +1568,7 @@ function buildAgBarChart(tickets,allTotals){
 
 // ── BD histórica desde Google Sheets ─────────────────────────────
 const BD_SHEET_ID='177zwx6fRMoXgSr4rA020RcL8qyykcAeQTXx3nEeuvv4';
-let BD_DATA=[];let BD_ANALISIS=null;
+let BD_DATA=[];let BD_ANALISIS=null;let BD_HEADERS=[];
 
 async function loadBDSheet(){
   const gid=localStorage.getItem('bd_gid')||'1776545593';
@@ -1580,9 +1580,125 @@ async function loadBDSheet(){
     if(!txt||txt.length<50)throw new Error('Respuesta vacía');
     const{rows,headers}=parseCSV(txt);
     BD_DATA=rows;
+    BD_HEADERS=headers;
     BD_ANALISIS=analizarBD(rows,headers);
+    REP_INI=null;REP_FIN=null;
     return{ok:true,count:rows.length};
   }catch(e){return{ok:false,error:e.message};}
+}
+
+// ── Utilidades de columnas por posición (A=0,B=1,...) — independientes del texto del encabezado ──
+function colIdxFromLetter(letter){
+  let n=0;
+  for(let i=0;i<letter.length;i++)n=n*26+(letter.toUpperCase().charCodeAt(i)-64);
+  return n-1;
+}
+function colKey(letter){return BD_HEADERS[colIdxFromLetter(letter)]||'';}
+function cv(row,letter){const k=colKey(letter);return k?(row[k]||''):'';}
+
+// ── ID_semana: formato tipo A2026_M5_S18 (año/mes/semana) ──
+function parseSemanaId(id){
+  const m=/A(\d+)_M(\d+)_S(\d+)/i.exec(id||'');
+  if(!m)return null;
+  const y=+m[1],mo=+m[2],w=+m[3];
+  return{id,year:y,month:mo,week:w,key:y*100000+mo*1000+w};
+}
+function getSemanasUnicas(){
+  if(!BD_DATA.length)return[];
+  const set=new Set();
+  BD_DATA.forEach(r=>{const v=cv(r,'H');if(v)set.add(v);});
+  return[...set].map(parseSemanaId).filter(Boolean).sort((a,b)=>a.key-b.key);
+}
+let REP_INI=null,REP_FIN=null;
+
+function ticketsPorSemanaIds(idsSet){
+  const kH=colKey('H');
+  if(!kH)return[];
+  return BD_DATA.filter(r=>idsSet.has(r[kH]));
+}
+
+function esResuelto(row){
+  const est=cv(row,'J').toLowerCase();
+  if(['solved','resuelto','closed','cerrado'].includes(est))return true;
+  return!!cv(row,'M').trim();
+}
+function esDesarrollo(row){
+  const v=cv(row,'S').trim().toLowerCase();
+  return v==='si'||v==='sí'||v==='yes'||v==='true'||v==='1';
+}
+function tuvoLlamada(row){
+  return!!cv(row,'AL').trim();
+}
+function diffDias(f1,f2){
+  const d1=new Date(f1),d2=new Date(f2);
+  if(isNaN(d1)||isNaN(d2))return null;
+  return(d2-d1)/86400000;
+}
+
+function calcularRango(rows){
+  const total=rows.length;
+  const resueltas=rows.filter(esResuelto);
+  const abiertas=rows.filter(r=>!esResuelto(r));
+  const resTimes=resueltas.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0);
+  const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
+  const desarrollo=rows.filter(esDesarrollo).length;
+
+  // Antigüedad de las que siguen abiertas
+  const hoy=new Date();
+  const buckets={'0-3 días':0,'4-7 días':0,'8-15 días':0,'15+ días':0};
+  abiertas.forEach(r=>{
+    const d=diffDias(cv(r,'L'),hoy);
+    if(d==null)return;
+    if(d<=3)buckets['0-3 días']++;
+    else if(d<=7)buckets['4-7 días']++;
+    else if(d<=15)buckets['8-15 días']++;
+    else buckets['15+ días']++;
+  });
+
+  // Empresas
+  const empMap={};
+  rows.forEach(r=>{const o=cv(r,'K').trim()||'Sin clasificar';if(!empMap[o])empMap[o]={total:0,categorias:{},llamadas:0};empMap[o].total++;const cat=cv(r,'T').trim()||'Sin categoría';empMap[o].categorias[cat]=(empMap[o].categorias[cat]||0)+1;if(tuvoLlamada(r))empMap[o].llamadas++;});
+  const empresas=Object.entries(empMap).map(([org,d])=>{
+    const topCat=Object.entries(d.categorias).sort((a,b)=>b[1]-a[1])[0];
+    return{org,total:d.total,llamadas:d.llamadas,topCategoria:topCat?topCat[0]:'—'};
+  }).sort((a,b)=>b.total-a.total);
+  const reincidentes=empresas.filter(e=>e.total>=3);
+
+  // Categoría / Módulo / Función
+  function topDe(letter,n){
+    const m={};
+    rows.forEach(r=>{const v=cv(r,letter).trim();if(v)m[v]=(m[v]||0)+1;});
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n||5);
+  }
+  const topCategorias=topDe('T',5);
+  const topModulos=topDe('U',5);
+  const topFunciones=topDe('V',5);
+
+  // Responsables
+  function porResponsable(letter){
+    const m={};
+    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,categorias:{}};m[a].total++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
+    return Object.entries(m).map(([a,d])=>{const topCat=Object.entries(d.categorias).sort((x,y)=>y[1]-x[1])[0];return{nombre:a,total:d.total,topCategoria:topCat?topCat[0]:'—'};}).sort((a,b)=>b.total-a.total);
+  }
+  const porSoporte=porResponsable('O');
+  const porDesarrollo=porResponsable('P');
+
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topFunciones,porSoporte,porDesarrollo};
+}
+
+function resumenInteligente(stats,rangoLabel){
+  if(!stats.total)return`No hay tickets registrados en el rango ${rangoLabel}.`;
+  const frases=[];
+  stats.empresas.slice(0,4).forEach(e=>{
+    let f=`<strong>${e.org}</strong> reportó ${e.total} ticket${e.total===1?'':'s'}`;
+    if(e.topCategoria&&e.topCategoria!=='Sin categoría')f+=`, principalmente sobre ${e.topCategoria.toLowerCase()}`;
+    if(e.llamadas>0)f+=`, con ${e.llamadas} llamada${e.llamadas===1?'':'s'} registrada${e.llamadas===1?'':'s'}`;
+    if(e.total>=3)f+=' — cliente reincidente';
+    frases.push(f+'.');
+  });
+  if(stats.tiempoProm!=null)frases.push(`El tiempo promedio de resolución en el rango fue de ${stats.tiempoProm.toFixed(1)} días.`);
+  if(stats.topCategorias.length)frases.push(`La categoría con más incidencia fue <strong>${stats.topCategorias[0][0]}</strong> (${stats.topCategorias[0][1]} tickets).`);
+  return frases.join(' ');
 }
 
 function analizarBD(rows,hdrs){
@@ -1931,7 +2047,7 @@ async function ensureBD(){
       if(!txt||txt.length<50)continue;
       const{rows,headers}=parseCSV(txt);
       if(!rows.length)continue;
-      BD_DATA=rows;BD_ANALISIS=analizarBD(rows,headers);BD_LOADED=true;
+      BD_DATA=rows;BD_HEADERS=headers;BD_ANALISIS=analizarBD(rows,headers);BD_LOADED=true;REP_INI=null;REP_FIN=null;
       return true;
     }catch(e){continue;}
   }
@@ -2134,37 +2250,165 @@ function renderReportes(){
       </div>
     </div>
 
-    <!-- BD histórica: análisis extra si está conectada -->
-    ${BD_ANALISIS?`
-    <div class="card" style="border:1.5px solid #bbf7d0">
-      <div class="card-head" style="background:#f0fdf4">
-        <div class="card-title" style="color:#15803d">🗄 Análisis BD histórica — ${BD_DATA.length} tickets</div>
-        <span style="font-size:10px;color:#15803d">${BD_ANALISIS.semanas.length} semanas de datos</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px">
-        <div style="background:#f0fdf4;border-radius:var(--rl);padding:12px;text-align:center">
-          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#15803d">${BD_DATA.length}</div>
-          <div style="font-size:11px;color:#15803d;margin-top:2px">Total tickets históricos</div>
-        </div>
-        <div style="background:#eff4ff;border-radius:var(--rl);padding:12px;text-align:center">
-          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#2563eb">${BD_ANALISIS.reincidentes.length}</div>
-          <div style="font-size:11px;color:#2563eb;margin-top:2px">Empresas reincidentes (≥3)</div>
-        </div>
-        <div style="background:#faf5ff;border-radius:var(--rl);padding:12px;text-align:center">
-          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#7c3aed">${BD_ANALISIS.extraCols.length}</div>
-          <div style="font-size:11px;color:#7c3aed;margin-top:2px">Columnas extra disponibles</div>
-        </div>
-      </div>
-      ${BD_ANALISIS.extraCols.length?`<div style="padding:8px 14px;font-size:10px;color:var(--txt3);border-top:1px solid var(--bdr)">Columnas I-AL disponibles: ${BD_ANALISIS.extraCols.slice(0,10).join(', ')}${BD_ANALISIS.extraCols.length>10?'…':''}</div>`:''}
-    </div>`:''}
+    <!-- Comparativo por semana (ID_semana) + análisis histórico enriquecido -->
+    ${BD_DATA.length?renderAnalisisRango():''}
 
     <div id="reportes-detail"></div>`;
+
+  if(BD_DATA.length){
+    const si=el('rep-sem-ini'),sf=el('rep-sem-fin');
+    if(si&&REP_INI)si.value=REP_INI;
+    if(sf&&REP_FIN)sf.value=REP_FIN;
+  }
+}
+
+function cambiarRangoReportes(){
+  const ini=el('rep-sem-ini'),fin=el('rep-sem-fin');
+  if(ini)REP_INI=ini.value;
+  if(fin)REP_FIN=fin.value;
+  renderReportes();
+}
+
+function renderAnalisisRango(){
+  const semanas=getSemanasUnicas();
+  if(!semanas.length){
+    return`<div class="card"><div class="card-head"><div class="card-title">📅 Comparativo por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna ID_semana (col. H) en la BD conectada.</div></div>`;
+  }
+  if(!REP_INI||!semanas.some(s=>s.id===REP_INI))REP_INI=semanas[0].id;
+  if(!REP_FIN||!semanas.some(s=>s.id===REP_FIN))REP_FIN=semanas[semanas.length-1].id;
+  let iniIdx=semanas.findIndex(s=>s.id===REP_INI);
+  let finIdx=semanas.findIndex(s=>s.id===REP_FIN);
+  if(iniIdx>finIdx){const tmp=iniIdx;iniIdx=finIdx;finIdx=tmp;const tmp2=REP_INI;REP_INI=REP_FIN;REP_FIN=tmp2;}
+
+  const rangoActualIds=new Set(semanas.slice(iniIdx,finIdx+1).map(s=>s.id));
+  const numSemanas=rangoActualIds.size;
+  const prevEnd=iniIdx-1;
+  const prevStart=Math.max(0,prevEnd-numSemanas+1);
+  const rangoPrevIds=prevEnd>=0?new Set(semanas.slice(prevStart,prevEnd+1).map(s=>s.id)):new Set();
+
+  const ticketsActual=ticketsPorSemanaIds(rangoActualIds);
+  const ticketsPrev=rangoPrevIds.size?ticketsPorSemanaIds(rangoPrevIds):[];
+  const stA=calcularRango(ticketsActual);
+  const stP=rangoPrevIds.size?calcularRango(ticketsPrev):null;
+
+  function delta2(a,b){
+    if(b==null||!b)return'';
+    const dif=a-b;const pct=Math.round(dif/b*100);
+    const col=dif>=0?'#dc2626':'#16a34a';const sym=dif>=0?'▲':'▼';
+    return`<span style="font-size:10px;color:${col};margin-left:4px">${sym}${Math.abs(pct)}%</span>`;
+  }
+
+  const opciones=semanas.map(s=>`<option value="${s.id}">${s.id}</option>`).join('');
+
+  const maxBucket=Math.max(...Object.values(stA.buckets),1);
+  const bucketRows=Object.entries(stA.buckets).map(([k,v])=>{
+    const pct=Math.round(v/maxBucket*100);
+    const col=k==='15+ días'?'#dc2626':k==='8-15 días'?'#d97706':k==='4-7 días'?'#eab308':'#16a34a';
+    return`<div class="ag-bar-row" style="margin-bottom:6px"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${col}">${v}</span></div>`;
+  }).join('');
+
+  function topList(arr,color){
+    if(!arr.length)return`<div style="font-size:11px;color:var(--txt3);padding:6px 0">Sin datos</div>`;
+    const max=arr[0][1];
+    return arr.map(([k,v])=>{
+      const pct=Math.round(v/max*100);
+      return`<div class="ag-bar-row" style="margin-bottom:6px"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${color}">${v}</span></div>`;
+    }).join('');
+  }
+
+  const empresasRows=stA.empresas.slice(0,10).map(e=>{
+    const col=e.total>=3?'#dc2626':'#2563eb';
+    return`<tr>
+      <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-weight:600">${e.org}${e.total>=3?' <span style="font-size:9px;background:#fef2f2;color:#dc2626;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px">REINCIDENTE</span>':''}</td>
+      <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${col}">${e.total}</td>
+      <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${e.topCategoria}</td>
+      <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);text-align:center">${e.llamadas||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const rangoLabel=`${REP_INI} → ${REP_FIN}`;
+
+  return`
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📅 Comparativo por semana</div>
+        <span style="font-size:10px;color:var(--txt3)">${numSemanas} semana${numSemanas===1?'':'s'} seleccionada${numSemanas===1?'':'s'}${rangoPrevIds.size?' · vs. '+rangoPrevIds.size+' semana(s) anterior(es)':' · sin rango anterior para comparar'}</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 16px;flex-wrap:wrap">
+        <label style="font-size:11px;color:var(--txt3);font-weight:600">Semana inicio</label>
+        <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--bdr);font-family:var(--font)">${opciones}</select>
+        <label style="font-size:11px;color:var(--txt3);font-weight:600">Semana fin</label>
+        <select id="rep-sem-fin" onchange="cambiarRangoReportes()" style="font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--bdr);font-family:var(--font)">${opciones}</select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="mini-kpi" style="border-top:3px solid #2563eb">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Total tickets</div>
+        <div class="mini-kpi-val" style="color:#2563eb">${stA.total}${stP?delta2(stA.total,stP.total):''}</div>
+        <div class="mini-kpi-lbl">en el rango</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #16a34a">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Resueltos</div>
+        <div class="mini-kpi-val" style="color:#16a34a">${stA.resueltas}${stP?delta2(stA.resueltas,stP.resueltas):''}</div>
+        <div class="mini-kpi-lbl">${stA.abiertas} abiertos</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #d97706">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Tiempo prom. resolución</div>
+        <div class="mini-kpi-val" style="color:#d97706">${stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—'}</div>
+        <div class="mini-kpi-lbl">${stP&&stP.tiempoProm!=null?'vs. '+stP.tiempoProm.toFixed(1)+'d anterior':'días promedio'}</div>
+      </div>
+      <div class="mini-kpi" style="border-top:3px solid #7c3aed">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Desarrollo</div>
+        <div class="mini-kpi-val" style="color:#7c3aed">${stA.pctDesarrollo}%</div>
+        <div class="mini-kpi-lbl">${stA.desarrollo} de ${stA.total} tickets</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">⏳ Antigüedad (abiertos)</div></div>
+        <div style="padding:10px 14px">${bucketRows||'<div style="font-size:11px;color:var(--txt3)">Sin tickets abiertos en el rango</div>'}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">🏢 Empresas en el rango</div><span style="font-size:10px;color:var(--txt3)">${stA.empresas.length} empresas · ${stA.reincidentes.length} reincidentes</span></div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--sur2)">${['Empresa','Tickets','Categoría principal','Llamadas'].map(h=>`<th style="padding:6px 14px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
+            <tbody>${empresasRows||'<tr><td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--txt3)">Sin datos en el rango</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">🏷 Top categoría</div></div>
+        <div style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">🧩 Top módulo</div></div>
+        <div style="padding:10px 14px">${topList(stA.topModulos,'#16a34a')}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">⚙️ Top función</div></div>
+        <div style="padding:10px 14px">${topList(stA.topFunciones,'#d97706')}</div>
+      </div>
+    </div>
+
+    <div class="card" style="border:1.5px solid #dbeafe">
+      <div class="card-head" style="background:#eff4ff">
+        <div class="card-title" style="color:#2563eb">🧠 Resumen inteligente</div>
+        <span style="font-size:10px;color:#2563eb">${rangoLabel}</span>
+      </div>
+      <div style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--txt2)">${resumenInteligente(stA,rangoLabel)}</div>
+    </div>`;
 }
 
 function conectarBDReportes(){
   if(BD_DATA.length){
     if(!confirm('BD ya conectada ('+BD_DATA.length+' tickets históricos).\n¿Quieres reconectar con otra URL?'))return;
-    BD_DATA=[];BD_ANALISIS=null;
+    BD_DATA=[];BD_ANALISIS=null;BD_HEADERS=[];REP_INI=null;REP_FIN=null;
   }
   const url=prompt('Pega la URL CSV de tu Sheets publicado.\n\nCómo obtenerla:\n1. Sheets → Archivo → Compartir → Publicar en la web\n2. Selecciona pestaña "Tickets BD" + formato CSV\n3. Clic en Publicar → copia la URL\n\nDebe empezar con: https://docs.google.com/spreadsheets/d/e/2PACX...');
   if(!url||!url.includes('google'))return;
