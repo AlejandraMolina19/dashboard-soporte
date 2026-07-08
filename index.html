@@ -439,12 +439,14 @@ function renderClientes(){
       else{
         // Si falla, mostrar directamente desde tickets de Zendesk
         v.innerHTML=renderClientesFromTickets()+
-          '<div class="card" style="border:1.5px dashed var(--bdr);margin-top:0">'+
-          '<div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">'+
-          '<div><div style="font-size:12px;font-weight:600;color:var(--txt2)">📋 Conectar hoja de Clientes para ver datos completos</div>'+
-          '<div style="font-size:11px;color:var(--txt3);margin-top:3px">Archivo EMPRESAS → Archivo → Compartir → Publicar en la web → pestaña EMPRESAS → CSV → Publicar → pega la URL</div></div>'+
-          '<button onclick="renderClientesMostrarConfig()" style="font-size:11px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--bdr);background:none;cursor:pointer;color:var(--acc);font-family:var(--font);white-space:nowrap;flex-shrink:0;margin-left:12px">⚙ Configurar</button>'+
-          '</div></div>';
+          '<div class="card" style="border:1.5px solid #bfdbfe;background:#eff4ff;margin-top:0">'+
+          '<div style="padding:14px 16px">'+
+          '<div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:6px">📋 Conectar hoja de Clientes (EMPRESAS) para ver datos completos</div>'+
+          '<div style="font-size:11px;color:#3b82f6;margin-bottom:10px">Archivo EMPRESAS → Archivo → Compartir → Publicar en la web → pestaña EMPRESAS → CSV → Publicar → copia la URL</div>'+
+          '<div style="display:flex;gap:8px">'+
+          '<input id="cli-url-inline" type="text" placeholder="Pega aquí la URL CSV publicada..." style="flex:1;border:1px solid #bfdbfe;border-radius:var(--r);padding:7px 12px;font-size:12px;font-family:var(--font);outline:none">'+
+          '<button onclick="conectarCliInline()" style="padding:7px 16px;background:#2563eb;color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);white-space:nowrap">Conectar</button>'+
+          '</div></div></div>';
       }
     });
     return;
@@ -490,6 +492,17 @@ function renderClientes(){
     return;
   }
   renderClientesConDatos();
+}
+
+function conectarCliInline(){
+  const inp=document.getElementById('cli-url-inline');
+  if(!inp||!inp.value.trim()){showToast('Pega una URL válida','#dc2626');return;}
+  const u=inp.value.trim();
+  if(!u.includes('google')){showToast('URL inválida','#dc2626');return;}
+  localStorage.setItem('clientes_pub_url',u);
+  CLIENTES_DATA=[];
+  showToast('Conectando...','#2563eb');
+  renderClientes();
 }
 
 function saveClientesUrl(){
@@ -1853,7 +1866,7 @@ function getDiagnosis(tickets){
 
 
 // ── RENDER REPORTES ───────────────────────────────────────────────
-const BD_URL_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub';
+const BD_URL_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0iBGGEkjKvVCihcoJpCjm/pub';
 const BD_GID_TICKETS='1776545593';
 let BD_LOADED=false;
 
@@ -1862,7 +1875,7 @@ async function ensureBD(){
   const savedUrl=localStorage.getItem('bd_pub_url')||'';
   const gid=localStorage.getItem('bd_gid')||BD_GID_TICKETS;
   const urls=[
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0IBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K0SCkugsC2zJJzv_JK4HHCwB4fvuDjjQLuO5sFBc6-YqGa0iBGGEkjKvVCihcoJpCjm/pub?gid=1776545593&single=true&output=csv',
     savedUrl,
     BD_URL_BASE+'?gid='+gid+'&single=true&output=csv',
   ].filter((u,i,a)=>u&&a.indexOf(u)===i);
