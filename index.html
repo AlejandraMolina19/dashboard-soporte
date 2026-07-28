@@ -568,26 +568,34 @@ function saveClientesGid(){
   });
 }
 
+function formatEncargado(raw){
+  if(!raw||!String(raw).trim())return'—';
+  let s=String(raw).trim();
+  s=s.replace(/^[\-\*•\u2022]+\s*/,'');
+  s=s.replace(/[_]+/g,' ');
+  s=s.replace(/\s{2,}/g,' ');
+  const small=new Set(['de','del','la','las','el','los','y','en','a','con']);
+  return s.split(' ').map((w,i)=>{
+    if(!w)return w;
+    const lw=w.toLowerCase();
+    if(i>0&&small.has(lw))return lw;
+    return lw.replace(/^([^a-zà-ÿ]*)([a-zà-ÿ])/,(m,pre,ch)=>pre+ch.toUpperCase());
+  }).join(' ');
+}
+
 function renderClientesConDatos(){
   const v=el('v-clientes');if(!v)return;
   const rows=CLIENTES_DATA;
   const hdrs=Object.keys(rows[0]||{});
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const findH=pats=>hdrs.find(h=>pats.some(p=>norm(h).includes(p)))||'';
-  const findHIdx=pats=>{const h=findH(pats);return h?hdrs.indexOf(h):-1;};
 
-  // Columnas del Sheets EMPRESAS:
-  // [0]=num [1]=Servidor [2]=INSTANCIAS(URL) [3]=EMPRESA [4]=Encargado General [5]=Correo [6]=Teléfono
-  // Columnas del sheet EMPRESAS:
-  // buscar por nombre primero, luego por posición como fallback
-  // Headers observados: ,Servidor,Notif Correo,Persona Notif,INSTANCIA TEMPORAL,INSTANCIAS,EMPRESA PARA PUBLICACIÓN,EMPRESA,Encargado General,...
+  // Columnas del sheet EMPRESAS: buscar por nombre primero, luego por posición como fallback
   const cInst=findH(['instancias','instancia temporal','instance','url','https'])||hdrs[5]||hdrs[2]||'';
   const cEmp=findH(['empresa para publicacion','empresa','company'])||hdrs[7]||hdrs[3]||'';
   const cEnc=findH(['encargado','responsable','contacto','general'])||hdrs[8]||hdrs[4]||'';
   const cCor=findH(['notif correo','correo','email','mail'])||hdrs[2]||hdrs[5]||'';
   const cTel=findH(['telefono','tel','phone','celular'])||hdrs[9]||hdrs[6]||'';
-  console.log('Cols detectadas — emp:',cEmp,'enc:',cEnc,'cor:',cCor,'inst:',cInst,'tel:',cTel);
-  console.log('Headers disponibles:',hdrs.slice(0,12));
 
   function getNotas(emp){
     try{return JSON.parse(localStorage.getItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))))||'[]');}catch{return[];}
@@ -606,16 +614,47 @@ function renderClientesConDatos(){
   window._cliDelNota=delNotaCli;
   window._cliHeaders={cInst,cEmp,cEnc,cCor,cTel};
   window._cliRows=rows;
+  window._cliFullRows=rows;
 
-  const tableRows=rows.map((r,i)=>{
+  v.innerHTML=`<div class="card">
+    <div class="card-head">
+      <div class="card-title">🏢 Clientes — <span id="cli-count">${rows.length} registros</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="cli-search" placeholder="Buscar empresa…" oninput="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;font-size:12px;font-family:var(--font);outline:none;width:180px">
+        <select id="cli-filtro-notas" onchange="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 8px;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2)">
+          <option value="">Todos</option>
+          <option value="con">Con comentarios</option>
+          <option value="sin">Sin comentarios</option>
+        </select>
+        <button onclick="exportarNotasExcel()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ Notas Excel</button>
+        <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:700px">
+        <thead><tr style="background:var(--sur2)">
+          ${['#','Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody id="cli-tbody">${buildCliRows(rows)}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function buildCliRows(rows){
+  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
+  const getNotas=window._cliGetNotas||(()=>[]);
+  return rows.map((r,i)=>{
     const emp=(r[cEmp]||'—').trim();
-    const enc=r[cEnc]||'—';
+    const enc=formatEncargado(r[cEnc]);
     const cor=r[cCor]||'—';
     const tel=r[cTel]||'—';
     const inst=(r[cInst]||'').trim();
     const notas=getNotas(emp);
     const hasNota=notas.length>0;
+    const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
     return`<tr class="cli-table-row" onclick="toggleCliRow('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:10px;color:var(--txt3);font-family:var(--mono)">${i+1}</td>
       <td style="font-weight:500;padding:7px 12px;border-bottom:0.5px solid var(--bdr)">${emp}</td>
       <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px">${enc}</td>
       <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
@@ -629,84 +668,70 @@ function renderClientesConDatos(){
           :`<span style="font-size:10px;color:var(--txt3)">+ agregar</span>`}
       </td>
     </tr>
-    <tr id="cli-row-${i}" style="display:none">
-      <td colspan="6" style="padding:0;background:var(--sur2)">
-        ${buildCliNotaPanel(emp,i)}
+    <tr id="cli-row-${key}" style="display:none">
+      <td colspan="7" style="padding:0;background:var(--sur2)">
+        ${buildCliNotaPanel(emp)}
       </td>
     </tr>`;
   }).join('');
-
-  v.innerHTML=`<div class="card">
-    <div class="card-head">
-      <div class="card-title">🏢 Clientes — ${rows.length} registros</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="cli-search" placeholder="Buscar empresa…" oninput="filtrarClientes(this.value)" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;font-size:12px;font-family:var(--font);outline:none;width:180px">
-        <button onclick="exportarNotasExcel()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ Notas Excel</button>
-        <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto">
-      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:700px">
-        <thead><tr style="background:var(--sur2)">
-          ${['Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
-        </tr></thead>
-        <tbody id="cli-tbody">${tableRows}</tbody>
-      </table>
-    </div>
-  </div>`;
-
-  // Guardar índice para filtros
-  window._cliFullRows=rows;
 }
 
-function buildCliNotaPanel(emp,idx){
+function aplicarFiltrosClientes(){
+  const q=(el('cli-search')?.value||'').trim().toLowerCase();
+  const notaFiltro=el('cli-filtro-notas')?.value||'';
+  const rows=window._cliFullRows||window._cliRows||[];
+  const getNotas=window._cliGetNotas||(()=>[]);
+  const{cEmp}=window._cliHeaders||{};
+  let filtered=rows;
+  if(q)filtered=filtered.filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q)));
+  if(notaFiltro==='con')filtered=filtered.filter(r=>getNotas((r[cEmp]||'').trim()).length>0);
+  else if(notaFiltro==='sin')filtered=filtered.filter(r=>getNotas((r[cEmp]||'').trim()).length===0);
+  const tbody=el('cli-tbody');
+  if(tbody)tbody.innerHTML=buildCliRows(filtered);
+  const cnt=el('cli-count');
+  if(cnt)cnt.textContent=(q||notaFiltro)?filtered.length+' de '+rows.length+' registros':rows.length+' registros';
+}
+
+function buildCliNotaPanel(emp){
   const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
   const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
   const notasHtml=notas.length
     ?notas.map(n=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--bdr)">
         <span style="font-size:10px;color:var(--txt3);white-space:nowrap;font-family:var(--mono);min-width:110px">${fmtTs(n.ts)}</span>
         <span style="font-size:11px;color:var(--txt);flex:1">${n.txt}</span>
-        <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;padding:0;line-height:1;flex-shrink:0">×</button>
+        <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;padding:0;line-height:1;flex-shrink:0">×</button>
       </div>`).join('')
     :'<div style="font-size:11px;color:var(--txt3);padding:4px 0">Sin notas aún</div>';
   return`<div style="padding:12px 16px">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px">Notas de seguimiento — ${emp}</div>
     <div id="cli-notas-${key}" style="max-height:180px;overflow-y:auto;border-left:2px solid var(--bdr);padding-left:12px;margin-bottom:10px">${notasHtml}</div>
     <div style="display:flex;gap:6px">
-      <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}',${idx})" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:12px;font-family:var(--font);outline:none">
-      <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}',${idx})" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+      <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:12px;font-family:var(--font);outline:none">
+      <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
     </div>
   </div>`;
 }
 
 function toggleCliRow(emp){
-  const rows=window._cliRows||[];
-  const idx=rows.findIndex(r=>{
-    const{cEmp}=window._cliHeaders||{};
-    return (r[cEmp]||'').trim()===emp;
-  });
-  if(idx<0)return;
-  const tr=el('cli-row-'+idx);
+  const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
+  const tr=el('cli-row-'+key);
   if(!tr)return;
   const hidden=tr.style.display==='none';
   tr.style.display=hidden?'':'none';
   if(hidden){
-    const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
-    const cont=el('cli-notas-'+key);
-    if(cont)refreshCliRow(emp,idx);
+    refreshCliRow(emp);
     const inp=el('cli-inp-'+key);
     if(inp)setTimeout(()=>inp.focus(),50);
   }
 }
 
-function refreshCliRow(emp,idx){
-  const tr=el('cli-row-'+idx);if(!tr)return;
+function refreshCliRow(emp){
+  const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
+  const tr=el('cli-row-'+key);if(!tr)return;
   const td=tr.querySelector('td');if(!td)return;
-  td.innerHTML=buildCliNotaPanel(emp,idx);
+  td.innerHTML=buildCliNotaPanel(emp);
   // Actualizar badge en la fila principal
   const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
-  const allTrs=document.querySelectorAll('#cli-tbody tr');
-  // Buscar el tr anterior (fila principal)
   const prevTr=tr.previousElementSibling;
   if(prevTr){
     const notaCell=prevTr.querySelector('td:last-child');
@@ -718,12 +743,12 @@ function refreshCliRow(emp,idx){
   }
 }
 
-function addCliNotaRow(emp,key,idx){
+function addCliNotaRow(emp,key){
   const inp=el('cli-inp-'+key);
   if(!inp||!inp.value.trim())return;
   if(window._cliSaveNota)window._cliSaveNota(emp,inp.value.trim());
   inp.value='';
-  refreshCliRow(emp,idx);
+  refreshCliRow(emp);
 }
 
 function exportarNotasExcel(){
@@ -748,42 +773,6 @@ function exportarNotasExcel(){
   a.href=URL.createObjectURL(new Blob([csvRows.map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8;'}));
   a.download='notas_clientes.csv';a.click();
   showToast('✓ Notas exportadas','#16a34a');
-}
-
-function filtrarClientes(q){
-  const rows=window._cliFullRows||window._cliRows||[];
-  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
-  const filtered=q?rows.filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q.toLowerCase()))):rows;
-  // Re-renderizar solo el tbody
-  renderClientesConDatos();
-}
-
-
-function filtrarClientes(q){
-  if(!q){document.getElementById('cli-tbody').innerHTML=renderCliTableRows(window._cliRows||[]);return;}
-  const filtered=(window._cliRows||[]).filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q.toLowerCase())));
-  const tbody=document.getElementById('cli-tbody');
-  if(tbody)tbody.innerHTML=renderCliTableRows(filtered);
-}
-
-function renderCliTableRows(rows){
-  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
-  return rows.map(r=>{
-    const emp=r[cEmp]||'—';const enc=r[cEnc]||'—';const cor=r[cCor]||'—';const tel=r[cTel]||'—';const inst=r[cInst]||'';
-    const tks=T.filter(t=>{const o=(t.org||'').toLowerCase();const e=emp.toLowerCase();return o.includes(e.substring(0,6))||e.includes(o.substring(0,6));});
-    const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
-    const sc=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#16a34a';
-    const nota=STORE.getNotaCliente(emp)||{};
-    return`<tr class="cli-table-row" onclick="showClienteDetailPlus('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
-      <td style="font-weight:700;padding:8px 12px;border-bottom:1px solid var(--bdr)">${emp}</td>
-      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)">${enc}</td>
-      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
-      <td style="font-size:11px;padding:8px 12px;border-bottom:1px solid var(--bdr)">${tel}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:2px 7px;border-radius:4px;font-weight:600;text-decoration:none">🔗</a>`:'—'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${tks.length?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc}">${tks.length}</span>`:'0'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid var(--bdr);text-align:center">${nota.situacion?'📝':'—'}</td>
-    </tr>`;
-  }).join('');
 }
 
 function renderClientesFromTickets(){
@@ -925,8 +914,8 @@ function deleteCliNota(org,ts){
 }
 
 // ── ANÁLISIS ─────────────────────────────────────────────────────
-function getTicketsQuemandose(){
-  return T.filter(t=>{
+function getTicketsQuemandose(subset){
+  return (subset||T).filter(t=>{
     const r=(t.rangoStr||'').trim().toLowerCase();
     return r==='7 días'||r==='7 dias'||r==='6 días'||r==='6 dias'||t.sinSeguimiento||(t.isSinAsignar&&(t.priority==='urgent'||t.priority==='high'));
   }).sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});
@@ -972,12 +961,13 @@ function getDesarrolladoresConRiesgo(){
     return{ag:dev,total,sinSeg,mas7,area:'Desarrollo',nivel,urghi:tks.filter(t=>t.priority==='urgent'||t.priority==='high').length,_tickets:tks};
   }).filter(Boolean).sort((a,b)=>b.total-a.total);
 }
-function getPredSLA(){
+function getPredSLA(subset){
+  const base=subset||T;
   const now=new Date();
-  const ind1=T.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='7 días'||r==='7 dias';});
-  const ind2=T.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='6 días'||r==='6 dias';});
-  const ind3=T.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;return(now-d)/86400000>3;});
-  const ind4=T.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;const diff=(now-d)/86400000;return diff>2&&diff<=3;});
+  const ind1=base.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='7 días'||r==='7 dias';});
+  const ind2=base.filter(t=>{const r=(t.rangoStr||'').trim().toLowerCase();return r==='6 días'||r==='6 dias';});
+  const ind3=base.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;return(now-d)/86400000>3;});
+  const ind4=base.filter(t=>{if(!t.ultimoSeg||!t.ultimoSeg.trim())return false;const d=new Date(t.ultimoSeg);if(isNaN(d))return false;const diff=(now-d)/86400000;return diff>2&&diff<=3;});
   return{ind1,ind2,ind3,ind4,n1:ind1.length,n2:ind2.length,n3:ind3.length,n4:ind4.length};
 }
 function getTrendData(){
@@ -1077,12 +1067,43 @@ function clearDFilter(filterId,tableId,openKey,showSeg){
 function cerrarDetalle(closeId){const e=el(closeId);if(e){e.style.display='none';e.dataset.open='';}}
 
 // ── RENDER HOY ───────────────────────────────────────────────────
+// ── Comparativa vs. ayer (snapshot en localStorage) ──────────────
+function getComparativaHoy(totalNow,riesgoNow){
+  const todayStr=new Date().toISOString().split('T')[0];
+  let hoy=null,ayer=null;
+  try{hoy=JSON.parse(localStorage.getItem('snap_hoy')||'null');}catch{}
+  try{ayer=JSON.parse(localStorage.getItem('snap_ayer')||'null');}catch{}
+  if(!hoy||hoy.date!==todayStr){
+    if(hoy)ayer=hoy;
+    hoy={date:todayStr,total:totalNow,riesgo:riesgoNow};
+    localStorage.setItem('snap_hoy',JSON.stringify(hoy));
+    if(ayer)localStorage.setItem('snap_ayer',JSON.stringify(ayer));
+  }
+  if(!ayer)return null;
+  return{deltaTotal:totalNow-ayer.total,deltaRiesgo:riesgoNow-ayer.riesgo,fechaAyer:ayer.date};
+}
+function fmtDelta(n){
+  if(n===0)return'<span style="color:var(--txt3)">sin cambio</span>';
+  const c=n>0?'#dc2626':'#16a34a';const s=n>0?'▲':'▼';
+  return`<span style="color:${c};font-weight:700">${s}${Math.abs(n)}</span>`;
+}
+let HOY_AREA='Todas las áreas';
+function hoyBase(){return HOY_AREA==='Todas las áreas'?T:T.filter(t=>getAreaAgente(t)===HOY_AREA);}
+function filterHoy(area,btn){
+  HOY_AREA=area;
+  document.querySelectorAll('#hoy-area-filter .area-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderHoy();
+}
 function renderHoy(){
-  const lista=getTicketsQuemandose();
-  const agRiesgo=getAgentesEnRiesgo();
-  const pred=getPredSLA();
+  const baseT=hoyBase();
+  const allAreasHoy=['Todas las áreas','Customer','Soporte','Implementación','Desarrollo'];
+  const lista=getTicketsQuemandose(baseT);
+  const agRiesgo=getAgentesEnRiesgo().filter(ag=>HOY_AREA==='Todas las áreas'||ag.area===HOY_AREA);
+  const pred=getPredSLA(baseT);
   window._predTickets={ind1:pred.ind1,ind2:pred.ind2,ind3:pred.ind3,ind4:pred.ind4};
   window._hoyLista=lista;
+  const comp=getComparativaHoy(baseT.length,lista.length);
   const now=new Date();
   const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -1177,32 +1198,39 @@ function renderHoy(){
       <span class="date-chip">${fechaHoy} · SEM ${wk(now)}</span>
     </div>
 
+    <!-- Filtro por área -->
+    <div class="area-filter" id="hoy-area-filter" style="border-radius:var(--rl);margin-bottom:2px">
+      ${allAreasHoy.map(a=>`<button class="area-btn ${a===HOY_AREA?'on':''}" onclick="filterHoy('${a}',this)">${a}</button>`).join('')}
+    </div>
+
+    <!-- Comparativa vs. ayer -->
+    ${comp?`<div style="display:flex;gap:16px;align-items:center;padding:8px 16px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--rl);font-size:11px;color:var(--txt2)">
+      <span style="font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;font-size:9.5px">vs. ayer (${comp.fechaAyer})</span>
+      <span>Total tickets${HOY_AREA!=='Todas las áreas'?' · '+HOY_AREA:''}: ${baseT.length} ${fmtDelta(comp.deltaTotal)}</span>
+      <span>En riesgo hoy: ${lista.length} ${fmtDelta(comp.deltaRiesgo)}</span>
+    </div>`:''}
+
     <!-- Mini KPIs — 4 indicadores SLA + revisados -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
       <div class="mini-kpi" style="border-top:3px solid #dc2626;cursor:pointer" onclick="showPredDetail('ind1','Vencen hoy — 7 Días','#dc2626')">
         <div class="mini-kpi-val" style="color:#dc2626">${pred.n1}</div>
         <div class="mini-kpi-lbl">Vencen hoy (7 Días)</div>
-        <div style="font-size:9px;color:#dc2626;margin-top:2px;opacity:.7">col R · ▼ detalle</div>
       </div>
       <div class="mini-kpi" style="border-top:3px solid #d97706;cursor:pointer" onclick="showPredDetail('ind2','Vencen mañana — 6 Días','#d97706')">
         <div class="mini-kpi-val" style="color:#d97706">${pred.n2}</div>
         <div class="mini-kpi-lbl">Vencen mañana (6 Días)</div>
-        <div style="font-size:9px;color:#d97706;margin-top:2px;opacity:.7">col R · ▼ detalle</div>
       </div>
       <div class="mini-kpi" style="border-top:3px solid #7c3aed;cursor:pointer" onclick="showPredDetail('ind3','Sin seguimiento >3d hoy','#7c3aed')">
         <div class="mini-kpi-val" style="color:#7c3aed">${pred.n3}</div>
         <div class="mini-kpi-lbl">Sin seguim. >3d hoy</div>
-        <div style="font-size:9px;color:#7c3aed;margin-top:2px;opacity:.7">col E · ▼ detalle</div>
       </div>
       <div class="mini-kpi" style="border-top:3px solid #2563eb;cursor:pointer" onclick="showPredDetail('ind4','Sin seguimiento 2-3d','#2563eb')">
         <div class="mini-kpi-val" style="color:#2563eb">${pred.n4}</div>
         <div class="mini-kpi-lbl">Sin seguim. mañana</div>
-        <div style="font-size:9px;color:#2563eb;margin-top:2px;opacity:.7">col E · ▼ detalle</div>
       </div>
       <div class="mini-kpi" style="border-top:3px solid #16a34a">
         <div class="mini-kpi-val" style="color:#16a34a">${revisadosHoy}</div>
         <div class="mini-kpi-lbl">Revisados hoy</div>
-        <div style="font-size:9px;color:#16a34a;margin-top:2px;opacity:.7">marcados ✓ hoy</div>
       </div>
     </div>
 
@@ -1235,7 +1263,7 @@ function renderHoy(){
       <div class="legend-row">
         <span class="why-pill fire">7d</span> vence hoy &nbsp;
         <span class="why-pill clock">6d</span> vence mañana &nbsp;
-        <span class="why-pill ghost">sin seguim.</span> col E >3d &nbsp;
+        <span class="why-pill ghost">sin seguim.</span> más de 3 días sin actualizar &nbsp;
         <span style="font-size:10px;color:var(--txt3)">· ✓ = marcar revisado &nbsp; 💬 = notificar Slack</span>
       </div>
     </div>
@@ -1744,33 +1772,31 @@ function analizarBD(rows,hdrs){
 
 
 let _panoKpiActivo=null;
+let PANO_AREA='Todas las áreas';
+function panoBase(){return PANO_AREA==='Todas las áreas'?T:T.filter(t=>getAreaAgente(t)===PANO_AREA);}
+function filterPanorama(area,btn){
+  PANO_AREA=area;
+  document.querySelectorAll('#pano-area-filter .area-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderPanorama();
+}
 function renderPanorama(){
-  const orgMap={};T.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
-  const orgS=Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
-  const orgH=Math.max(160,orgS.length*28);
-  const rVals=[...new Set(T.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
-  const priData=['urgent','high','normal','low'].map(k=>T.filter(t=>t.priority===k).length);
-  const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
-  const trendData=getTrendData();
-  const tMax=Math.max(...trendData.map(w=>w.open),1);
-  const tH=70;
-  const tPts=trendData.map((w,i)=>`${10+i*92},${tH-(w.open/tMax*(tH-8))}`).join(' ');
-  const sPts=trendData.map((w,i)=>`${10+i*92},${tH-(w.sla/tMax*(tH-8))}`).join(' ');
-  const topSol=getTopSolicitantes();
-  const solColors=['#dc2626','#d97706','#4B9BFF','#22C55E','#A855F7'];
-  const solBgs=['#fef2f2','#fffbeb','#eff4ff','#f0fdf4','#faf5ff'];
+  const baseT=panoBase();
+  const allAreasPano=['Todas las áreas','Customer','Soporte','Implementación','Desarrollo'];
+  const orgMap0={};baseT.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap0[o]=(orgMap0[o]||0)+1;});
+  const orgH=Math.max(160,Math.min(Object.keys(orgMap0).length,12)*28);
   const kpis=[
-    {key:'total',label:'Total tickets',color:'#2563eb',fn:()=>T},
-    {key:'urgent',label:'Urgentes',color:'#FF5C5C',fn:()=>T.filter(t=>t.priority==='urgent')},
-    {key:'high',label:'Alta prioridad',color:'#FF9A3C',fn:()=>T.filter(t=>t.priority==='high')},
-    {key:'sla',label:'SLA vencido +7d',color:'#F59E0B',fn:()=>T.filter(t=>t.isSla)},
-    {key:'sinSeg',label:'Sin seguimiento +3d',color:'#e11d48',fn:()=>T.filter(t=>t.sinSeguimiento)},
-    {key:'sinA',label:'Sin responsable',color:'#7c3aed',fn:()=>T.filter(t=>t.isSinAsignar)},
-    {key:'emp3',label:'Empresas con +3 tickets',color:'#0891b2',fn:()=>{const oc={};T.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return T.filter(t=>t.org&&(oc[t.org]||0)>=3);}},
+    {key:'total',label:'Total tickets',color:'#2563eb',fn:()=>baseT},
+    {key:'urgent',label:'Urgentes',color:'#FF5C5C',fn:()=>baseT.filter(t=>t.priority==='urgent')},
+    {key:'high',label:'Alta prioridad',color:'#FF9A3C',fn:()=>baseT.filter(t=>t.priority==='high')},
+    {key:'sla',label:'SLA vencido +7d',color:'#F59E0B',fn:()=>baseT.filter(t=>t.isSla)},
+    {key:'sinSeg',label:'Sin seguimiento +3d',color:'#e11d48',fn:()=>baseT.filter(t=>t.sinSeguimiento)},
+    {key:'sinA',label:'Sin responsable',color:'#7c3aed',fn:()=>baseT.filter(t=>t.isSinAsignar)},
+    {key:'emp3',label:'Empresas con +3 tickets',color:'#0891b2',fn:()=>{const oc={};baseT.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return baseT.filter(t=>t.org&&(oc[t.org]||0)>=3);}},
   ];
   window._panoKpis=kpis;
   const kpiCards=kpis.map(k=>{
-    const list=k.fn();const pct=T.length?Math.round(list.length/T.length*100):0;
+    const list=k.fn();const pct=baseT.length?Math.round(list.length/baseT.length*100):0;
     let displayVal=list.length;
     if(k.key==='emp3')displayVal=[...new Set(list.map(t=>t.org).filter(Boolean))].length;
     return`<div class="kc${k.key==='emp3'?' emp3-kc':''}" id="kc-${k.key}" onclick="showPanoDetail('${k.key}')">
@@ -1783,36 +1809,27 @@ function renderPanorama(){
 
   el('v-panorama').innerHTML=`
     <div class="card">
-      <div class="card-head"><div class="card-title">📊 Indicadores clave · ${T.length} tickets activos</div><span style="font-size:10px;color:var(--txt3)">clic para ver detalle y actualizar gráficas</span></div>
-      <div class="kpi-grid">${kpiCards}</div>
-    </div>
-    <div class="card" id="trend-card">
-      <div class="card-head">
-        <div class="card-title">📈 Tendencia semanal — Tickets BD</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${BD_DATA.length?`<span style="font-size:10px;color:var(--txt3)">${BD_DATA.length} tickets históricos</span>`:''}
-          <button onclick="conectarBD()" style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:var(--font);background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#16a34a':'var(--txt2)'}">
-            ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
-          </button>
-        </div>
+      <div class="card-head"><div class="card-title">📊 Indicadores clave · ${baseT.length} tickets${PANO_AREA!=='Todas las áreas'?' · '+PANO_AREA:' activos'}</div><span style="font-size:10px;color:var(--txt3)">clic para ver detalle y actualizar gráficas</span></div>
+      <div class="area-filter" id="pano-area-filter">
+        ${allAreasPano.map(a=>`<button class="area-btn ${a===PANO_AREA?'on':''}" onclick="filterPanorama('${a}',this)">${a}</button>`).join('')}
       </div>
-      ${BD_DATA.length&&BD_ANALISIS?renderTendenciaBD():renderTendenciaActual(trendData,tPts,sPts,tH,tMax)}
+      <div class="kpi-grid">${kpiCards}</div>
+      <div style="padding:10px 16px;border-top:1px solid var(--bdr);background:var(--sur2);font-size:10.5px;color:var(--txt2);line-height:1.7">
+        <strong>📌 Cómo leer estos indicadores:</strong><br>
+        <span style="color:#22C55E;font-weight:700">●</span> <strong>Corriente</strong> = ticket creado hoy &nbsp;·&nbsp;
+        <span style="color:#eab308;font-weight:700">●</span> <strong>1 a 6 días</strong> = en camino a vencer el SLA (aviso) &nbsp;·&nbsp;
+        <span style="color:#dc2626;font-weight:700">●</span> <strong>7 días</strong> = rango máximo — ya vencido, es lo que cuenta "SLA vencido +7d".<br>
+        "Urgentes" y "Alta prioridad" salen del mismo campo de Prioridad (no se suman entre sí — son subconjuntos). Los demás indicadores (SLA vencido, Sin seguimiento, Sin responsable, Empresas con +3 tickets) son criterios independientes entre sí.
+      </div>
     </div>
     <div class="charts-row" id="pano-charts-row">
       <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
       <div class="ccard"><div class="ch"><span class="ct">Antigüedad</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div><div class="cb"><div style="position:relative;height:200px;overflow:hidden"><canvas id="ca"></canvas></div></div></div>
       <div class="ccard"><div class="ch"><span class="ct">Por empresa</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div>
     </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">🏢 Top solicitantes</div><span style="font-size:10px;color:var(--txt3)">volumen · score máx.</span></div>
-      <div style="padding:8px 16px">
-        <div style="display:grid;grid-template-columns:1fr 36px 60px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 2px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.05em"><span>Solicitante</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span></div>
-        ${topSol.map(([sol,d],i)=>`<div style="display:grid;grid-template-columns:1fr 36px 60px;align-items:center;padding:5px 2px;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:${solColors[i]}"></div><span style="font-size:11px">${sol}</span></div><span style="font-size:12px;font-weight:700;color:${solColors[i]};text-align:center">${d.count}</span><div style="text-align:right"><span style="font-size:10px;background:${solBgs[i]};color:${solColors[i]};padding:1px 6px;border-radius:4px">${d.maxScore}</span></div></div>`).join('')}
-      </div>
-    </div>
     <div id="pano-detail-wrap" style="display:none"></div>`;
 
-  buildPanoCharts(T);
+  buildPanoCharts(baseT);
 }
 
 function buildPanoCharts(subset){
@@ -1854,12 +1871,12 @@ function buildPanoCharts(subset){
   if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map(function(l,i){return '<div class="legend-item"><div class="legend-dot" style="background:'+priColors[i]+'"></div>'+l+': '+priData[i]+'</div>';}).join('');
 
   mkChart('ca','bar',rVals,rVals.map(function(r){return subset.filter(function(t){return t.rangoStr===r;}).length;}),rVals.map(function(r){return getRangoColor(r);}),false,function(label){
-    var tickets=sortByAge((window._panoSubset||T).filter(function(t){return t.rangoStr===label;}));
+    var tickets=sortByAge((window._panoSubset||panoBase()).filter(function(t){return t.rangoStr===label;}));
     showPanoDetalleCarta('rango_'+label,'Antigüedad: '+label,getRangoColor(label),tickets);
   });
 
   mkChart('cag','bar',orgS.map(function(x){return x[0];}),orgS.map(function(x){return x[1];}),orgS.map(function(){return '#4B9BFF';}),true,function(label){
-    var tickets=sortByAge((window._panoSubset||T).filter(function(t){return (t.org||'').trim()===label||(t.org||'Sin clasificar').trim()===label;}));
+    var tickets=sortByAge((window._panoSubset||panoBase()).filter(function(t){return (t.org||'').trim()===label||(t.org||'Sin clasificar').trim()===label;}));
     showPanoDetalleCarta('org_'+label,'Empresa: '+label,'#2563eb',tickets);
   });
 }
@@ -1881,21 +1898,22 @@ function showPanoDetail(key,label){
   const kDef=kpis.find(k=>k.key===key);
   const color=kDef?kDef.color:'#2563eb';
   const title=label||(kDef?kDef.label:key);
+  const baseT=panoBase();
   const kpiFns={
-    total:()=>T,urgent:()=>T.filter(t=>t.priority==='urgent'),high:()=>T.filter(t=>t.priority==='high'),
-    sla:()=>T.filter(t=>t.isSla),sinSeg:()=>T.filter(t=>t.sinSeguimiento),
-    sinA:()=>T.filter(t=>t.isSinAsignar),
-    emp3:()=>{const oc={};T.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return T.filter(t=>t.org&&(oc[t.org]||0)>=3);}
+    total:()=>baseT,urgent:()=>baseT.filter(t=>t.priority==='urgent'),high:()=>baseT.filter(t=>t.priority==='high'),
+    sla:()=>baseT.filter(t=>t.isSla),sinSeg:()=>baseT.filter(t=>t.sinSeguimiento),
+    sinA:()=>baseT.filter(t=>t.isSinAsignar),
+    emp3:()=>{const oc={};baseT.forEach(t=>{if(t.org)oc[t.org]=(oc[t.org]||0)+1;});return baseT.filter(t=>t.org&&(oc[t.org]||0)>=3);}
   };
-  const fn=key.startsWith('rango_')?()=>T.filter(t=>t.rangoStr===key.replace('rango_','')):kpiFns[key];
+  const fn=key.startsWith('rango_')?()=>baseT.filter(t=>t.rangoStr===key.replace('rango_','')):kpiFns[key];
   const tickets=fn?fn():[];
   // Actualizar gráficas dinámicamente
   const titleEl=el('pano-chart-title');if(titleEl)titleEl.textContent='Por prioridad — '+title;
-  buildPanoCharts(tickets.length?tickets:T);
+  buildPanoCharts(tickets.length?tickets:baseT);
   // Detalle al final
   const wrap=el('pano-detail-wrap');
   if(!wrap)return;
-  if(wrap.dataset.open===key){wrap.style.display='none';wrap.dataset.open='';document.querySelectorAll('.kc').forEach(k=>k.classList.remove('active'));buildPanoCharts(T);if(titleEl)titleEl.textContent='Por prioridad';return;}
+  if(wrap.dataset.open===key){wrap.style.display='none';wrap.dataset.open='';document.querySelectorAll('.kc').forEach(k=>k.classList.remove('active'));buildPanoCharts(baseT);if(titleEl)titleEl.textContent='Por prioridad';return;}
   wrap.dataset.open=key;wrap.style.display='block';
   wrap.innerHTML=`<div class="card">${buildDetailBlock(tickets,title,color,'pano-detail-wrap',key,false)}</div>`;
   setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
