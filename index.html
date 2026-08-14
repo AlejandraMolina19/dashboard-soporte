@@ -304,8 +304,10 @@ function mapRows(rows,headers){
   const colG=findCol(['traduccion organizacion','traduccion org'])||HDR[6]||'';
   const colK=findCol(['fecha inicio'])||HDR[10]||'';
   const colU=HDR[20]||'';
-  // Col AG (índice 32) = D-Estatus de replicacion
-  const colAG=HDR[32]||'';
+  // Col AK (índice 36) = D-Estatus limpio (reemplaza a AG que traía texto sucio)
+  const colAK=HDR[36]||'';
+  // Col AL (índice 37) = Canal de atención (ticket / llamada)
+  const colAL=HDR[37]||'';
   function fkv(pats){return HDR.find(k=>pats.some(p=>{try{return new RegExp(p,'i').test(k);}catch{return false;}}));}
   const kId=fkv(['^ID$','^Id$','^id$']);
   const kSt=fkv(['^Estado$','^Status$']);
@@ -333,7 +335,7 @@ function mapRows(rows,headers){
     const areaN=(colN?r[colN]||'':'').trim();
     const isSinAsignar=/sin\s+asignar|sin\s+clasificar|ticket\s+sin|^nuevo$/i.test(areaN)||areaN==='';
     const ultimoSegRaw=(colE?r[colE]||'':'').trim();
-    return{id,status,priority,subject:kSub?r[kSub]||'':'',org:colG?r[colG]||'':'',agente:colM?r[colM]||'':'',areaAsig:areaN,dResp:colU?r[colU]||'':'',dEstatusRep:colAG?r[colAG]||'':'',sResp:kSResp?r[kSResp]||'':'',assignee:kAssign?r[kAssign]||'':'',created,days,rangoStr,isSla:isSlaVencido(rangoStr),isSinAsignar,sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),createdFmt:fmtDateShort(crRaw),score,action:act(score),mesAnt:kMesAnt?r[kMesAnt]||'':'',ultimoSeg:ultimoSegRaw};
+    return{id,status,priority,subject:kSub?r[kSub]||'':'',org:colG?r[colG]||'':'',agente:colM?r[colM]||'':'',areaAsig:areaN,dResp:colU?r[colU]||'':'',dEstatusRep:colAK?r[colAK]||'':'',canal:colAL?r[colAL]||'':'',sResp:kSResp?r[kSResp]||'':'',assignee:kAssign?r[kAssign]||'':'',created,days,rangoStr,isSla:isSlaVencido(rangoStr),isSinAsignar,sinSeguimiento:isSinSeguimiento(ultimoSegRaw,now),createdFmt:fmtDateShort(crRaw),score,action:act(score),mesAnt:kMesAnt?r[kMesAnt]||'':'',ultimoSeg:ultimoSegRaw};
   }).filter(Boolean);
 }
 
@@ -617,28 +619,51 @@ function renderClientesConDatos(){
   window._cliFullRows=rows;
 
   v.innerHTML=`<div class="card">
-    <div class="card-head">
+    <div class="card-head" style="flex-wrap:wrap;gap:10px">
       <div class="card-title">🏢 Clientes — <span id="cli-count">${rows.length} registros</span></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="cli-search" placeholder="Buscar empresa…" oninput="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;font-size:12px;font-family:var(--font);outline:none;width:180px">
-        <select id="cli-filtro-notas" onchange="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:5px 8px;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2)">
-          <option value="">Todos</option>
-          <option value="con">Con comentarios</option>
-          <option value="sin">Sin comentarios</option>
-        </select>
-        <button onclick="exportarNotasExcel()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ Notas Excel</button>
-        <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="exportarNotasExcel()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;cursor:pointer;color:var(--txt2);font-family:var(--font);display:flex;align-items:center;gap:4px" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt2)'">⬇ Notas Excel</button>
+        <button onclick="localStorage.removeItem('clientes_gid');CLIENTES_DATA=[];renderClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:5px 10px;cursor:pointer;color:var(--txt3);font-family:var(--font)">⚙ Reconectar</button>
       </div>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--sur2);border-bottom:1px solid var(--bdr)">
+      <input type="text" id="cli-search" placeholder="🔍 Buscar empresa, encargado, correo…" oninput="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:6px 12px;font-size:12px;font-family:var(--font);outline:none;width:230px;background:var(--sur)">
+      <select id="cli-filtro-notas" onchange="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2);background:var(--sur)">
+        <option value="">📝 Todos</option>
+        <option value="con">Con comentarios</option>
+        <option value="sin">Sin comentarios</option>
+      </select>
+      <div style="display:flex;align-items:center;gap:6px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:4px 10px">
+        <span style="font-size:10px;color:var(--txt3);font-weight:600">Notas del</span>
+        <input type="date" id="cli-fecha-desde" onchange="aplicarFiltrosClientes()" style="border:none;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2);background:transparent">
+        <span style="font-size:10px;color:var(--txt3)">al</span>
+        <input type="date" id="cli-fecha-hasta" onchange="aplicarFiltrosClientes()" style="border:none;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2);background:transparent">
+      </div>
+      <button onclick="limpiarFiltrosClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Limpiar</button>
+    </div>
     <div style="overflow-x:auto">
-      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:700px">
+      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:760px">
         <thead><tr style="background:var(--sur2)">
-          ${['#','Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
+          ${['#','Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
         </tr></thead>
         <tbody id="cli-tbody">${buildCliRows(rows)}</tbody>
       </table>
     </div>
   </div>`;
+}
+
+function limpiarFiltrosClientes(){
+  const s=el('cli-search');if(s)s.value='';
+  const n=el('cli-filtro-notas');if(n)n.value='';
+  const d1=el('cli-fecha-desde');if(d1)d1.value='';
+  const d2=el('cli-fecha-hasta');if(d2)d2.value='';
+  aplicarFiltrosClientes();
+}
+
+const AVATAR_COLORS=['#2563eb','#7c3aed','#0891b2','#d97706','#dc2626','#16a34a','#db2777'];
+function avatarColor(str){
+  let h=0;for(let i=0;i<(str||'').length;i++)h=(h*31+str.charCodeAt(i))>>>0;
+  return AVATAR_COLORS[h%AVATAR_COLORS.length];
 }
 
 function buildCliRows(rows){
@@ -653,19 +678,26 @@ function buildCliRows(rows){
     const notas=getNotas(emp);
     const hasNota=notas.length>0;
     const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
-    return`<tr class="cli-table-row" onclick="toggleCliRow('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer">
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:10px;color:var(--txt3);font-family:var(--mono)">${i+1}</td>
-      <td style="font-weight:500;padding:7px 12px;border-bottom:0.5px solid var(--bdr)">${emp}</td>
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px">${enc}</td>
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc)">${cor}</a></td>
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px">${tel}</td>
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
-        ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:2px 7px;border-radius:4px;font-weight:600;text-decoration:none">🔗 Acceder</a>`:'—'}
+    const col=avatarColor(emp);
+    const iniciales=emp.replace(/[^A-Za-zÀ-ÿ0-9 ]/g,'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
+    return`<tr class="cli-table-row" onclick="toggleCliRow('${emp.replace(/'/g,"\\'").replace(/\\/g,'\\\\')}')" style="cursor:pointer;transition:background .15s">
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:10px;color:var(--txt3);font-family:var(--mono)">${i+1}</td>
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:26px;height:26px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex-shrink:0">${iniciales}</div>
+          <span style="font-weight:600;font-size:12px">${emp}</span>
+        </div>
       </td>
-      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${enc}</td>
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc);text-decoration:none">${cor}</a></td>
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${tel}</td>
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
+        ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:3px 9px;border-radius:20px;font-weight:600;text-decoration:none">🔗 Acceder</a>`:'<span style="color:var(--txt3);font-size:11px">—</span>'}
+      </td>
+      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
         ${hasNota
-          ?`<span style="font-size:10px;font-weight:600;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:10px">📝 ${notas.length}</span>`
-          :`<span style="font-size:10px;color:var(--txt3)">+ agregar</span>`}
+          ?`<span style="font-size:10px;font-weight:700;background:#f0fdf4;color:#16a34a;padding:3px 10px;border-radius:20px">📝 ${notas.length}</span>`
+          :`<span style="font-size:10px;color:var(--acc);font-weight:600;background:var(--acc2);padding:3px 10px;border-radius:20px">+ agregar</span>`}
       </td>
     </tr>
     <tr id="cli-row-${key}" style="display:none">
@@ -679,6 +711,8 @@ function buildCliRows(rows){
 function aplicarFiltrosClientes(){
   const q=(el('cli-search')?.value||'').trim().toLowerCase();
   const notaFiltro=el('cli-filtro-notas')?.value||'';
+  const fDesde=el('cli-fecha-desde')?.value||'';
+  const fHasta=el('cli-fecha-hasta')?.value||'';
   const rows=window._cliFullRows||window._cliRows||[];
   const getNotas=window._cliGetNotas||(()=>[]);
   const{cEmp}=window._cliHeaders||{};
@@ -686,28 +720,36 @@ function aplicarFiltrosClientes(){
   if(q)filtered=filtered.filter(r=>Object.values(r).some(v=>(v||'').toLowerCase().includes(q)));
   if(notaFiltro==='con')filtered=filtered.filter(r=>getNotas((r[cEmp]||'').trim()).length>0);
   else if(notaFiltro==='sin')filtered=filtered.filter(r=>getNotas((r[cEmp]||'').trim()).length===0);
+  if(fDesde||fHasta){
+    const tDesde=fDesde?new Date(fDesde+'T00:00:00').getTime():-Infinity;
+    const tHasta=fHasta?new Date(fHasta+'T23:59:59').getTime():Infinity;
+    filtered=filtered.filter(r=>getNotas((r[cEmp]||'').trim()).some(n=>n.ts>=tDesde&&n.ts<=tHasta));
+  }
   const tbody=el('cli-tbody');
   if(tbody)tbody.innerHTML=buildCliRows(filtered);
   const cnt=el('cli-count');
-  if(cnt)cnt.textContent=(q||notaFiltro)?filtered.length+' de '+rows.length+' registros':rows.length+' registros';
+  const hayFiltro=q||notaFiltro||fDesde||fHasta;
+  if(cnt)cnt.textContent=hayFiltro?filtered.length+' de '+rows.length+' registros':rows.length+' registros';
 }
 
 function buildCliNotaPanel(emp){
   const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
   const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
   const notasHtml=notas.length
-    ?notas.map(n=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--bdr)">
-        <span style="font-size:10px;color:var(--txt3);white-space:nowrap;font-family:var(--mono);min-width:110px">${fmtTs(n.ts)}</span>
-        <span style="font-size:11px;color:var(--txt);flex:1">${n.txt}</span>
-        <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:14px;padding:0;line-height:1;flex-shrink:0">×</button>
+    ?notas.map(n=>`<div style="display:flex;gap:10px;align-items:flex-start;background:var(--sur);border:1px solid var(--bdr);border-left:3px solid var(--acc);border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;color:var(--txt3);font-family:var(--mono);margin-bottom:3px">${fmtTs(n.ts)}</div>
+          <div style="font-size:12px;color:var(--txt);line-height:1.4">${n.txt}</div>
+        </div>
+        <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:15px;padding:0;line-height:1;flex-shrink:0" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--txt3)'">×</button>
       </div>`).join('')
-    :'<div style="font-size:11px;color:var(--txt3);padding:4px 0">Sin notas aún</div>';
-  return`<div style="padding:12px 16px">
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px">Notas de seguimiento — ${emp}</div>
-    <div id="cli-notas-${key}" style="max-height:180px;overflow-y:auto;border-left:2px solid var(--bdr);padding-left:12px;margin-bottom:10px">${notasHtml}</div>
+    :'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin notas aún — sé el primero en dejar seguimiento</div>';
+  return`<div style="padding:14px 18px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-bottom:10px;display:flex;align-items:center;gap:6px">📝 Notas de seguimiento — ${emp}</div>
+    <div id="cli-notas-${key}" style="max-height:220px;overflow-y:auto;margin-bottom:10px">${notasHtml}</div>
     <div style="display:flex;gap:6px">
-      <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:12px;font-family:var(--font);outline:none">
-      <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="padding:6px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+      <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-size:12px;font-family:var(--font);outline:none;background:var(--sur)">
+      <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);box-shadow:0 2px 6px rgba(37,99,235,.25)">+ Agregar</button>
     </div>
   </div>`;
 }
@@ -813,7 +855,6 @@ function showClienteDetailPlus(org){
     oldWrap.innerHTML='';
     if(savedOpen)oldWrap.dataset.open=savedOpen;
   }
-  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
 
@@ -886,7 +927,6 @@ function showClienteDetail(org){
       ${seccion('🔵 Vigilancia',resto,'#2563eb')}
     </div>
   </div>`;
-  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
 function saveCliSituacion(org,key){
@@ -922,7 +962,7 @@ function getTicketsQuemandose(subset){
 }
 function getAgentesEnRiesgo(){
   const agMap={};
-  T.forEach(t=>{
+  T.filter(t=>{const na=(t.areaAsig||'').trim().toLowerCase();return na!=='desarrollo';}).forEach(t=>{
     const ag=(t.agente||'').trim();
     if(!ag||ag.toLowerCase()==='no'||ag==='')return;
     if(!agMap[ag])agMap[ag]={tickets:[],area:getAreaAgente(t)};
@@ -988,7 +1028,7 @@ function getTopSolicitantes(){
 // ── buildDetailBlock CON FILTROS + ÁREA + ORDEN ANTIGÜEDAD ───────
 function sortByAge(list){return[...list].sort((a,b)=>{const da=parseDias(a.rangoStr),db=parseDias(b.rangoStr);return db!==da?db-da:b.score-a.score;});}
 
-function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
+function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg,hideScore){
   if(!tickets||!tickets.length)return'<div class="empty" style="color:#16a34a;padding:20px">✓ Sin tickets en esta categoría</div>';
   window['_dt_'+openKey]=tickets;
   const sorted=sortByAge(tickets);
@@ -996,6 +1036,10 @@ function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
   const rangos=[...new Set(sorted.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(b)-parseDias(a));
   const filterId='filt-'+openKey;
   const tableId='tbl-'+openKey;
+  const hs=hideScore?'true':'false';
+  const headers=['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Solicitado','Canal','Agente','Desarrollador','Estatus'];
+  if(!hideScore)headers.push('Score');
+  headers.push('Slack');
   return`<div style="background:${color}10;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr)">
     <span style="font-size:12px;font-weight:700;color:${color}">${title}</span>
     <div style="display:flex;gap:6px;align-items:center">
@@ -1005,25 +1049,34 @@ function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg){
     </div>
   </div>
   <div class="filter-bar">
-    <select class="filter-select" id="${filterId}-area" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+    <select class="filter-select" id="${filterId}-area" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'},${hs})">
       <option value="">Todas las áreas</option>${areas.map(a=>`<option value="${a}">${a}</option>`).join('')}
     </select>
-    <select class="filter-select" id="${filterId}-rango" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+    <select class="filter-select" id="${filterId}-rango" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'},${hs})">
       <option value="">Toda antigüedad</option>${rangos.map(r=>`<option value="${r}">${r}</option>`).join('')}
     </select>
-    <select class="filter-select" id="${filterId}-prior" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">
+    <select class="filter-select" id="${filterId}-prior" onchange="applyDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'},${hs})">
       <option value="">Toda prioridad</option>
       <option value="urgent">Urgente</option><option value="high">Alto</option><option value="normal">Normal</option><option value="low">Bajo</option>
     </select>
-    <button class="filter-btn-clear" onclick="clearDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'})">✕ Limpiar</button>
+    <button class="filter-btn-clear" onclick="clearDFilter('${filterId}','${tableId}','${openKey}',${showSeg?'true':'false'},${hs})">✕ Limpiar</button>
     <span id="${filterId}-total" style="font-size:10px;color:var(--txt3);margin-left:auto">${tickets.length} tickets</span>
   </div>
-  <div class="tw"><table id="${tableId}"><thead><tr>${['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Agente','Desarrollador','D-Estatus Rep.','Score','Slack'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg)}</tbody></table></div>
+  <div class="tw"><table id="${tableId}"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${renderDetailRows(sorted,showSeg,hideScore)}</tbody></table></div>
   ${getDiagnosis(sorted)}`;
 }
 
-function renderDetailRows(list,showSeg){
-  if(!list.length)return'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--txt3)">Sin resultados</td></tr>';
+function canalBadge(canal){
+  if(!canal||!canal.trim())return'—';
+  const c=canal.trim().toLowerCase();
+  if(c.includes('llamada'))return`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:#eff4ff;color:#2563eb">📞 Llamada</span>`;
+  if(c.includes('ticket'))return`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:var(--sur3);color:var(--txt2)">🎫 Ticket</span>`;
+  return`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:var(--sur3);color:var(--txt2)">${canal}</span>`;
+}
+
+function renderDetailRows(list,showSeg,hideScore){
+  const colCount=hideScore?12:13;
+  if(!list.length)return`<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:var(--txt3)">Sin resultados</td></tr>`;
   return list.map((t,i)=>{
     const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
     const st=SC[t.status]||SC[''];const pr=PC[t.priority]||PC[''];
@@ -1038,16 +1091,18 @@ function renderDetailRows(list,showSeg){
       <td>${bdg(st.t,st.c,st.bg)}</td>
       <td>${bdg(pr.t,pr.c,pr.bg)}</td>
       <td>${t.rangoStr?bdg(t.rangoStr,getRangoColor(t.rangoStr),getRangoColor(t.rangoStr)+'18'):''}</td>
+      <td style="font-size:10px;color:var(--txt2);white-space:nowrap">${t.createdFmt||'—'}</td>
+      <td>${canalBadge(t.canal)}</td>
       <td>${t.agente||'—'}${sf}</td>
       <td style="font-size:10px;color:var(--txt2)">${t.dResp&&t.dResp.toLowerCase()!=='no'&&t.dResp.trim()!==''?t.dResp:'—'}</td>
-      <td style="font-size:10px">${t.dEstatusRep?`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:${t.dEstatusRep.includes('listo')?'#f0fdf4':t.dEstatusRep.includes('pendiente')?'#fef2f2':t.dEstatusRep.includes('atencion')||t.dEstatusRep.includes('atención')?'#fffbeb':'var(--sur3)'};color:${t.dEstatusRep.includes('listo')?'#15803d':t.dEstatusRep.includes('pendiente')?'#dc2626':t.dEstatusRep.includes('atencion')||t.dEstatusRep.includes('atención')?'#92400e':'var(--txt2)'}">${t.dEstatusRep}</span>`:'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>
+      <td style="font-size:10px">${t.dEstatusRep?`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:${t.dEstatusRep.toLowerCase().includes('listo')?'#f0fdf4':t.dEstatusRep.toLowerCase().includes('pendiente')?'#fef2f2':t.dEstatusRep.toLowerCase().includes('atencion')||t.dEstatusRep.toLowerCase().includes('atención')?'#fffbeb':'var(--sur3)'};color:${t.dEstatusRep.toLowerCase().includes('listo')?'#15803d':t.dEstatusRep.toLowerCase().includes('pendiente')?'#dc2626':t.dEstatusRep.toLowerCase().includes('atencion')||t.dEstatusRep.toLowerCase().includes('atención')?'#92400e':'var(--txt2)'}">${t.dEstatusRep}</span>`:'—'}</td>
+      ${hideScore?'':`<td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>`}
       <td onclick="event.stopPropagation()"><button onclick="mostrarSelectorCanal(${t.id},'seguimiento')" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer" title="Notificar en Slack">💬</button></td>
     </tr>`;
   }).join('');
 }
 
-function applyDFilter(filterId,tableId,openKey,showSeg){
+function applyDFilter(filterId,tableId,openKey,showSeg,hideScore){
   const area=el(filterId+'-area')?.value||'';
   const rango=el(filterId+'-rango')?.value||'';
   const prior=el(filterId+'-prior')?.value||'';
@@ -1056,13 +1111,13 @@ function applyDFilter(filterId,tableId,openKey,showSeg){
   if(rango)list=list.filter(t=>t.rangoStr===rango);
   if(prior)list=list.filter(t=>t.priority===prior);
   const tbody=el(tableId)?.querySelector('tbody');
-  if(tbody)tbody.innerHTML=renderDetailRows(list,showSeg);
+  if(tbody)tbody.innerHTML=renderDetailRows(list,showSeg,hideScore);
   const cnt=el(filterId+'-cnt');if(cnt)cnt.textContent=list.length;
   const tot=el(filterId+'-total');if(tot)tot.textContent=list.length+' tickets';
 }
-function clearDFilter(filterId,tableId,openKey,showSeg){
+function clearDFilter(filterId,tableId,openKey,showSeg,hideScore){
   ['area','rango','prior'].forEach(f=>{const e=el(filterId+'-'+f);if(e)e.value='';});
-  applyDFilter(filterId,tableId,openKey,showSeg);
+  applyDFilter(filterId,tableId,openKey,showSeg,hideScore);
 }
 function cerrarDetalle(closeId){const e=el(closeId);if(e){e.style.display='none';e.dataset.open='';}}
 
@@ -1103,74 +1158,13 @@ function renderHoy(){
   const pred=getPredSLA(baseT);
   window._predTickets={ind1:pred.ind1,ind2:pred.ind2,ind3:pred.ind3,ind4:pred.ind4};
   window._hoyLista=lista;
-  const comp=getComparativaHoy(baseT.length,lista.length);
   const now=new Date();
   const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const fechaHoy=dias[now.getDay()]+' '+now.getDate()+' '+meses[now.getMonth()];
 
-  // Clasificar niveles
-  const criticos=sortByAge(lista.filter(t=>(t.priority==='urgent'||t.priority==='high')&&parseDias(t.rangoStr||'')>=7));
-  const atencion=sortByAge(lista.filter(t=>!criticos.includes(t)&&(t.score>=300||parseDias(t.rangoStr||'')>=6)));
-  const vigilancia=sortByAge(lista.filter(t=>!criticos.includes(t)&&!atencion.includes(t)));
-
   // Mini KPIs
   const revisadosHoy=lista.filter(t=>STORE.isRevisado(t.id)).length;
-  const pendientes=lista.length-revisadosHoy;
-  const conNotas=lista.filter(t=>STORE.getNotas(t.id).length>0).length;
-
-  function motivoPills(t){
-    const r=(t.rangoStr||'').trim().toLowerCase();const p=[];
-    if(r==='7 días'||r==='7 dias')p.push('<span class="why-pill fire">7d · vence hoy</span>');
-    else if(r==='6 días'||r==='6 dias')p.push('<span class="why-pill clock">6d · mañana</span>');
-    if(t.sinSeguimiento)p.push('<span class="why-pill ghost">sin seguim.</span>');
-    if(t.isSinAsignar)p.push('<span class="why-pill fire">sin resp.</span>');
-    return p.join('');
-  }
-
-  function buildRows(list){
-    return list.map((t,i)=>{
-      const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':'#4B9BFF';
-      const pr=PC[t.priority]||PC[''];
-      const rev=STORE.isRevisado(t.id);
-      const tieneNotas=STORE.getNotas(t.id).length>0;
-      return`<div class="hoy-row${rev?' hoy-rev':''}" data-tid="${t.id}" onclick="om(${t.id})">
-        <span class="t-num">${i+1}</span>
-        <div style="min-width:0;flex:1">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <a href="https://dual.zendesk.com/agent/tickets/${t.id}" target="_blank" class="t-id" onclick="event.stopPropagation()">#${t.id}</a>
-            <span class="t-sub">${t.subject||'—'}</span>
-            ${tieneNotas?'<span style="font-size:9px;background:#f0fdf4;color:#16a34a;padding:1px 5px;border-radius:3px;font-weight:600">📝 nota</span>':''}
-          </div>
-          <div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${motivoPills(t)}</div>
-        </div>
-        <span style="font-size:11px;color:var(--txt2);white-space:nowrap">${t.agente||'—'}</span>
-        <span class="pr-tag ${t.priority}">${pr.t}</span>
-        <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${sc}">${t.score}</span>
-        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
-          <button class="rev-btn" onclick="toggleRevisado(${t.id},this)" style="${rev?'background:#f0fdf4;color:#16a34a;border-color:#bbf7d0':''}">${rev?'↩':'✓'}</button>
-          <button class="slack-btn" onclick="mostrarSelectorCanal(${t.id},'seguimiento')" title="Notificar en Slack">💬</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function nivelCard(emoji,titulo,list,color,id,collapsed){
-    if(!list.length)return'';
-    return`<div class="nivel-card" style="border-left:4px solid ${color}">
-      <div class="nivel-head" onclick="toggleNivel('${id}')">
-        <span style="font-size:13px;font-weight:700;color:${color}">${emoji} ${titulo}</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;background:${color}20;color:${color}">${list.length}</span>
-          <span id="${id}-arr" style="font-size:11px;color:${color};transition:transform .2s">${collapsed?'▼':'▲'}</span>
-        </div>
-      </div>
-      <div id="${id}" style="display:${collapsed?'none':'block'}">
-        <div class="hoy-hdr"><span>#</span><span>Ticket · Asunto · Motivo</span><span>Agente</span><span>Prioridad</span><span>Score</span><span style="text-align:right">Acción</span></div>
-        ${buildRows(list)}
-      </div>
-    </div>`;
-  }
 
   const agRows=agRiesgo.slice(0,5).map(ag=>{
     const init=ag.ag.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
@@ -1189,9 +1183,7 @@ function renderHoy(){
       <div>
         <div class="greeting-title">Buenos días, Ale 👋</div>
         <div class="greeting-sub" style="margin-top:4px">
-          ${criticos.length?`<span style="color:#dc2626;font-weight:700">${criticos.length} críticos</span> · `:''}
-          ${atencion.length?`<span style="color:#d97706;font-weight:700">${atencion.length} en atención</span> · `:''}
-          ${vigilancia.length?`<span style="color:#2563eb">${vigilancia.length} vigilancia</span> · `:''}
+          ${lista.length?`<span style="color:#dc2626;font-weight:700">${lista.length} tickets</span> necesitan atención hoy · `:'<span style="color:#16a34a">Sin tickets urgentes hoy</span> · '}
           <span>${agRiesgo.length} agentes con riesgo</span>
         </div>
       </div>
@@ -1202,13 +1194,6 @@ function renderHoy(){
     <div class="area-filter" id="hoy-area-filter" style="border-radius:var(--rl);margin-bottom:2px">
       ${allAreasHoy.map(a=>`<button class="area-btn ${a===HOY_AREA?'on':''}" onclick="filterHoy('${a}',this)">${a}</button>`).join('')}
     </div>
-
-    <!-- Comparativa vs. ayer -->
-    ${comp?`<div style="display:flex;gap:16px;align-items:center;padding:8px 16px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--rl);font-size:11px;color:var(--txt2)">
-      <span style="font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;font-size:9.5px">vs. ayer (${comp.fechaAyer})</span>
-      <span>Total tickets${HOY_AREA!=='Todas las áreas'?' · '+HOY_AREA:''}: ${baseT.length} ${fmtDelta(comp.deltaTotal)}</span>
-      <span>En riesgo hoy: ${lista.length} ${fmtDelta(comp.deltaRiesgo)}</span>
-    </div>`:''}
 
     <!-- Mini KPIs — 4 indicadores SLA + revisados -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
@@ -1243,29 +1228,11 @@ function renderHoy(){
       <div style="display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap">${agRows}${agRiesgo.length>5?`<div class="ag-chip ag-chip-a" style="cursor:pointer" onclick="go('equipo')"><span style="font-size:11px;color:var(--txt3)">+${agRiesgo.length-5} más →</span></div>`:''}</div>
     </div>`:''}
 
-    <!-- Niveles de tickets -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title danger">🔥 Lo que se quema hoy</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span class="badge red">${lista.length} tickets</span>
-          <button onclick="downloadCSV(window._hoyLista||[],'hoy_riesgo')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
-        </div>
-      </div>
-      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
-        ${lista.length===0
-          ?'<div class="empty" style="color:#16a34a">✓ Sin tickets en riesgo hoy — buen día</div>'
-          :nivelCard('🔴','CRÍTICO — resolver HOY sin excusa',criticos,'#dc2626','nivel-c',false)
-           +nivelCard('🟠','ATENCIÓN — vencen mañana o sin seguimiento',atencion,'#d97706','nivel-a',true)
-           +nivelCard('🔵','VIGILANCIA — mantener ojo',vigilancia,'#2563eb','nivel-v',true)
-        }
-      </div>
-      <div class="legend-row">
-        <span class="why-pill fire">7d</span> vence hoy &nbsp;
-        <span class="why-pill clock">6d</span> vence mañana &nbsp;
-        <span class="why-pill ghost">sin seguim.</span> más de 3 días sin actualizar &nbsp;
-        <span style="font-size:10px;color:var(--txt3)">· ✓ = marcar revisado &nbsp; 💬 = notificar Slack</span>
-      </div>
+    <div class="legend-row" style="margin:0 4px">
+      <span class="why-pill fire">7d</span> vence hoy &nbsp;
+      <span class="why-pill clock">6d</span> vence mañana &nbsp;
+      <span class="why-pill ghost">sin seguim.</span> más de 3 días sin actualizar &nbsp;
+      <span style="font-size:10px;color:var(--txt3)">· clic en un indicador para ver el detalle abajo</span>
     </div>
 
     <div id="pred-detail" style="display:none;border-top:1px solid var(--bdr)"></div>`;
@@ -1814,17 +1781,10 @@ function renderPanorama(){
         ${allAreasPano.map(a=>`<button class="area-btn ${a===PANO_AREA?'on':''}" onclick="filterPanorama('${a}',this)">${a}</button>`).join('')}
       </div>
       <div class="kpi-grid">${kpiCards}</div>
-      <div style="padding:10px 16px;border-top:1px solid var(--bdr);background:var(--sur2);font-size:10.5px;color:var(--txt2);line-height:1.7">
-        <strong>📌 Cómo leer estos indicadores:</strong><br>
-        <span style="color:#22C55E;font-weight:700">●</span> <strong>Corriente</strong> = ticket creado hoy &nbsp;·&nbsp;
-        <span style="color:#eab308;font-weight:700">●</span> <strong>1 a 6 días</strong> = en camino a vencer el SLA (aviso) &nbsp;·&nbsp;
-        <span style="color:#dc2626;font-weight:700">●</span> <strong>7 días</strong> = rango máximo — ya vencido, es lo que cuenta "SLA vencido +7d".<br>
-        "Urgentes" y "Alta prioridad" salen del mismo campo de Prioridad (no se suman entre sí — son subconjuntos). Los demás indicadores (SLA vencido, Sin seguimiento, Sin responsable, Empresas con +3 tickets) son criterios independientes entre sí.
-      </div>
     </div>
     <div class="charts-row" id="pano-charts-row">
       <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
-      <div class="ccard"><div class="ch"><span class="ct">Antigüedad</span><span style="font-size:10px;color:var(--txt3)">clic para filtrar</span></div><div class="cb"><div style="position:relative;height:200px;overflow:hidden"><canvas id="ca"></canvas></div></div></div>
+      <div class="ccard"><div class="ch"><span class="ct">Antigüedad — por estatus</span><span style="font-size:10px;color:var(--txt3)">azul=Soporte(S-) · morado=Desarrollo(D-) · clic para filtrar</span></div><div class="cb"><div style="position:relative;height:200px"><canvas id="ca"></canvas></div></div></div>
       <div class="ccard"><div class="ch"><span class="ct">Por empresa</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div>
     </div>
     <div id="pano-detail-wrap" style="display:none"></div>`;
@@ -1870,14 +1830,54 @@ function buildPanoCharts(subset){
   const legEl=el('pri-legend');
   if(legEl)legEl.innerHTML=['Urgente','Alto','Normal','Bajo'].map(function(l,i){return '<div class="legend-item"><div class="legend-dot" style="background:'+priColors[i]+'"></div>'+l+': '+priData[i]+'</div>';}).join('');
 
-  mkChart('ca','bar',rVals,rVals.map(function(r){return subset.filter(function(t){return t.rangoStr===r;}).length;}),rVals.map(function(r){return getRangoColor(r);}),false,function(label){
-    var tickets=sortByAge((window._panoSubset||panoBase()).filter(function(t){return t.rangoStr===label;}));
-    showPanoDetalleCarta('rango_'+label,'Antigüedad: '+label,getRangoColor(label),tickets);
-  });
+  buildAntiguedadChart(subset);
 
   mkChart('cag','bar',orgS.map(function(x){return x[0];}),orgS.map(function(x){return x[1];}),orgS.map(function(){return '#4B9BFF';}),true,function(label){
     var tickets=sortByAge((window._panoSubset||panoBase()).filter(function(t){return (t.org||'').trim()===label||(t.org||'Sin clasificar').trim()===label;}));
     showPanoDetalleCarta('org_'+label,'Empresa: '+label,'#2563eb',tickets);
+  });
+}
+
+function buildAntiguedadChart(subset){
+  const rVals=[...new Set(subset.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
+  function esSoporte(t){return(t.dEstatusRep||'').trim().toUpperCase().startsWith('S-');}
+  function esDesarrollo(t){return(t.dEstatusRep||'').trim().toUpperCase().startsWith('D-');}
+  const porRango=rVals.map(r=>subset.filter(t=>t.rangoStr===r));
+  const dataSoporte=porRango.map(list=>list.filter(esSoporte).length);
+  const dataDesarrollo=porRango.map(list=>list.filter(esDesarrollo).length);
+  const dataOtros=porRango.map((list,i)=>list.length-dataSoporte[i]-dataDesarrollo[i]);
+  if(CH['ca'])CH['ca'].destroy();
+  const ctx=el('ca');if(!ctx)return;
+  CH['ca']=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:rVals,
+      datasets:[
+        {label:'Soporte (S-)',data:dataSoporte,backgroundColor:'#2563eb',borderRadius:3,maxBarThickness:38},
+        {label:'Desarrollo (D-)',data:dataDesarrollo,backgroundColor:'#7c3aed',borderRadius:3,maxBarThickness:38},
+        {label:'Sin estatus',data:dataOtros,backgroundColor:'#d1d5db',borderRadius:3,maxBarThickness:38}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280',padding:8}},
+        tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}
+      },
+      scales:{
+        x:{stacked:true,ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}},
+        y:{stacked:true,ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}
+      },
+      onClick:(evt,els)=>{
+        if(!els.length)return;
+        const idx=els[0].index;
+        const label=rVals[idx];
+        const tickets=sortByAge((window._panoSubset||panoBase()).filter(t=>t.rangoStr===label));
+        showPanoDetalleCarta('rango_'+label,'Antigüedad: '+label,getRangoColor(label),tickets);
+      },
+      onHover:(evt,els)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor=els.length?'pointer':'default';}
+    }
   });
 }
 
@@ -1886,7 +1886,6 @@ function showPanoDetalleCarta(key,titulo,color,tickets){
   if(wrap.dataset.open===key&&wrap.style.display!=='none'){wrap.style.display='none';wrap.dataset.open='';return;}
   wrap.dataset.open=key;wrap.style.display='block';
   wrap.innerHTML=`<div class="card">${buildDetailBlock(sortByAge(tickets||[]),titulo,color,'pano-detail-wrap',key.replace(/[^a-z0-9_]/gi,'_'),false)}</div>`;
-  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
 
@@ -1916,7 +1915,6 @@ function showPanoDetail(key,label){
   if(wrap.dataset.open===key){wrap.style.display='none';wrap.dataset.open='';document.querySelectorAll('.kc').forEach(k=>k.classList.remove('active'));buildPanoCharts(baseT);if(titleEl)titleEl.textContent='Por prioridad';return;}
   wrap.dataset.open=key;wrap.style.display='block';
   wrap.innerHTML=`<div class="card">${buildDetailBlock(tickets,title,color,'pano-detail-wrap',key,false)}</div>`;
-  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
 // ── DETALLE AGENTE ───────────────────────────────────────────────
@@ -1930,8 +1928,7 @@ function showAgentDetail(agName,type){
   if(!agData){detail.innerHTML='<div class="empty">Sin datos</div>';return;}
   const color=agData.nivel==='r'?'#dc2626':'#d97706';
   const label=type==='dev'?`Tickets asignados a ${agName} (Desarrollo)`:`Tickets de ${agName} — ${agData.sinSeg} sin mover · ${agData.mas7} ≥7 días`;
-  detail.innerHTML=buildDetailBlock(agData._tickets,label,color,detailId,agName.replace(/\s/g,'_'),true);
-  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+  detail.innerHTML=buildDetailBlock(agData._tickets,label,color,detailId,agName.replace(/\s/g,'_'),true,true);
 }
 
 function showPredDetail(key,title,color){
@@ -1940,7 +1937,6 @@ function showPredDetail(key,title,color){
   detail.dataset.open=key;detail.style.display='';
   const tickets=window._predTickets?window._predTickets[key]||[]:[];
   detail.innerHTML=buildDetailBlock(tickets,title,color,'pred-detail',key+'_pred',false);
-  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 
 // ── CHART HELPER ─────────────────────────────────────────────────
