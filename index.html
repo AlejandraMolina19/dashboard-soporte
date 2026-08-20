@@ -247,7 +247,6 @@ tbody tr:last-child td{border-bottom:none}
 </div>
 <div class="nav">
   <button class="ntab on" onclick="go('panorama')">📊 Panorama</button>
-  <button class="ntab" onclick="go('hoy')">🔥 Hoy <span class="nb danger" id="nb-hoy">–</span></button>
   <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
   <button class="ntab" onclick="go('clientes')">🏢 Clientes <span class="nb" id="nb-clientes">–</span></button>
   <button class="ntab" onclick="go('reportes')">📈 Reportes</button>
@@ -269,7 +268,7 @@ const API=localStorage.getItem('api_pub_url')||'https://docs.google.com/spreadsh
 const PCOLORS={urgent:'#FF5C5C',high:'#FF9A3C',normal:'#4B9BFF',low:'#8BC4FF'};
 const PC={urgent:{t:'Urgente',c:'#FF5C5C',bg:'#FFF0F0'},high:{t:'Alto',c:'#FF9A3C',bg:'#FFF8EF'},normal:{t:'Normal',c:'#4B9BFF',bg:'#EFF6FF'},low:{t:'Bajo',c:'#8BC4FF',bg:'#F0F7FF'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
 const SC={open:{t:'Abierto',c:'#dc2626',bg:'#fef2f2'},pending:{t:'Pendiente',c:'#d97706',bg:'#fffbeb'},solved:{t:'Resuelto',c:'#16a34a',bg:'#f0fdf4'},'':{t:'—',c:'#9ca3af',bg:'#f9fafb'}};
-let T=[],CH={},TAB='hoy',HDR=[];
+let T=[],CH={},TAB='panorama',HDR=[];
 const el=id=>document.getElementById(id);
 const bdg=(t,c,bg)=>`<span class="b" style="background:${bg};color:${c}">${t}</span>`;
 function wk(d){const s=new Date(d.getFullYear(),0,1);return Math.ceil(((d-s)/86400000+s.getDay()+1)/7);}
@@ -585,6 +584,48 @@ function formatEncargado(raw){
   }).join(' ');
 }
 
+const NOTA_CATS={'Facturación':'#d97706','Contratos':'#7c3aed','Soporte técnico':'#2563eb','Configuración':'#0891b2','Otro':'#6b7280'};
+
+function getNotasSemana(){try{return JSON.parse(localStorage.getItem('notas_semana_general')||'[]');}catch{return[];}}
+function saveNotaSemana(txt){const arr=getNotasSemana();arr.unshift({ts:Date.now(),txt:txt.trim()});localStorage.setItem('notas_semana_general',JSON.stringify(arr.slice(0,100)));}
+function delNotaSemana(ts){const arr=getNotasSemana().filter(n=>n.ts!==ts);localStorage.setItem('notas_semana_general',JSON.stringify(arr));}
+function addNotaSemana(){
+  const inp=el('semana-inp');
+  if(!inp||!inp.value.trim())return;
+  saveNotaSemana(inp.value.trim());
+  inp.value='';
+  refreshNotasSemana();
+}
+function eliminarNotaSemana(ts){delNotaSemana(ts);refreshNotasSemana();}
+function refreshNotasSemana(){
+  const cont=el('semana-lista');if(!cont)return;
+  const notas=getNotasSemana();
+  cont.innerHTML=notas.length
+    ?notas.map(n=>`<div style="display:flex;gap:10px;align-items:flex-start;background:var(--sur);border:1px solid var(--bdr);border-left:3px solid #d97706;border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;color:var(--txt3);font-family:var(--mono);margin-bottom:3px">${fmtTs(n.ts)}</div>
+          <div style="font-size:12px;color:var(--txt);line-height:1.4">${n.txt}</div>
+        </div>
+        <button onclick="eliminarNotaSemana(${n.ts})" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:15px;padding:0;line-height:1;flex-shrink:0" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--txt3)'">×</button>
+      </div>`).join('')
+    :'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin notas de la semana aún</div>';
+}
+function renderNotasSemanaCard(){
+  return`<div class="card" style="border:1.5px solid #fde68a">
+    <div class="card-head" style="background:#fffbeb">
+      <div class="card-title" style="color:#92400e">📋 Relevante esta semana</div>
+      <span style="font-size:10px;color:#92400e">bitácora general del equipo, no ligada a un cliente</span>
+    </div>
+    <div style="padding:14px 18px">
+      <div id="semana-lista" style="max-height:200px;overflow-y:auto;margin-bottom:10px">${''}</div>
+      <div style="display:flex;gap:6px">
+        <input id="semana-inp" type="text" placeholder="Ej. Esta semana se reportó caída de llamadas en Zendesk…" onkeydown="if(event.key==='Enter')addNotaSemana()" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-size:12px;font-family:var(--font);outline:none;background:var(--sur)">
+        <button onclick="addNotaSemana()" style="padding:8px 16px;background:#d97706;color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font)">+ Agregar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderClientesConDatos(){
   const v=el('v-clientes');if(!v)return;
   const rows=CLIENTES_DATA;
@@ -602,9 +643,9 @@ function renderClientesConDatos(){
   function getNotas(emp){
     try{return JSON.parse(localStorage.getItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))))||'[]');}catch{return[];}
   }
-  function saveNota(emp,txt){
+  function saveNota(emp,txt,cat){
     const notas=getNotas(emp);
-    notas.unshift({ts:Date.now(),txt:txt.trim()});
+    notas.unshift({ts:Date.now(),txt:txt.trim(),cat:cat||'Otro'});
     localStorage.setItem('notas_cli_'+btoa(unescape(encodeURIComponent(emp||''))),JSON.stringify(notas.slice(0,50)));
   }
   function delNotaCli(emp,ts){
@@ -618,7 +659,8 @@ function renderClientesConDatos(){
   window._cliRows=rows;
   window._cliFullRows=rows;
 
-  v.innerHTML=`<div class="card">
+  v.innerHTML=`${renderNotasSemanaCard()}
+  <div class="card">
     <div class="card-head" style="flex-wrap:wrap;gap:10px">
       <div class="card-title">🏢 Clientes — <span id="cli-count">${rows.length} registros</span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -627,7 +669,7 @@ function renderClientesConDatos(){
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--sur2);border-bottom:1px solid var(--bdr)">
-      <input type="text" id="cli-search" placeholder="🔍 Buscar empresa, encargado, correo…" oninput="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:6px 12px;font-size:12px;font-family:var(--font);outline:none;width:230px;background:var(--sur)">
+      <input type="text" id="cli-search" placeholder="🔍 Buscar empresa, encargado…" oninput="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:6px 12px;font-size:12px;font-family:var(--font);outline:none;width:220px;background:var(--sur)">
       <select id="cli-filtro-notas" onchange="aplicarFiltrosClientes()" style="border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;font-size:11px;font-family:var(--font);outline:none;color:var(--txt2);background:var(--sur)">
         <option value="">📝 Todos</option>
         <option value="con">Con comentarios</option>
@@ -642,14 +684,15 @@ function renderClientesConDatos(){
       <button onclick="limpiarFiltrosClientes()" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:6px 10px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Limpiar</button>
     </div>
     <div style="overflow-x:auto">
-      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:760px">
+      <table id="cli-table" style="width:100%;border-collapse:collapse;min-width:520px">
         <thead><tr style="background:var(--sur2)">
-          ${['#','Empresa','Encargado','Correo','Teléfono','Instancia','Notas'].map(h=>`<th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
+          ${['#','Empresa','Encargado','Teléfono','Notas'].map(h=>`<th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);white-space:nowrap">${h}</th>`).join('')}
         </tr></thead>
         <tbody id="cli-tbody">${buildCliRows(rows)}</tbody>
       </table>
     </div>
   </div>`;
+  refreshNotasSemana();
 }
 
 function limpiarFiltrosClientes(){
@@ -667,14 +710,12 @@ function avatarColor(str){
 }
 
 function buildCliRows(rows){
-  const{cEmp,cEnc,cCor,cTel,cInst}=window._cliHeaders||{};
+  const{cEmp,cEnc,cTel}=window._cliHeaders||{};
   const getNotas=window._cliGetNotas||(()=>[]);
   return rows.map((r,i)=>{
     const emp=(r[cEmp]||'—').trim();
     const enc=formatEncargado(r[cEnc]);
-    const cor=r[cCor]||'—';
     const tel=r[cTel]||'—';
-    const inst=(r[cInst]||'').trim();
     const notas=getNotas(emp);
     const hasNota=notas.length>0;
     const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
@@ -684,16 +725,12 @@ function buildCliRows(rows){
       <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:10px;color:var(--txt3);font-family:var(--mono)">${i+1}</td>
       <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr)">
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="width:26px;height:26px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex-shrink:0">${iniciales}</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:${col}18;color:${col};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${iniciales}</div>
           <span style="font-weight:600;font-size:12px">${emp}</span>
         </div>
       </td>
       <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${enc}</td>
-      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px"><a href="mailto:${cor}" onclick="event.stopPropagation()" style="color:var(--acc);text-decoration:none">${cor}</a></td>
       <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${tel}</td>
-      <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
-        ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;background:var(--acc2);color:var(--acc);padding:3px 9px;border-radius:20px;font-weight:600;text-decoration:none">🔗 Acceder</a>`:'<span style="color:var(--txt3);font-size:11px">—</span>'}
-      </td>
       <td style="padding:8px 12px;border-bottom:0.5px solid var(--bdr);text-align:center">
         ${hasNota
           ?`<span style="font-size:10px;font-weight:700;background:#f0fdf4;color:#16a34a;padding:3px 10px;border-radius:20px">📝 ${notas.length}</span>`
@@ -701,7 +738,7 @@ function buildCliRows(rows){
       </td>
     </tr>
     <tr id="cli-row-${key}" style="display:none">
-      <td colspan="7" style="padding:0;background:var(--sur2)">
+      <td colspan="5" style="padding:0;background:var(--sur2)">
         ${buildCliNotaPanel(emp)}
       </td>
     </tr>`;
@@ -735,19 +772,38 @@ function aplicarFiltrosClientes(){
 function buildCliNotaPanel(emp){
   const notas=window._cliGetNotas?window._cliGetNotas(emp):[];
   const key=btoa(unescape(encodeURIComponent(emp||''))).replace(/=/g,'');
+  const{cCor,cInst}=window._cliHeaders||{};
+  const row=(window._cliRows||[]).find(r=>(r[window._cliHeaders.cEmp]||'').trim()===emp)||{};
+  const cor=cCor?row[cCor]:'';
+  const inst=cInst?(row[cInst]||'').trim():'';
+  const infoExtra=(cor||inst)?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:11px">
+    ${cor?`<a href="mailto:${cor}" style="color:var(--acc);text-decoration:none">✉ ${cor}</a>`:''}
+    ${inst?`<a href="${inst.startsWith('http')?inst:'https://'+inst}" target="_blank" style="color:var(--acc);text-decoration:none">🔗 Acceder a instancia</a>`:''}
+  </div>`:'';
   const notasHtml=notas.length
-    ?notas.map(n=>`<div style="display:flex;gap:10px;align-items:flex-start;background:var(--sur);border:1px solid var(--bdr);border-left:3px solid var(--acc);border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
+    ?notas.map(n=>{
+      const cat=n.cat||'Otro';
+      const catColor=NOTA_CATS[cat]||'#6b7280';
+      return`<div style="display:flex;gap:10px;align-items:flex-start;background:var(--sur);border:1px solid var(--bdr);border-left:3px solid ${catColor};border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:9.5px;color:var(--txt3);font-family:var(--mono);margin-bottom:3px">${fmtTs(n.ts)}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <span style="font-size:9px;font-weight:700;color:${catColor};background:${catColor}18;padding:1px 7px;border-radius:8px">${cat}</span>
+            <span style="font-size:9.5px;color:var(--txt3);font-family:var(--mono)">${fmtTs(n.ts)}</span>
+          </div>
           <div style="font-size:12px;color:var(--txt);line-height:1.4">${n.txt}</div>
         </div>
         <button onclick="window._cliDelNota('${emp.replace(/'/g,"\\'")}',${n.ts});refreshCliRow('${emp.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:15px;padding:0;line-height:1;flex-shrink:0" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--txt3)'">×</button>
-      </div>`).join('')
+      </div>`;
+    }).join('')
     :'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin notas aún — sé el primero en dejar seguimiento</div>';
   return`<div style="padding:14px 18px">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-bottom:10px;display:flex;align-items:center;gap:6px">📝 Notas de seguimiento — ${emp}</div>
+    ${infoExtra}
     <div id="cli-notas-${key}" style="max-height:220px;overflow-y:auto;margin-bottom:10px">${notasHtml}</div>
     <div style="display:flex;gap:6px">
+      <select id="cli-cat-${key}" style="border:1px solid var(--bdr);border-radius:var(--r);padding:8px 8px;font-size:11px;font-family:var(--font);outline:none;background:var(--sur);color:var(--txt2)">
+        ${Object.keys(NOTA_CATS).map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
       <input id="cli-inp-${key}" type="text" placeholder="Escribe una nota de seguimiento y presiona Enter…" onkeydown="if(event.key==='Enter')addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="flex:1;border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;font-size:12px;font-family:var(--font);outline:none;background:var(--sur)">
       <button onclick="addCliNotaRow('${emp.replace(/'/g,"\\'")}','${key}')" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);box-shadow:0 2px 6px rgba(37,99,235,.25)">+ Agregar</button>
     </div>
@@ -787,8 +843,9 @@ function refreshCliRow(emp){
 
 function addCliNotaRow(emp,key){
   const inp=el('cli-inp-'+key);
+  const catSel=el('cli-cat-'+key);
   if(!inp||!inp.value.trim())return;
-  if(window._cliSaveNota)window._cliSaveNota(emp,inp.value.trim());
+  if(window._cliSaveNota)window._cliSaveNota(emp,inp.value.trim(),catSel?catSel.value:'Otro');
   inp.value='';
   refreshCliRow(emp);
 }
@@ -797,7 +854,7 @@ function exportarNotasExcel(){
   const rows=window._cliRows||[];
   const{cEmp,cEnc}=window._cliHeaders||{};
   if(!rows.length){showToast('Sin datos de clientes','#dc2626');return;}
-  const csvRows=[['Empresa','Encargado','Fecha','Hora','Nota']];
+  const csvRows=[['Empresa','Encargado','Fecha','Hora','Categoría','Nota']];
   rows.forEach(r=>{
     const emp=(r[cEmp]||'').trim();
     const enc=r[cEnc]||'—';
@@ -807,7 +864,7 @@ function exportarNotasExcel(){
       const d=new Date(n.ts);
       const fecha=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
       const hora=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-      csvRows.push([emp,enc,fecha,hora,n.txt.replace(/,/g,';')]);
+      csvRows.push([emp,enc,fecha,hora,n.cat||'Otro',n.txt.replace(/,/g,';')]);
     });
   });
   if(csvRows.length<2){showToast('Sin notas que exportar','#d97706');return;}
@@ -1032,18 +1089,18 @@ function buildDetailBlock(tickets,title,color,closeId,openKey,showSeg,hideScore)
   if(!tickets||!tickets.length)return'<div class="empty" style="color:#16a34a;padding:20px">✓ Sin tickets en esta categoría</div>';
   window['_dt_'+openKey]=tickets;
   const sorted=sortByAge(tickets);
+  window['_dtFiltered_'+openKey]=sorted;
   const areas=[...new Set(sorted.map(t=>getAreaAgente(t)).filter(a=>a&&a!=='—'))].sort();
   const rangos=[...new Set(sorted.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(b)-parseDias(a));
   const filterId='filt-'+openKey;
   const tableId='tbl-'+openKey;
   const hs=hideScore?'true':'false';
-  const headers=['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Solicitado','Canal','Agente','Desarrollador','Estatus'];
-  if(!hideScore)headers.push('Score');
-  headers.push('Slack');
-  return`<div style="background:${color}10;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr)">
+  const headers=['#','Ticket','Asunto','Empresa','Área','Estado','Prioridad','Antigüedad','Solicitado','Canal','Agente','Desarrollador','Estatus','Slack'];
+  return`<div style="background:${color}10;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;gap:6px">
     <span style="font-size:12px;font-weight:700;color:${color}">${title}</span>
     <div style="display:flex;gap:6px;align-items:center">
       <span id="${filterId}-cnt" style="font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:${color}25;color:${color}">${tickets.length}</span>
+      <button onclick="enviarMasivoSlack('${openKey}')" style="font-size:10px;background:#eff4ff;border:1px solid #dbeafe;border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--acc);font-family:var(--font);font-weight:600">📤 Slack masivo</button>
       <button onclick="downloadCSV(window['_dt_${openKey}']||[],'detalle')" style="font-size:10px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt2);font-family:var(--font)">⬇ CSV</button>
       <button onclick="cerrarDetalle('${closeId}')" style="font-size:11px;background:none;border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--txt3);font-family:var(--font)">✕ Cerrar</button>
     </div>
@@ -1075,7 +1132,7 @@ function canalBadge(canal){
 }
 
 function renderDetailRows(list,showSeg,hideScore){
-  const colCount=hideScore?12:13;
+  const colCount=12;
   if(!list.length)return`<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:var(--txt3)">Sin resultados</td></tr>`;
   return list.map((t,i)=>{
     const sc=t.score>=350?'#EF4444':t.score>=220?'#F59E0B':t.score>=200?'#4B9BFF':'#9ca3af';
@@ -1096,7 +1153,6 @@ function renderDetailRows(list,showSeg,hideScore){
       <td>${t.agente||'—'}${sf}</td>
       <td style="font-size:10px;color:var(--txt2)">${t.dResp&&t.dResp.toLowerCase()!=='no'&&t.dResp.trim()!==''?t.dResp:'—'}</td>
       <td style="font-size:10px">${t.dEstatusRep?`<span style="font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;background:${t.dEstatusRep.toLowerCase().includes('listo')?'#f0fdf4':t.dEstatusRep.toLowerCase().includes('pendiente')?'#fef2f2':t.dEstatusRep.toLowerCase().includes('atencion')||t.dEstatusRep.toLowerCase().includes('atención')?'#fffbeb':'var(--sur3)'};color:${t.dEstatusRep.toLowerCase().includes('listo')?'#15803d':t.dEstatusRep.toLowerCase().includes('pendiente')?'#dc2626':t.dEstatusRep.toLowerCase().includes('atencion')||t.dEstatusRep.toLowerCase().includes('atención')?'#92400e':'var(--txt2)'}">${t.dEstatusRep}</span>`:'—'}</td>
-      ${hideScore?'':`<td style="font-family:var(--mono);font-weight:700;color:${sc}">${t.score}</td>`}
       <td onclick="event.stopPropagation()"><button onclick="mostrarSelectorCanal(${t.id},'seguimiento')" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--bdr);background:none;cursor:pointer" title="Notificar en Slack">💬</button></td>
     </tr>`;
   }).join('');
@@ -1110,6 +1166,7 @@ function applyDFilter(filterId,tableId,openKey,showSeg,hideScore){
   if(area)list=list.filter(t=>getAreaAgente(t)===area);
   if(rango)list=list.filter(t=>t.rangoStr===rango);
   if(prior)list=list.filter(t=>t.priority===prior);
+  window['_dtFiltered_'+openKey]=list;
   const tbody=el(tableId)?.querySelector('tbody');
   if(tbody)tbody.innerHTML=renderDetailRows(list,showSeg,hideScore);
   const cnt=el(filterId+'-cnt');if(cnt)cnt.textContent=list.length;
@@ -1360,6 +1417,64 @@ function sendSlackPresetACanalIndex(id,tipo,canalIdx){
     .catch(()=>showToast(`✓ Enviado${destino} (verifica Slack)`,'#16a34a'));
 }
 
+// ── Envío masivo a Slack (respeta filtros activos del bloque de detalle) ──
+function enviarMasivoSlack(openKey){
+  const list=window['_dtFiltered_'+openKey]||window['_dt_'+openKey]||[];
+  if(!list.length){showToast('Sin tickets para enviar','#d97706');return;}
+  const canales=getSlackCanales();
+  const wh=localStorage.getItem('slack_webhook');
+  if(!canales.length&&!wh){
+    const ok=confirm('Slack no está configurado.\n\n¿Quieres agregar un canal ahora?');
+    if(ok)configSlack();
+    return;
+  }
+  if(canales.length>1){showSlackModalMasivo(openKey,canales);return;}
+  const webhook=canales.length?canales[0].webhook:wh;
+  enviarMasivoACanal(list,webhook,canales.length?canales[0].nombre:null);
+}
+function showSlackModalMasivo(openKey,canales){
+  let modal=document.getElementById('slack-canal-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='slack-canal-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center';
+    modal.onclick=function(e){if(e.target===modal)modal.remove();};
+    document.body.appendChild(modal);
+  }
+  const list=window['_dtFiltered_'+openKey]||window['_dt_'+openKey]||[];
+  modal.innerHTML=`<div style="background:var(--sur);border-radius:var(--rl);padding:20px;max-width:380px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.15)">
+    <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">Enviar ${list.length} tickets a Slack</div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:14px">Se enviará un solo mensaje con la lista completa</div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:8px">Selecciona el canal:</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${canales.map((canal,i)=>`<button onclick="enviarMasivoACanalIdx('${openKey}',${i});document.getElementById('slack-canal-modal').remove()" style="padding:8px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);cursor:pointer;text-align:left;font-size:12px;font-weight:600;color:var(--txt);font-family:var(--font);transition:all .15s" onmouseover="this.style.background='var(--acc2)';this.style.borderColor='var(--acc)'" onmouseout="this.style.background='var(--sur2)';this.style.borderColor='var(--bdr)'">
+        <span style="font-size:16px;margin-right:8px">#</span>${canal.nombre}
+      </button>`).join('')}
+    </div>
+    <button onclick="document.getElementById('slack-canal-modal').remove()" style="width:100%;padding:7px;border-radius:var(--r);border:1px solid var(--bdr);background:none;cursor:pointer;font-size:12px;color:var(--txt3);font-family:var(--font)">Cancelar</button>
+  </div>`;
+}
+function enviarMasivoACanalIdx(openKey,idx){
+  const canales=getSlackCanales();
+  const canal=canales[idx];
+  const list=window['_dtFiltered_'+openKey]||window['_dt_'+openKey]||[];
+  enviarMasivoACanal(list,canal?canal.webhook:localStorage.getItem('slack_webhook'),canal?canal.nombre:null);
+}
+function enviarMasivoACanal(list,webhook,nombreCanal){
+  if(!webhook){showToast('Sin webhook configurado','#dc2626');return;}
+  const max=25;
+  const lineas=list.slice(0,max).map(t=>{
+    const base=`https://dual.zendesk.com/agent/tickets/${t.id}`;
+    return`• <${base}|#${t.id}> — ${t.subject||'—'} (${t.org||'—'} · ${t.rangoStr||'—'})`;
+  }).join('\n');
+  const extra=list.length>max?`\n… y ${list.length-max} más`:'';
+  const texto=`📋 *Seguimiento masivo — ${list.length} ticket${list.length===1?'':'s'}*\n${lineas}${extra}`;
+  const msg={text:texto,username:'Dashboard Soporte',icon_emoji:':clipboard:'};
+  fetch(webhook,{method:'POST',body:JSON.stringify(msg),mode:'no-cors'})
+    .then(()=>showToast(`✓ Enviados ${list.length} tickets a Slack${nombreCanal?' → #'+nombreCanal:''}`,'#16a34a'))
+    .catch(()=>showToast('✓ Enviado (verifica Slack)','#16a34a'));
+}
+
 function sendSlackPreset(id,tipo){
   mostrarSelectorCanal(id,tipo);
 }
@@ -1465,10 +1580,38 @@ function renderEquipo(){
         <div class="card-title">✅ Agentes al día</div>
       </div>
       <div id="eq-aldia-list" class="al-dia-list"></div>
-    </div>`;
+    </div>
+    ${renderFocosRojos(agRiesgo,devRiesgo)}`;
   window._eqSegActivo=false;window._eqAreaActiva='Todas las áreas';
   renderEquipoCards();
   renderAlDia();
+}
+
+function renderFocosRojos(agRiesgo,devRiesgo){
+  const todos=[...agRiesgo,...devRiesgo];
+  const ranking=todos.map(a=>{
+    const criticos=(a._tickets||[]).filter(t=>t.score>=350).length;
+    return{ag:a.ag,area:a.area,criticos,sinSeg:a.sinSeg,mas7:a.mas7,total:a.total};
+  }).filter(r=>r.criticos>0).sort((a,b)=>b.criticos-a.criticos);
+  if(!ranking.length)return`<div class="card"><div class="card-head"><div class="card-title">🔥 Resumen de focos rojos</div></div><div class="empty" style="color:#16a34a;padding:20px">✓ Nadie tiene tickets críticos (score ≥350) ahora mismo</div></div>`;
+  const max=ranking[0].criticos;
+  const filas=ranking.slice(0,10).map((r,i)=>{
+    const pct=Math.round(r.criticos/max*100);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 16px${i<ranking.length-1?';border-bottom:1px solid var(--bdr)':''}">
+      <span style="font-size:11px;font-weight:700;color:var(--txt3);width:16px">${i+1}</span>
+      <span style="font-size:12px;font-weight:600;width:140px;flex-shrink:0">${r.ag}</span>
+      <span style="font-size:9px;color:var(--txt3);background:var(--sur3);padding:2px 6px;border-radius:4px;flex-shrink:0">${r.area}</span>
+      <div style="flex:1;height:8px;background:var(--sur3);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#dc2626;border-radius:4px"></div></div>
+      <span style="font-size:13px;font-weight:700;color:#dc2626;font-family:var(--mono);width:26px;text-align:right">${r.criticos}</span>
+    </div>`;
+  }).join('');
+  return`<div class="card">
+    <div class="card-head">
+      <div class="card-title">🔥 Resumen de focos rojos</div>
+      <span style="font-size:10px;color:var(--txt3)">tickets críticos (score ≥350) por persona</span>
+    </div>
+    ${filas}
+  </div>`;
 }
 function renderAlDia(){
   const riesgoNames=new Set([...getAgentesEnRiesgo().map(a=>a.ag)]);
@@ -1784,7 +1927,7 @@ function renderPanorama(){
     </div>
     <div class="charts-row" id="pano-charts-row">
       <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
-      <div class="ccard"><div class="ch"><span class="ct">Antigüedad — por estatus</span><span style="font-size:10px;color:var(--txt3)">azul=Soporte(S-) · morado=Desarrollo(D-) · clic para filtrar</span></div><div class="cb"><div style="position:relative;height:200px"><canvas id="ca"></canvas></div></div></div>
+      <div class="ccard"><div class="ch"><span class="ct">Antigüedad — por estatus</span><span style="font-size:10px;color:var(--txt3)">1 color por estatus (col. AK) · clic para filtrar</span></div><div class="cb"><div style="position:relative;height:220px"><canvas id="ca"></canvas></div></div></div>
       <div class="ccard"><div class="ch"><span class="ct">Por empresa</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div>
     </div>
     <div id="pano-detail-wrap" style="display:none"></div>`;
@@ -1838,31 +1981,53 @@ function buildPanoCharts(subset){
   });
 }
 
+const ESTATUS_COLORS={
+  'd - listo para publicar/replicar':'#16a34a',
+  'd - en atención':'#f59e0b',
+  'd - en atencion':'#f59e0b',
+  'd - pendiente solución definitiva':'#dc2626',
+  'd - pendiente solucion definitiva':'#dc2626',
+  'd - sin responsable':'#6b7280',
+  's - abierto':'#2563eb',
+  's - pendiente':'#0891b2',
+  's - pendiente llamar cliente':'#7c3aed',
+  's - pendiente monitoreo':'#db2777',
+};
+const ESTATUS_PALETTE_FALLBACK=['#2563eb','#7c3aed','#0891b2','#d97706','#dc2626','#16a34a','#db2777','#4338ca','#0d9488','#b45309','#65a30d','#e11d48'];
+function estatusColor(raw){
+  const k=(raw||'').trim().toLowerCase();
+  if(!k)return'#d1d5db';
+  if(ESTATUS_COLORS[k])return ESTATUS_COLORS[k];
+  let h=0;for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))>>>0;
+  return ESTATUS_PALETTE_FALLBACK[h%ESTATUS_PALETTE_FALLBACK.length];
+}
+
 function buildAntiguedadChart(subset){
   const rVals=[...new Set(subset.map(t=>t.rangoStr).filter(Boolean))].sort((a,b)=>parseDias(a)-parseDias(b));
-  function esSoporte(t){return(t.dEstatusRep||'').trim().toUpperCase().startsWith('S-');}
-  function esDesarrollo(t){return(t.dEstatusRep||'').trim().toUpperCase().startsWith('D-');}
-  const porRango=rVals.map(r=>subset.filter(t=>t.rangoStr===r));
-  const dataSoporte=porRango.map(list=>list.filter(esSoporte).length);
-  const dataDesarrollo=porRango.map(list=>list.filter(esDesarrollo).length);
-  const dataOtros=porRango.map((list,i)=>list.length-dataSoporte[i]-dataDesarrollo[i]);
+  const SIN_ESTATUS='Sin estatus';
+  const grupoDe=t=>(t.dEstatusRep||'').trim()||SIN_ESTATUS;
+  const gruposPresentes=[...new Set(subset.map(grupoDe))].sort((a,b)=>{
+    if(a===SIN_ESTATUS)return 1;if(b===SIN_ESTATUS)return-1;
+    return a.localeCompare(b);
+  });
+  const datasets=gruposPresentes.map(g=>({
+    label:g,
+    data:rVals.map(r=>subset.filter(t=>t.rangoStr===r&&grupoDe(t)===g).length),
+    backgroundColor:g===SIN_ESTATUS?'#d1d5db':estatusColor(g),
+    borderRadius:3,
+    maxBarThickness:38
+  })).filter(ds=>ds.data.some(v=>v>0));
+
   if(CH['ca'])CH['ca'].destroy();
   const ctx=el('ca');if(!ctx)return;
   CH['ca']=new Chart(ctx,{
     type:'bar',
-    data:{
-      labels:rVals,
-      datasets:[
-        {label:'Soporte (S-)',data:dataSoporte,backgroundColor:'#2563eb',borderRadius:3,maxBarThickness:38},
-        {label:'Desarrollo (D-)',data:dataDesarrollo,backgroundColor:'#7c3aed',borderRadius:3,maxBarThickness:38},
-        {label:'Sin estatus',data:dataOtros,backgroundColor:'#d1d5db',borderRadius:3,maxBarThickness:38}
-      ]
-    },
+    data:{labels:rVals,datasets},
     options:{
       responsive:true,
       maintainAspectRatio:false,
       plugins:{
-        legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280',padding:8}},
+        legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:8.5},color:'#6b7280',padding:6}},
         tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}
       },
       scales:{
@@ -1871,10 +2036,13 @@ function buildAntiguedadChart(subset){
       },
       onClick:(evt,els)=>{
         if(!els.length)return;
-        const idx=els[0].index;
-        const label=rVals[idx];
-        const tickets=sortByAge((window._panoSubset||panoBase()).filter(t=>t.rangoStr===label));
-        showPanoDetalleCarta('rango_'+label,'Antigüedad: '+label,getRangoColor(label),tickets);
+        const{datasetIndex,index}=els[0];
+        const rango=rVals[index];
+        const grupo=datasets[datasetIndex]?datasets[datasetIndex].label:null;
+        let tickets=(window._panoSubset||panoBase()).filter(t=>t.rangoStr===rango);
+        if(grupo)tickets=tickets.filter(t=>grupoDe(t)===grupo);
+        tickets=sortByAge(tickets);
+        showPanoDetalleCarta('rango_'+rango+'_'+(grupo||''),'Antigüedad: '+rango+(grupo?' · '+grupo:''),grupo?estatusColor(grupo):getRangoColor(rango),tickets);
       },
       onHover:(evt,els)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor=els.length?'pointer':'default';}
     }
@@ -2185,53 +2353,26 @@ function renderReportes(){
       </div>
     </div>
 
-    <!-- Fila: Por agente + Reincidentes -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-
-      <!-- Por agente -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">👤 Por agente${BD_DATA.length?' — histórico':' — activos'}</div>
-          <span style="font-size:10px;color:var(--txt3)">tickets asignados</span>
-        </div>
-        <div style="padding:10px 14px">
-          ${agBD.map(([ag,cnt],i)=>{
-            const maxCnt=agBD[0]?agBD[0][1]:1;
-            const pct=Math.round((typeof cnt==='object'?cnt.total:cnt)/maxCnt*100);
-            const val=typeof cnt==='object'?cnt.total:cnt;
-            const col=i===0?'#dc2626':i<=2?'#d97706':'#2563eb';
-            return`<div class="ag-bar-row" style="margin-bottom:7px">
-              <span class="ag-bar-lbl" style="font-size:11px">${ag}</span>
-              <div class="ag-bar-track" style="height:16px">
-                <div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div>
-              </div>
-              <span class="ag-bar-val" style="font-size:12px;font-weight:700;color:${col}">${val}</span>
-            </div>`;
-          }).join('')}
-        </div>
+    <!-- Clientes reincidentes -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🔄 Clientes reincidentes</div>
+        <span style="font-size:10px;color:var(--txt3)">≥3 tickets activos · ${reinc.length} empresas</span>
       </div>
-
-      <!-- Clientes reincidentes -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">🔄 Clientes reincidentes</div>
-          <span style="font-size:10px;color:var(--txt3)">≥3 tickets activos · ${reinc.length} empresas</span>
+      <div style="padding:10px 0">
+        <div style="display:grid;grid-template-columns:1fr 44px 60px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 14px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.05em">
+          <span>Empresa</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span>
         </div>
-        <div style="padding:10px 0">
-          <div style="display:grid;grid-template-columns:1fr 44px 60px;font-size:9px;font-weight:700;color:var(--txt3);padding:0 14px 6px;border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.05em">
-            <span>Empresa</span><span style="text-align:center">Tickets</span><span style="text-align:right">Score máx.</span>
-          </div>
-          ${reinc.slice(0,10).map(([org,cnt])=>{
-            const tks=T.filter(t=>(t.org||'Sin clasificar')===org);
-            const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
-            const col=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#2563eb';
-            return`<div style="display:grid;grid-template-columns:1fr 44px 60px;align-items:center;padding:6px 14px;border-bottom:0.5px solid var(--bdr);cursor:pointer" onclick="showPanoDetalleCarta('org_${org.replace(/'/g,"\\'")}','Empresa: ${org.replace(/'/g,"\\'")}','#2563eb',T.filter(t=>(t.org||'Sin clasificar')==='${org.replace(/'/g,"\\'")}'));go('panorama')">
-              <span style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${org}</span>
-              <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${col};text-align:center">${cnt}</span>
-              <span style="font-size:10px;font-weight:700;font-family:var(--mono);text-align:right;padding:1px 6px;border-radius:4px;background:${col}15;color:${col}">${maxSc}</span>
-            </div>`;
-          }).join('')}
-        </div>
+        ${reinc.slice(0,10).map(([org,cnt])=>{
+          const tks=T.filter(t=>(t.org||'Sin clasificar')===org);
+          const maxSc=tks.length?Math.max(...tks.map(t=>t.score)):0;
+          const col=maxSc>=350?'#dc2626':maxSc>=220?'#d97706':'#2563eb';
+          return`<div style="display:grid;grid-template-columns:1fr 44px 60px;align-items:center;padding:6px 14px;border-bottom:0.5px solid var(--bdr);cursor:pointer" onclick="showPanoDetalleCarta('org_${org.replace(/'/g,"\\'")}','Empresa: ${org.replace(/'/g,"\\'")}','#2563eb',T.filter(t=>(t.org||'Sin clasificar')==='${org.replace(/'/g,"\\'")}'));go('panorama')">
+            <span style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${org}</span>
+            <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${col};text-align:center">${cnt}</span>
+            <span style="font-size:10px;font-weight:700;font-family:var(--mono);text-align:right;padding:1px 6px;border-radius:4px;background:${col}15;color:${col}">${maxSc}</span>
+          </div>`;
+        }).join('')}
       </div>
     </div>
 
@@ -2446,11 +2587,10 @@ function conectarBDReportes(){
 // ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','hoy','equipo','clientes','reportes'][i]===tab));
-  ['hoy','equipo','clientes','panorama','reportes'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','equipo','clientes','reportes'][i]===tab));
+  ['equipo','clientes','panorama','reportes'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
-  if(tab==='hoy')renderHoy();
-  else if(tab==='equipo')renderEquipo();
+  if(tab==='equipo')renderEquipo();
   else if(tab==='clientes')renderClientes();
   else if(tab==='panorama')renderPanorama();
   else if(tab==='reportes')renderReportes();
@@ -2495,11 +2635,11 @@ function safeSet(id,v){const e=document.getElementById(id);if(e)e.textContent=v;
 async function loadData(){
   const btn=el('ubtn');btn.disabled=true;btn.classList.add('spin');
   el('ldr').style.display='flex';
-  ['hoy','equipo','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
+  ['equipo','panorama'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   // Timeout de seguridad: si tarda más de 12s mostrar error
   const _timeout=setTimeout(()=>{
     el('ldr').style.display='none';
-    const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar. Ve al Sheets de Ant_Tickets → Archivo → Publicar en la web → selecciona Ant_Tickets → CSV → Publicar → copia la URL y pégala abajo.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
+    const v=el('v-panorama');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;width:100%"><div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Tiempo de espera agotado</div><div style="font-size:12px;color:#6b7280;margin-bottom:14px">No se pudo conectar. Ve al Sheets de Ant_Tickets → Archivo → Publicar en la web → selecciona Ant_Tickets → CSV → Publicar → copia la URL y pégala abajo.</div><button onclick="loadData()" style="padding:7px 16px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">↺ Reintentar</button></div>';}
     btn.disabled=false;btn.classList.remove('spin');
   },12000);
   if(!localStorage.getItem('clientes_pub_url')){localStorage.setItem('clientes_pub_url','https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJqwXH1eznEg5ikR5ZFARuNvPYFMnmpBdzmVOZDtL4NX-6j3Mg6uChyzWrvoLD6GAcT-tvU1eqJK-/pub?gid=1715906212&single=true&output=csv');}
@@ -2514,9 +2654,9 @@ async function loadData(){
     safeSet('cs','SEM '+wk(now));
     safeSet('ct',T.length+' tickets');
     safeSet('cu',now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
-    const _q=getTicketsQuemandose();const _ar=getAgentesEnRiesgo();
+    const _ar=getAgentesEnRiesgo();
     const _orgCount=new Set(T.map(t=>t.org).filter(Boolean)).size;
-    safeSet('nb-hoy',_q.length);safeSet('nb-equipo',_ar.length);safeSet('nb-clientes',_orgCount);
+    safeSet('nb-equipo',_ar.length);safeSet('nb-clientes',_orgCount);
     el('ls').textContent='Cargando vista…';
     el('ldr').style.display='none';
     TAB='panorama';
@@ -2524,13 +2664,13 @@ async function loadData(){
     const v=el('v-panorama');if(v)v.classList.add('on');
     setTimeout(()=>{
       try{renderPanorama();}catch(re){
-        const v=el('v-hoy');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;color:#dc2626;font-weight:600">Error al renderizar: '+re.message+'<br><small style=\'font-family:monospace;font-weight:400\'>'+re.stack+'</small></div>';}
-        console.error('renderHoy error:',re);
+        const v=el('v-panorama');if(v){v.classList.add('on');v.style.display='flex';v.innerHTML='<div style="padding:20px;color:#dc2626;font-weight:600">Error al renderizar: '+re.message+'<br><small style=\'font-family:monospace;font-weight:400\'>'+re.stack+'</small></div>';}
+        console.error('renderPanorama error:',re);
       }
     },10);
   }catch(e){
     el('ldr').style.display='none';
-    const v=el('v-hoy');
+    const v=el('v-panorama');
     if(v){
       v.classList.add('on');
       v.style.display='flex';
