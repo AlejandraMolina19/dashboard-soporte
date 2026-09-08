@@ -46,7 +46,23 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .ntab.on .nb{background:var(--acc3);color:var(--acc)}
 .nb.danger{background:#fef2f2 !important;color:#dc2626 !important}
 .nb.warn{background:#fffbeb !important;color:#92400e !important}
-.main{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+.layout{display:flex;flex:1;min-height:0;align-items:stretch}
+.sidebar{width:196px;flex-shrink:0;background:#16234f;display:flex;flex-direction:column;padding:16px 10px;gap:3px;position:sticky;top:48px;align-self:flex-start;height:calc(100vh - 48px);overflow-y:auto}
+.sidebar-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);padding:6px 12px 8px}
+.stab{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--font);color:rgba(255,255,255,.62);border:none;background:none;cursor:pointer;transition:all .15s;text-align:left;width:100%}
+.stab:hover{background:rgba(255,255,255,.08);color:#fff}
+.stab.on{background:var(--acc);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+.stab .stab-ico{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.stab .stab-lbl{flex:1}
+.stab .nb{margin-left:auto}
+.stab.on .nb{background:rgba(255,255,255,.25);color:#fff}
+@media(max-width:760px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;flex-direction:row;position:static;height:auto;overflow-x:auto;overflow-y:visible;padding:8px 10px;gap:6px}
+  .sidebar-label{display:none}
+  .stab{width:auto;white-space:nowrap;padding:8px 12px}
+}
+.main{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .view{display:none;flex-direction:column;gap:12px}
 .view.on{display:flex}
 .ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rl)}
@@ -245,19 +261,22 @@ tbody tr:last-child td{border-bottom:none}
     Actualizar datos
   </button>
 </div>
-<div class="nav">
-  <button class="ntab on" onclick="go('panorama')">📊 Panorama</button>
-  <button class="ntab" onclick="go('equipo')">👥 Equipo <span class="nb warn" id="nb-equipo">–</span></button>
-  <button class="ntab" onclick="go('clientes')">🏢 Clientes <span class="nb" id="nb-clientes">–</span></button>
-  <button class="ntab" onclick="go('reportes')">📈 Reportes</button>
-</div>
-<div class="main">
-  <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
-  <div class="view" id="v-hoy"></div>
-  <div class="view" id="v-equipo"></div>
-  <div class="view" id="v-panorama"></div>
-  <div class="view" id="v-clientes"></div>
-  <div class="view" id="v-reportes"></div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-label">Menú</div>
+    <button class="stab on" onclick="go('panorama')"><span class="stab-ico">📊</span><span class="stab-lbl">Panorama</span></button>
+    <button class="stab" onclick="go('equipo')"><span class="stab-ico">👥</span><span class="stab-lbl">Equipo</span><span class="nb warn" id="nb-equipo">–</span></button>
+    <button class="stab" onclick="go('clientes')"><span class="stab-ico">🏢</span><span class="stab-lbl">Clientes</span><span class="nb" id="nb-clientes">–</span></button>
+    <button class="stab" onclick="go('reportes')"><span class="stab-ico">📈</span><span class="stab-lbl">Reportes</span></button>
+  </div>
+  <div class="main">
+    <div class="ldr" id="ldr"><div class="ring"></div><div style="font-size:12px;color:var(--txt3);font-weight:500" id="ls">Conectando con Google Sheets…</div></div>
+    <div class="view" id="v-hoy"></div>
+    <div class="view" id="v-equipo"></div>
+    <div class="view" id="v-panorama"></div>
+    <div class="view" id="v-clientes"></div>
+    <div class="view" id="v-reportes"></div>
+  </div>
 </div>
 <div class="msk" id="msk" onclick="if(event.target===this)cm()"><div class="mbox" id="mb"></div></div>
 <script>
@@ -1613,14 +1632,20 @@ function renderFocosRojos(agRiesgo,devRiesgo){
     ${filas}
   </div>`;
 }
-function renderAlDia(){
+function renderAlDia(area){
+  area=area||window._eqAreaActiva||'Todas las áreas';
   const riesgoNames=new Set([...getAgentesEnRiesgo().map(a=>a.ag)]);
-  const devRiesgoNames=new Set(getDesarrolladoresConRiesgo().map(a=>a.ag));
   const allAg=[...new Set(T.map(t=>(t.agente||'').trim()).filter(a=>a&&a.toLowerCase()!=='no'))];
-  const alDia=allAg.filter(a=>!riesgoNames.has(a));
+  let alDia=allAg.filter(a=>!riesgoNames.has(a));
+  if(area!=='Todas las áreas'){
+    alDia=alDia.filter(a=>{
+      const tks=T.filter(t=>(t.agente||'').trim()===a);
+      return getAreaAgente(tks[0]||{agente:a})===area;
+    });
+  }
   const cont=el('eq-aldia-list');
   if(!cont)return;
-  cont.innerHTML=alDia.length?alDia.map(a=>{const tks=T.filter(t=>t.agente===a);const area=getAreaAgente(tks[0]||{agente:a});return`<span class="al-dia-chip">${a} (${area}) — ${tks.length} tkt</span>`;}).join(''):'<span style="font-size:12px;color:var(--txt3)">Todos tienen riesgo</span>';
+  cont.innerHTML=alDia.length?alDia.map(a=>{const tks=T.filter(t=>(t.agente||'').trim()===a);const ag=getAreaAgente(tks[0]||{agente:a});return`<span class="al-dia-chip">${a} (${ag}) — ${tks.length} tkt</span>`;}).join(''):'<span style="font-size:12px;color:var(--txt3)">Todos tienen riesgo en esta área</span>';
 }
 window._eqSegActivo=false;window._eqAreaActiva='Todas las áreas';
 function filterEquipo(area,btn){
@@ -1628,6 +1653,7 @@ function filterEquipo(area,btn){
   document.querySelectorAll('.area-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   renderEquipoCards();
+  renderAlDia(area);
 }
 function toggleSegEquipo(btn){
   window._eqSegActivo=!window._eqSegActivo;
@@ -1894,7 +1920,7 @@ function renderPanorama(){
   const baseT=panoBase();
   const allAreasPano=['Todas las áreas','Customer','Soporte','Implementación','Desarrollo'];
   const orgMap0={};baseT.forEach(t=>{const o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap0[o]=(orgMap0[o]||0)+1;});
-  const orgH=Math.max(160,Math.min(Object.keys(orgMap0).length,12)*28);
+  const orgH=Math.max(160,Object.keys(orgMap0).length*26);
   const kpis=[
     {key:'total',label:'Total tickets',color:'#2563eb',fn:()=>baseT},
     {key:'urgent',label:'Urgentes',color:'#FF5C5C',fn:()=>baseT.filter(t=>t.priority==='urgent')},
@@ -1927,7 +1953,7 @@ function renderPanorama(){
     </div>
     <div class="charts-row" id="pano-charts-row">
       <div class="ccard"><div class="ch"><span class="ct" id="pano-chart-title">Por prioridad</span></div><div class="cb"><div style="position:relative;height:160px"><canvas id="cp"></canvas></div><div class="chart-legend" id="pri-legend"></div></div></div>
-      <div class="ccard"><div class="ch"><span class="ct">Antigüedad — por estatus</span><span style="font-size:10px;color:var(--txt3)">1 color por estatus (col. AK) · clic para filtrar</span></div><div class="cb"><div style="position:relative;height:220px"><canvas id="ca"></canvas></div></div></div>
+      <div class="ccard"><div class="ch"><span class="ct">Antigüedad — por estatus</span><span style="font-size:10px;color:var(--txt3)">morado=Soporte(S-) · naranja=Desarrollo(D-) · clic para filtrar</span></div><div class="cb"><div style="position:relative;height:280px"><canvas id="ca"></canvas></div></div></div>
       <div class="ccard"><div class="ch"><span class="ct">Por empresa</span></div><div class="cb"><div style="position:relative;height:${orgH}px"><canvas id="cag"></canvas></div></div></div>
     </div>
     <div id="pano-detail-wrap" style="display:none"></div>`;
@@ -1941,7 +1967,7 @@ function buildPanoCharts(subset){
   const priColors=[PCOLORS.urgent,PCOLORS.high,PCOLORS.normal,PCOLORS.low];
   const orgMap={};
   subset.forEach(function(t){var o=(t.org||'Sin clasificar').trim()||'Sin clasificar';orgMap[o]=(orgMap[o]||0)+1;});
-  const orgS=Object.entries(orgMap).sort(function(a,b){return b[1]-a[1];}).slice(0,12);
+  const orgS=Object.entries(orgMap).sort(function(a,b){return b[1]-a[1];});
   window._panoSubset=subset;
 
   if(CH['cp'])CH['cp'].destroy();
@@ -1981,24 +2007,29 @@ function buildPanoCharts(subset){
   });
 }
 
+const PURPLE_SHADES=['#ede9fe','#c4b5fd','#a78bfa','#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95'];
+const ORANGE_SHADES=['#ffedd5','#fed7aa','#fdba74','#fb923c','#f97316','#ea580c','#c2410c','#9a3412'];
 const ESTATUS_COLORS={
-  'd - listo para publicar/replicar':'#16a34a',
-  'd - en atención':'#f59e0b',
-  'd - en atencion':'#f59e0b',
-  'd - pendiente solución definitiva':'#dc2626',
-  'd - pendiente solucion definitiva':'#dc2626',
-  'd - sin responsable':'#6b7280',
-  's - abierto':'#2563eb',
-  's - pendiente':'#0891b2',
-  's - pendiente llamar cliente':'#7c3aed',
-  's - pendiente monitoreo':'#db2777',
+  'd - sin responsable':'#fed7aa',
+  'd - listo para publicar/replicar':'#fdba74',
+  'd - en atención':'#fb923c',
+  'd - en atencion':'#fb923c',
+  'd - pendiente solución definitiva':'#c2410c',
+  'd - pendiente solucion definitiva':'#c2410c',
+  's - pendiente monitoreo':'#ddd6fe',
+  's - pendiente':'#c4b5fd',
+  's - abierto':'#8b5cf6',
+  's - pendiente por revisar':'#7c3aed',
+  's - pendiente llamar cliente':'#5b21b6',
 };
-const ESTATUS_PALETTE_FALLBACK=['#2563eb','#7c3aed','#0891b2','#d97706','#dc2626','#16a34a','#db2777','#4338ca','#0d9488','#b45309','#65a30d','#e11d48'];
+const ESTATUS_PALETTE_FALLBACK=['#2563eb','#0891b2','#16a34a','#4338ca','#0d9488','#65a30d'];
 function estatusColor(raw){
   const k=(raw||'').trim().toLowerCase();
   if(!k)return'#d1d5db';
   if(ESTATUS_COLORS[k])return ESTATUS_COLORS[k];
   let h=0;for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))>>>0;
+  if(/^s\s*-/.test(k))return PURPLE_SHADES[h%PURPLE_SHADES.length];
+  if(/^d\s*-/.test(k))return ORANGE_SHADES[h%ORANGE_SHADES.length];
   return ESTATUS_PALETTE_FALLBACK[h%ESTATUS_PALETTE_FALLBACK.length];
 }
 
@@ -2027,7 +2058,7 @@ function buildAntiguedadChart(subset){
       responsive:true,
       maintainAspectRatio:false,
       plugins:{
-        legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:8.5},color:'#6b7280',padding:6}},
+        legend:{display:true,position:'bottom',align:'start',labels:{boxWidth:8,font:{size:8.5},color:'#6b7280',padding:7}},
         tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}
       },
       scales:{
@@ -2587,7 +2618,7 @@ function conectarBDReportes(){
 // ── TABS ─────────────────────────────────────────────────────────
 function go(tab){
   TAB=tab;
-  document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',['panorama','equipo','clientes','reportes'][i]===tab));
+  document.querySelectorAll('.stab').forEach((b,i)=>b.classList.toggle('on',['panorama','equipo','clientes','reportes'][i]===tab));
   ['equipo','clientes','panorama','reportes'].forEach(id=>{const v=el('v-'+id);if(v)v.classList.remove('on');});
   const v=el('v-'+tab);if(v)v.classList.add('on');
   if(tab==='equipo')renderEquipo();
@@ -2660,7 +2691,7 @@ async function loadData(){
     el('ls').textContent='Cargando vista…';
     el('ldr').style.display='none';
     TAB='panorama';
-    document.querySelectorAll('.ntab').forEach((b,i)=>b.classList.toggle('on',i===0));
+    document.querySelectorAll('.stab').forEach((b,i)=>b.classList.toggle('on',i===0));
     const v=el('v-panorama');if(v)v.classList.add('on');
     setTimeout(()=>{
       try{renderPanorama();}catch(re){
