@@ -1781,11 +1781,13 @@ function parseSemanaId(id){
   const y=+m[1],mo=+m[2],w=+m[3];
   return{id,year:y,month:mo,week:w,key:y*100000+mo*1000+w};
 }
+const REP_SEMANA_MIN='A2026_M5_S20'; // datos depurados a partir de aquí
+const REP_SEMANA_MIN_KEY=parseSemanaId(REP_SEMANA_MIN).key;
 function getSemanasUnicas(){
   if(!BD_DATA.length)return[];
   const set=new Set();
   BD_DATA.forEach(r=>{const v=cv(r,'H');if(v)set.add(v);});
-  return[...set].map(parseSemanaId).filter(Boolean).sort((a,b)=>a.key-b.key);
+  return[...set].map(parseSemanaId).filter(Boolean).filter(s=>s.key>=REP_SEMANA_MIN_KEY).sort((a,b)=>a.key-b.key);
 }
 let REP_INI=null,REP_FIN=null;
 
@@ -1817,6 +1819,18 @@ function calcularRango(rows){
   const total=rows.length;
   const resueltas=rows.filter(esResuelto);
   const abiertas=rows.filter(r=>!esResuelto(r));
+
+  // Desglose por estatus real (columna J): pending, solved, closed, open
+  const ESTATUS_ORDEN=['open','pending','solved','closed'];
+  const estatusMap={};
+  rows.forEach(r=>{
+    const raw=cv(r,'J').trim().toLowerCase();
+    const key=ESTATUS_ORDEN.includes(raw)?raw:(raw||'sin estatus');
+    estatusMap[key]=(estatusMap[key]||0)+1;
+  });
+  const estatusBreakdown=[...ESTATUS_ORDEN.filter(k=>estatusMap[k]),...Object.keys(estatusMap).filter(k=>!ESTATUS_ORDEN.includes(k))]
+    .map(k=>({estatus:k,total:estatusMap[k]}));
+  const solved=estatusMap['solved']||0;
   const resTimes=resueltas.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0);
   const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
   const desarrollo=rows.filter(esDesarrollo).length;
@@ -1861,7 +1875,7 @@ function calcularRango(rows){
   const porSoporte=porResponsable('O');
   const porDesarrollo=porResponsable('P');
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topFunciones,porSoporte,porDesarrollo};
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topFunciones,porSoporte,porDesarrollo,estatusBreakdown,solved};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2458,6 +2472,7 @@ function renderReportes(){
   if(BD_DATA.length){
     const si=el('rep-sem-ini');
     if(si&&REP_INI)si.value=REP_INI;
+    buildReportesCharts();
   }
 }
 
@@ -2468,10 +2483,20 @@ function cambiarRangoReportes(){
   renderReportes();
 }
 
+function getEvolucionSemanal(semanas){
+  return semanas.map(s=>{
+    const rows=ticketsPorSemanaIds(new Set([s.id]));
+    return{id:s.id,total:rows.length,resueltos:rows.filter(esResuelto).length};
+  });
+}
+
+const ESTATUS_LABEL={open:'Open',pending:'Pending',solved:'Solved',closed:'Closed'};
+const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',closed:'#6b7280'};
+
 function renderAnalisisRango(){
   const semanas=getSemanasUnicas();
   if(!semanas.length){
-    return`<div class="card"><div class="card-head"><div class="card-title">📅 Reporte por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna ID_semana (col. H) en la BD conectada.</div></div>`;
+    return`<div class="card"><div class="card-head"><div class="card-title">📅 Reporte por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna ID_semana (col. H) en la BD conectada, o no hay semanas depuradas desde ${REP_SEMANA_MIN}.</div></div>`;
   }
   if(!REP_INI||!semanas.some(s=>s.id===REP_INI))REP_INI=semanas[semanas.length-1].id;
   REP_FIN=REP_INI;
@@ -2485,10 +2510,15 @@ function renderAnalisisRango(){
   const ticketsPrev=rangoPrevIds.size?ticketsPorSemanaIds(rangoPrevIds):[];
   const stA=calcularRango(ticketsActual);
   const stP=rangoPrevIds.size?calcularRango(ticketsPrev):null;
+  const evolucion=getEvolucionSemanal(semanas);
+
+  window._repStatsActual=stA;
+  window._repEvolucion=evolucion;
+  window._repSemanaSel=REP_INI;
 
   function delta2(a,b){
     if(b==null||!b)return'';
-    const dif=a-b;const pct=Math.round(dif/b*100);
+    const dif=a-b;const pct=b?Math.round(dif/b*100):0;
     const col=dif>=0?'#dc2626':'#16a34a';const sym=dif>=0?'▲':'▼';
     return`<span style="font-size:10px;color:${col};margin-left:4px">${sym}${Math.abs(pct)}%</span>`;
   }
@@ -2522,53 +2552,83 @@ function renderAnalisisRango(){
   }).join('');
 
   const rangoLabel=REP_INI;
-  const pctResueltos=stA.total?Math.round(stA.resueltas/stA.total*100):0;
+  const pctResueltos=stA.total?Math.round(stA.solved/stA.total*100):0;
+  const topAgente=stA.porSoporte[0]||null;
+  const estatusPills=stA.estatusBreakdown.map(e=>{
+    const col=ESTATUS_COLOR_REP[e.estatus]||'#6b7280';
+    const label=ESTATUS_LABEL[e.estatus]||e.estatus;
+    return`<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${col}18;color:${col};margin-right:6px;display:inline-block;margin-bottom:6px">${label}: ${e.total}</span>`;
+  }).join('');
 
   return`
+    <!-- 1. TÍTULO Y PERIODO -->
     <div class="card" style="border:1.5px solid var(--acc3)">
       <div class="card-head" style="background:var(--acc2)">
-        <div class="card-title" style="color:var(--acc)">📅 Reporte por semana</div>
-        <span style="font-size:10px;color:var(--acc)">${rangoPrevIds.size?'vs. semana anterior: '+[...rangoPrevIds][0]:'sin semana anterior para comparar'}</span>
+        <div class="card-title" style="color:var(--acc)">📅 Reporte semanal — Tickets BD</div>
+        <span style="font-size:10px;color:var(--acc)">datos depurados desde ${REP_SEMANA_MIN} · ${rangoPrevIds.size?'vs. semana anterior: '+[...rangoPrevIds][0]:'sin semana anterior para comparar'}</span>
       </div>
+      <!-- 2. FILTROS / SEGMENTADORES -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 16px;text-align:center">
         <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">ID_SEMANA (col. H — Tickets BD)</label>
         <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:18px;font-weight:700;padding:8px 20px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+    <!-- 3. INDICADORES KPI (1-6) -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       <div class="mini-kpi" style="border-top:4px solid #2563eb">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📥 Tickets recibidos</div>
-        <div class="mini-kpi-val" style="color:#2563eb;font-size:32px">${stA.total}${stP?delta2(stA.total,stP.total):''}</div>
-        <div class="mini-kpi-lbl">entraron en ${rangoLabel} (todos los registros de esa semana)</div>
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">① 📥 Tickets recibidos</div>
+        <div class="mini-kpi-val" style="color:#2563eb;font-size:30px">${stA.total}${stP?delta2(stA.total,stP.total):''}</div>
+        <div class="mini-kpi-lbl">col. H = ${rangoLabel} · todos los registros de esa semana</div>
+      </div>
+      <div class="mini-kpi" style="border-top:4px solid #9ca3af;opacity:.65">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">② 📞 Llamadas</div>
+        <div class="mini-kpi-val" style="color:#9ca3af;font-size:30px">—</div>
+        <div class="mini-kpi-lbl">pendiente: se conectará otra fuente de datos</div>
       </div>
       <div class="mini-kpi" style="border-top:4px solid #16a34a">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Tickets resueltos</div>
-        <div class="mini-kpi-val" style="color:#16a34a;font-size:32px">${stA.resueltas}${stP?delta2(stA.resueltas,stP.resueltas):''}</div>
-        <div class="mini-kpi-lbl">col. J = solved/resolved · ${pctResueltos}% del total de esa semana</div>
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">③ ✅ Tickets resueltos</div>
+        <div class="mini-kpi-val" style="color:#16a34a;font-size:30px">${stA.solved}${stP?delta2(stA.solved,stP.solved):''}</div>
+        <div class="mini-kpi-lbl">col. J = solved · ${pctResueltos}% del total de esa semana</div>
+      </div>
+      <div class="mini-kpi" style="border-top:4px solid #0891b2">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">④ 🏢 Clientes únicos</div>
+        <div class="mini-kpi-val" style="color:#0891b2;font-size:30px">${stA.empresas.length}${stP?delta2(stA.empresas.length,stP.empresas.length):''}</div>
+        <div class="mini-kpi-lbl">col. K · empresas distintas que reportaron</div>
+      </div>
+      <div class="mini-kpi" style="border-top:4px solid #7c3aed">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⑤ 🛠 De Desarrollo</div>
+        <div class="mini-kpi-val" style="color:#7c3aed;font-size:30px">${stA.desarrollo}${stP?delta2(stA.desarrollo,stP.desarrollo):''}</div>
+        <div class="mini-kpi-lbl">col. S = SI · ${stA.pctDesarrollo}% del total</div>
+      </div>
+      <div class="mini-kpi" style="border-top:4px solid #d97706">
+        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⑥ 👤 Top agente</div>
+        <div class="mini-kpi-val" style="color:#d97706;font-size:22px">${topAgente?topAgente.total:'—'}</div>
+        <div class="mini-kpi-lbl">col. O · ${topAgente?topAgente.nombre:'sin datos'} · ver desglose abajo</div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-      <div class="mini-kpi" style="border-top:3px solid #64748b">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Abiertos</div>
-        <div class="mini-kpi-val" style="color:#64748b">${stA.abiertas}</div>
-        <div class="mini-kpi-lbl">de esa semana, aún sin J=solved</div>
+    <!-- Desglose de estatus (open/pending/solved/closed) -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">🎯 Tickets por estatus (col. J)</div><span style="font-size:10px;color:var(--txt3)">${rangoLabel}</span></div>
+      <div style="padding:12px 16px">${estatusPills||'<span style="font-size:11px;color:var(--txt3)">Sin datos</span>'}</div>
+    </div>
+
+    <!-- 4. TENDENCIA / EVOLUCIÓN -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">📈 Evolución semanal</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos · desde ${REP_SEMANA_MIN}</span></div>
+      <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
+    </div>
+
+    <!-- 5. GRÁFICOS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">🎯 Distribución por estatus</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-estatus-chart"></canvas></div></div>
       </div>
-      <div class="mini-kpi" style="border-top:3px solid #d97706">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Tiempo prom. resolución</div>
-        <div class="mini-kpi-val" style="color:#d97706">${stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—'}</div>
-        <div class="mini-kpi-lbl">${stP&&stP.tiempoProm!=null?'vs. '+stP.tiempoProm.toFixed(1)+'d anterior':'días promedio'}</div>
-      </div>
-      <div class="mini-kpi" style="border-top:3px solid #7c3aed">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Desarrollo</div>
-        <div class="mini-kpi-val" style="color:#7c3aed">${stA.pctDesarrollo}%</div>
-        <div class="mini-kpi-lbl">${stA.desarrollo} de ${stA.total} tickets</div>
-      </div>
-      <div class="mini-kpi" style="border-top:3px solid #0891b2">
-        <div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Empresas reincidentes</div>
-        <div class="mini-kpi-val" style="color:#0891b2">${stA.reincidentes.length}</div>
-        <div class="mini-kpi-lbl">de ${stA.empresas.length} empresas · ≥3 tickets</div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">👤 Tickets por agente (col. O)</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(160,stA.porSoporte.length*26)}px"><canvas id="rep-agente-chart"></canvas></div></div>
       </div>
     </div>
 
@@ -2610,6 +2670,59 @@ function renderAnalisisRango(){
       </div>
       <div style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--txt2)">${resumenInteligente(stA,rangoLabel)}</div>
     </div>`;
+}
+
+function buildReportesCharts(){
+  const stA=window._repStatsActual;const evolucion=window._repEvolucion;
+  if(!stA||!evolucion)return;
+
+  if(CH['rep-evo-chart'])CH['rep-evo-chart'].destroy();
+  const evoCtx=el('rep-evo-chart');
+  if(evoCtx){
+    CH['rep-evo-chart']=new Chart(evoCtx,{
+      type:'line',
+      data:{
+        labels:evolucion.map(e=>e.id.replace('A2026_','')),
+        datasets:[
+          {label:'Recibidos',data:evolucion.map(e=>e.total),borderColor:'#2563eb',backgroundColor:'#2563eb20',tension:.3,fill:true},
+          {label:'Resueltos',data:evolucion.map(e=>e.resueltos),borderColor:'#16a34a',backgroundColor:'#16a34a20',tension:.3,fill:true}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
+      }
+    });
+  }
+
+  if(CH['rep-estatus-chart'])CH['rep-estatus-chart'].destroy();
+  const estCtx=el('rep-estatus-chart');
+  if(estCtx){
+    CH['rep-estatus-chart']=new Chart(estCtx,{
+      type:'doughnut',
+      data:{
+        labels:stA.estatusBreakdown.map(e=>ESTATUS_LABEL[e.estatus]||e.estatus),
+        datasets:[{data:stA.estatusBreakdown.map(e=>e.total),backgroundColor:stA.estatusBreakdown.map(e=>ESTATUS_COLOR_REP[e.estatus]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+    });
+  }
+
+  if(CH['rep-agente-chart'])CH['rep-agente-chart'].destroy();
+  const agCtx=el('rep-agente-chart');
+  if(agCtx){
+    const datos=stA.porSoporte;
+    CH['rep-agente-chart']=new Chart(agCtx,{
+      type:'bar',
+      data:{labels:datos.map(a=>a.nombre),datasets:[{data:datos.map(a=>a.total),backgroundColor:'#d97706',borderRadius:4}]},
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
+      }
+    });
+  }
 }
 
 function conectarBDReportes(){
