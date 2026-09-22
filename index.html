@@ -1879,8 +1879,8 @@ function calcularRango(rows){
   // Responsables
   function porResponsable(letter){
     const m={};
-    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,categorias:{}};m[a].total++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
-    return Object.entries(m).map(([a,d])=>{const topCat=Object.entries(d.categorias).sort((x,y)=>y[1]-x[1])[0];return{nombre:a,total:d.total,topCategoria:topCat?topCat[0]:'—'};}).sort((a,b)=>b.total-a.total);
+    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,resueltos:0,categorias:{}};m[a].total++;if(esResuelto(r))m[a].resueltos++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
+    return Object.entries(m).map(([a,d])=>{const topCat=Object.entries(d.categorias).sort((x,y)=>y[1]-x[1])[0];return{nombre:a,total:d.total,resueltos:d.resueltos,topCategoria:topCat?topCat[0]:'—'};}).sort((a,b)=>b.total-a.total);
   }
   const porSoporte=porResponsable('O');
   const porDesarrollo=porResponsable('P');
@@ -2353,8 +2353,21 @@ function getEvolucionSemanal(semanas){
 const ESTATUS_LABEL={open:'Open',pending:'Pending',solved:'Solved',closed:'Closed'};
 const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',closed:'#6b7280'};
 
-function generarAlertasSemana(stA,stP){
+function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
+  if(evolucion&&evolucion.length>=3){
+    const idx=evolucion.findIndex(e=>e.id===semanaSelId);
+    if(idx>=2){
+      const ultimas=evolucion.slice(idx-2,idx+1);
+      const subiendo=ultimas[0].total<ultimas[1].total&&ultimas[1].total<ultimas[2].total;
+      const bajando=ultimas[0].total>ultimas[1].total&&ultimas[1].total>ultimas[2].total;
+      if(subiendo){
+        alertas.push({icon:'📈',color:'#d97706',bg:'#fffbeb',titulo:'Tendencia al alza — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Vale la pena revisar si es estacional o un problema recurrente.`});
+      } else if(bajando){
+        alertas.push({icon:'📉',color:'#16a34a',bg:'#f0fdf4',titulo:'Tendencia a la baja — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Buena señal si viene de mejoras, revisar si es por baja actividad del cliente.`});
+      }
+    }
+  }
   const pctRes=stA.total?Math.round(stA.solved/stA.total*100):0;
   if(stA.total>0&&pctRes<50){
     alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'Tasa de resolución baja',detalle:`Solo ${pctRes}% de los tickets de esta semana están en solved (${stA.solved} de ${stA.total}).`});
@@ -2390,7 +2403,7 @@ function generarAlertasSemana(stA,stP){
 function renderAnalisisRango(){
   const semanas=getSemanasUnicas();
   if(!semanas.length){
-    return`<div class="card"><div class="card-head"><div class="card-title">📅 Reporte por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna ID_semana (col. H) en la BD conectada, o no hay semanas depuradas desde ${REP_SEMANA_MIN}.</div></div>`;
+    return`<div class="card"><div class="card-head"><div class="card-title">📅 Reporte por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna de ID de semana en la BD conectada, o no hay semanas depuradas desde ${REP_SEMANA_MIN}.</div></div>`;
   }
   if(!REP_INI||!semanas.some(s=>s.id===REP_INI))REP_INI=semanas[semanas.length-1].id;
   REP_FIN=REP_INI;
@@ -2459,7 +2472,7 @@ function renderAnalisisRango(){
     const icon=c.canal==='Llamada'?'📞':c.canal==='Ticket'?'🎫':'❓';
     return`<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${col}18;color:${col};margin-right:6px;display:inline-block;margin-bottom:6px">${icon} ${c.canal}: ${c.total}</span>`;
   }).join('');
-  const alertas=generarAlertasSemana(stA,stP);
+  const alertas=generarAlertasSemana(stA,stP,evolucion,REP_INI);
   const alertasHtml=alertas.map((a,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px${i<alertas.length-1?';border-bottom:0.5px solid var(--bdr)':''}">
     <span style="font-size:14px;flex-shrink:0">${a.icon}</span>
     <div style="flex:1;min-width:0">
@@ -2477,21 +2490,20 @@ function renderAnalisisRango(){
       </div>
       <!-- 2. FILTROS / SEGMENTADORES -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 16px;text-align:center">
-        <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">ID_SEMANA (col. H — Tickets BD)</label>
+        <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Semana</label>
         <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:18px;font-weight:700;padding:8px 20px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
       </div>
     </div>
 
-    <!-- 3. INDICADORES KPI (1-6) — estilo tarjeta con ícono -->
+    <!-- 3. INDICADORES KPI — estilo tarjeta con ícono -->
     <div class="kpi-grid" style="padding:0">
       ${[
-        {icon:'📥',color:'#2563eb',label:'Recibidos',val:stA.total,sub:stP?delta2(stA.total,stP.total)+' vs. ant.':'col. H',big:true},
-        {icon:'📞',color:'#9ca3af',label:'Llamadas',val:'—',sub:'otra fuente',big:false,dim:true},
+        {icon:'📥',color:'#2563eb',label:'Recibidos',val:stA.total,sub:stP?delta2(stA.total,stP.total)+' vs. semana ant.':'sin comparación',big:true},
         {icon:'✅',color:'#16a34a',label:'Resueltos',val:stA.solved,sub:pctResueltos+'% del total',big:true},
-        {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'col. K',big:false},
+        {icon:'⏱',color:'#d97706',label:'Tiempo prom. resolución',val:stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—',sub:stP&&stP.tiempoProm!=null?'ant.: '+stP.tiempoProm.toFixed(1)+'d':'días promedio',big:false},
+        {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'empresas distintas',big:false},
         {icon:'🛠',color:'#7c3aed',label:'Desarrollo',val:stA.desarrollo,sub:stA.pctDesarrollo+'% del total',big:false},
-        {icon:'👤',color:'#d97706',label:'Top agente',val:topAgente?topAgente.total:'—',sub:topAgente?topAgente.nombre:'sin datos',big:false},
-      ].map(k=>`<div class="mini-kpi" style="padding:12px${k.dim?';opacity:.6':''}">
+      ].map(k=>`<div class="mini-kpi" style="padding:12px">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
           <div style="width:26px;height:26px;border-radius:8px;background:${k.color}18;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${k.icon}</div>
           <div style="font-size:9px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.2">${k.label}</div>
@@ -2500,6 +2512,7 @@ function renderAnalisisRango(){
         <div style="font-size:9.5px;color:var(--txt3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.sub}</div>
       </div>`).join('')}
     </div>
+    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">📞 Llamadas: aún no disponible — se agregará cuando conectes esa fuente de datos.</div>
 
     <!-- 4. TENDENCIA / EVOLUCIÓN + distribución por estatus -->
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
@@ -2508,17 +2521,16 @@ function renderAnalisisRango(){
         <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">🎯 Por estatus</div><span style="font-size:10px;color:var(--txt3)">col. J</span></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-estatus-chart"></canvas></div></div>
-        <div style="padding:0 16px 12px">${estatusPills||''}</div>
+        <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-estatus-chart"></canvas></div></div>
       </div>
     </div>
 
-    <!-- 5. GRÁFICOS: por agente + alertas automáticas -->
+    <!-- 5. GRÁFICOS: productividad por agente + alertas automáticas -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card">
-        <div class="card-head"><div class="card-title">👤 Tickets por agente (col. O)</div></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(160,stA.porSoporte.length*26)}px"><canvas id="rep-agente-chart"></canvas></div></div>
+        <div class="card-head"><div class="card-title">👤 Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana anterior: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
       </div>
       <div class="card">
         <div class="card-head"><div class="card-title">🔔 Alertas de la semana</div><span style="font-size:10px;color:var(--txt3)">generadas de tus datos</span></div>
@@ -2528,13 +2540,13 @@ function renderAnalisisRango(){
 
     <!-- Canal de atención -->
     <div class="card">
-      <div class="card-head"><div class="card-title">☎️ Canal de atención (col. AL)</div><span style="font-size:10px;color:var(--txt3)">${rangoLabel}</span></div>
+      <div class="card-head"><div class="card-title">☎️ Canal de atención</div><span style="font-size:10px;color:var(--txt3)">${rangoLabel}</span></div>
       <div style="padding:12px 16px">${canalPills||'<span style="font-size:11px;color:var(--txt3)">Sin datos</span>'}</div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
       <div class="card">
-        <div class="card-head"><div class="card-title">⏳ Antigüedad (abiertos)</div></div>
+        <div class="card-head"><div class="card-title">⏳ Tickets aún sin resolver (a hoy)</div></div>
         <div style="padding:10px 14px">${bucketRows||'<div style="font-size:11px;color:var(--txt3)">Sin tickets abiertos en esta semana</div>'}</div>
       </div>
       <div class="card">
@@ -2550,19 +2562,19 @@ function renderAnalisisRango(){
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div class="card">
-        <div class="card-head"><div class="card-title">🏷 Top categoría (T)</div></div>
+        <div class="card-head"><div class="card-title">🏷 Top categoría</div></div>
         <div style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">🧩 Top módulo (U)</div></div>
+        <div class="card-head"><div class="card-title">🧩 Top módulo</div></div>
         <div style="padding:10px 14px">${topList(stA.topModulos,'#16a34a')}</div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">❔ Top causa del reporte (V)</div></div>
+        <div class="card-head"><div class="card-title">❔ Top causa del reporte</div></div>
         <div style="padding:10px 14px">${topList(stA.topCausas,'#e11d48')}</div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">⚙️ Top función (AF)</div></div>
+        <div class="card-head"><div class="card-title">⚙️ Top función</div></div>
         <div style="padding:10px 14px">${topList(stA.topFunciones,'#d97706')}</div>
       </div>
     </div>
@@ -2619,10 +2631,16 @@ function buildReportesCharts(){
     const datos=stA.porSoporte;
     CH['rep-agente-chart']=new Chart(agCtx,{
       type:'bar',
-      data:{labels:datos.map(a=>a.nombre),datasets:[{data:datos.map(a=>a.total),backgroundColor:'#d97706',borderRadius:4}]},
+      data:{
+        labels:datos.map(a=>a.nombre),
+        datasets:[
+          {label:'Recibidos',data:datos.map(a=>a.total),backgroundColor:'#2563eb',borderRadius:4},
+          {label:'Resueltos',data:datos.map(a=>a.resueltos),backgroundColor:'#16a34a',borderRadius:4}
+        ]
+      },
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
       }
     });
