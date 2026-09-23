@@ -9,6 +9,8 @@
 <title>Dashboard Supervisor — Santi Soluciones v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --bg:#f0f2f7;--sur:#fff;--sur2:#f7f8fc;--sur3:#eef0f6;
@@ -1901,7 +1903,50 @@ function calcularRango(rows){
   const porSoporte=porResponsable('O');
   const porDesarrollo=porResponsable('P');
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,estatusBreakdown,solved,slaSoporte,slaDesarrollo};
+  // ── Patrones de la semana: hora del día, día de la semana, serie diaria ──
+  const DIA_NOMBRE=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const horaMap={};
+  const diaSemMap={};
+  rows.forEach(r=>{
+    const d=new Date(cv(r,'L'));
+    if(isNaN(d))return;
+    const h=d.getHours();
+    horaMap[h]=(horaMap[h]||0)+1;
+    const dn=DIA_NOMBRE[d.getDay()];
+    diaSemMap[dn]=(diaSemMap[dn]||0)+1;
+  });
+  const porHora=Object.entries(horaMap).map(([h,n])=>({hora:+h,total:n})).sort((a,b)=>a.hora-b.hora);
+  const porDiaSemana=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(dn=>({dia:dn,total:diaSemMap[dn]||0}));
+
+  // Serie diaria: creados vs resueltos, y soporte vs desarrollo, por fecha calendario
+  const diaFechaMap={};
+  function fechaCorta(str){const d=new Date(str);if(isNaN(d))return null;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  rows.forEach(r=>{
+    const fc=fechaCorta(cv(r,'L'));
+    if(!fc)return;
+    if(!diaFechaMap[fc])diaFechaMap[fc]={creados:0,resueltos:0,soporte:0,desarrollo:0};
+    diaFechaMap[fc].creados++;
+    if(esDesarrollo(r))diaFechaMap[fc].desarrollo++;else diaFechaMap[fc].soporte++;
+  });
+  rows.forEach(r=>{
+    if(!esResuelto(r))return;
+    const fr=fechaCorta(cv(r,'M'));
+    if(!fr)return;
+    if(!diaFechaMap[fr])diaFechaMap[fr]={creados:0,resueltos:0,soporte:0,desarrollo:0};
+    diaFechaMap[fr].resueltos++;
+  });
+  const porDia=Object.entries(diaFechaMap).sort((a,b)=>a[0].localeCompare(b[0])).map(([fecha,d])=>({fecha,...d}));
+
+  // One-touch: creado y resuelto en la misma fecha+hora
+  let oneTouchCount=0;
+  resueltas.forEach(r=>{
+    const dL=new Date(cv(r,'L')),dM=new Date(cv(r,'M'));
+    if(isNaN(dL)||isNaN(dM))return;
+    if(dL.getFullYear()===dM.getFullYear()&&dL.getMonth()===dM.getMonth()&&dL.getDate()===dM.getDate()&&dL.getHours()===dM.getHours())oneTouchCount++;
+  });
+  const oneTouch={count:oneTouchCount,pct:resueltas.length?Math.round(oneTouchCount/resueltas.length*100*10)/10:0};
+
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2336,12 +2381,17 @@ function renderReportes(){
         <div class="greeting-title">📈 Reportes — Dashboard KPI semanal</div>
         <div class="greeting-sub">${BD_DATA.length?'BD: '+BD_DATA.length+' tickets históricos conectados · todo el contenido de abajo depende de la semana (ID_SEMANA) que elijas':'Conecta la BD histórica (Tickets BD) para ver el reporte por semana'}</div>
       </div>
-      <button onclick="conectarBDReportes()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid ${BD_DATA.length?'#bbf7d0':'var(--bdr)'};background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#15803d':'var(--txt2)'};cursor:pointer;font-family:var(--font);font-weight:600">
-        ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
-      </button>
+      <div style="display:flex;gap:8px">
+        ${BD_DATA.length?`<button onclick="mostrarExportarPanel()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--acc3);background:var(--acc2);color:var(--acc);cursor:pointer;font-family:var(--font);font-weight:600">⬇ Exportar panel</button>`:''}
+        <button onclick="conectarBDReportes()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid ${BD_DATA.length?'#bbf7d0':'var(--bdr)'};background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#15803d':'var(--txt2)'};cursor:pointer;font-family:var(--font);font-weight:600">
+          ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
+        </button>
+      </div>
     </div>
 
-    ${BD_DATA.length?renderAnalisisRango():'<div class="card"><div style="padding:28px;text-align:center;color:var(--txt3);font-size:12.5px">Conecta la BD histórica para ver los KPIs por semana. Ningún dato de aquí en adelante se calcula sin ella.</div></div>'}
+    <div id="reportes-export-area">
+      ${BD_DATA.length?renderAnalisisRango():'<div class="card"><div style="padding:28px;text-align:center;color:var(--txt3);font-size:12.5px">Conecta la BD histórica para ver los KPIs por semana. Ningún dato de aquí en adelante se calcula sin ella.</div></div>'}
+    </div>
 
     <div id="reportes-detail"></div>`;
 
@@ -2458,7 +2508,7 @@ function renderAnalisisRango(){
   const bucketRows=Object.entries(stA.buckets).map(([k,v])=>{
     const pct=Math.round(v/maxBucket*100);
     const col=k==='15+ días'?'#dc2626':k==='8-15 días'?'#d97706':k==='4-7 días'?'#eab308':'#16a34a';
-    return`<div class="ag-bar-row" style="margin-bottom:6px"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${col}">${v}</span></div>`;
+    return`<div class="ag-bar-row" style="margin-bottom:6px" title="${k}: ${v} ticket${v===1?'':'s'}"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${col}">${v}</span></div>`;
   }).join('');
 
   function topList(arr,color){
@@ -2466,8 +2516,14 @@ function renderAnalisisRango(){
     const max=arr[0][1];
     return arr.map(([k,v])=>{
       const pct=Math.round(v/max*100);
-      return`<div class="ag-bar-row" style="margin-bottom:6px"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${color}">${v}</span></div>`;
+      return`<div class="ag-bar-row" style="margin-bottom:6px" title="${k}: ${v} ticket${v===1?'':'s'}"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${color}">${v}</span></div>`;
     }).join('');
+  }
+  function seccion(titulo){
+    return`<div style="display:flex;align-items:center;gap:10px;margin:6px 0 -4px;padding:0 4px">
+      <span style="font-size:13px;font-weight:800;color:var(--txt);white-space:nowrap">${titulo}</span>
+      <div style="flex:1;height:1px;background:var(--bdr)"></div>
+    </div>`;
   }
 
   const empresasRows=stA.empresas.slice(0,10).map(e=>{
@@ -2499,33 +2555,25 @@ function renderAnalisisRango(){
   const SEM_COLOR={verde:'#16a34a',amarillo:'#eab308',rojo:'#dc2626'};
   const SEM_LABEL={verde:'En meta',amarillo:'Requiere seguimiento',rojo:'Fuera de SLA'};
   const SEM_DOT={verde:'🟢',amarillo:'🟡',rojo:'🔴'};
-  function slaBlockHtml(sla,nombre,metaTxt){
+  function slaBlockHtml(sla,nombre,metaTxt,canvasId){
     if(!sla.total){
-      return`<div style="flex:1;padding:14px;text-align:center">
+      return`<div style="flex:1;min-width:200px;padding:14px;text-align:center">
         <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">${nombre}</div>
         <div style="font-size:12px;color:var(--txt3)">Sin tickets resueltos esta semana</div>
       </div>`;
     }
     const col=SEM_COLOR[sla.color]||'#9ca3af';
     const promTxt=sla.unidad==='horas'?sla.promedio.toFixed(1)+'h':sla.promedio.toFixed(1)+'d';
-    const maxB=Math.max(sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo,1);
-    return`<div style="flex:1;padding:14px;border-radius:var(--rl);background:${col}0d;border:1px solid ${col}30">
-      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">${nombre} <span style="font-weight:500;color:var(--txt3);text-transform:none">· meta ${metaTxt}</span></div>
-      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
-        <span style="font-size:22px">${SEM_DOT[sla.color]}</span>
-        <span style="font-size:26px;font-weight:800;color:${col}">${promTxt}</span>
-        <span style="font-size:11px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}</span>
-      </div>
-      <div style="font-size:10px;color:var(--txt3);margin-bottom:8px">promedio sobre ${sla.total} ticket${sla.total===1?'':'s'} resuelto${sla.total===1?'':'s'} esta semana</div>
-      <div style="display:flex;gap:4px;align-items:flex-end;height:28px;margin-bottom:4px">
-        <div style="flex:1;background:${SEM_COLOR.verde}25;border-radius:3px;height:${Math.max(6,sla.buckets.verde/maxB*28)}px" title="${sla.buckets.verde} en verde"></div>
-        <div style="flex:1;background:${SEM_COLOR.amarillo}25;border-radius:3px;height:${Math.max(6,sla.buckets.amarillo/maxB*28)}px" title="${sla.buckets.amarillo} en amarillo"></div>
-        <div style="flex:1;background:${SEM_COLOR.rojo}25;border-radius:3px;height:${Math.max(6,sla.buckets.rojo/maxB*28)}px" title="${sla.buckets.rojo} en rojo"></div>
-      </div>
-      <div style="display:flex;gap:4px;font-size:9px;color:var(--txt3);text-align:center">
-        <span style="flex:1">🟢 ${sla.buckets.verde}</span>
-        <span style="flex:1">🟡 ${sla.buckets.amarillo}</span>
-        <span style="flex:1">🔴 ${sla.buckets.rojo}</span>
+    return`<div style="flex:1;min-width:230px;padding:14px;border-radius:var(--rl);background:${col}0d;border:1px solid ${col}30;display:flex;gap:12px;align-items:center">
+      <div style="width:84px;height:84px;flex-shrink:0;position:relative"><canvas id="${canvasId}"></canvas></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10.5px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">${nombre} <span style="font-weight:500;color:var(--txt3);text-transform:none">· meta ${metaTxt}</span></div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span style="font-size:18px">${SEM_DOT[sla.color]}</span>
+          <span style="font-size:22px;font-weight:800;color:${col}">${promTxt}</span>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}</div>
+        <div style="font-size:9.5px;color:var(--txt3);margin-top:3px">${sla.total} resuelto${sla.total===1?'':'s'} esta semana</div>
       </div>
     </div>`;
   }
@@ -2551,24 +2599,18 @@ function renderAnalisisRango(){
       </div>
     </div>
 
-    <!-- SEMÁFORO SLA — meta de resolución -->
-    <div class="card">
-      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área</span></div>
-      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
-        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h')}
-        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d')}
-      </div>
-    </div>
+    ${seccion('📊 Indicadores')}
 
-    <!-- 3. INDICADORES KPI — estilo tarjeta con ícono -->
+    <!-- KPI — estilo tarjeta con ícono -->
     <div class="kpi-grid" style="padding:0">
       ${[
         {icon:'📥',color:'#2563eb',label:'Recibidos',val:stA.total,sub:stP?delta2(stA.total,stP.total)+' vs. semana ant.':'sin comparación',big:true},
         {icon:'✅',color:'#16a34a',label:'Resueltos',val:stA.solved,sub:pctResueltos+'% del total',big:true},
+        {icon:'🎯',color:'#0d9488',label:'One-touch',val:stA.oneTouch.pct+'%',sub:stA.oneTouch.count+' de '+stA.resueltas+' resueltos',big:false},
         {icon:'⏱',color:'#d97706',label:'Tiempo prom. resolución',val:stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—',sub:stP&&stP.tiempoProm!=null?'ant.: '+stP.tiempoProm.toFixed(1)+'d':'días promedio',big:false},
         {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'empresas distintas',big:false},
         {icon:'🛠',color:'#7c3aed',label:'Desarrollo',val:stA.desarrollo,sub:stA.pctDesarrollo+'% del total',big:false},
-      ].map(k=>`<div class="mini-kpi" style="padding:12px">
+      ].map(k=>`<div class="mini-kpi" style="padding:12px" title="${k.label}: ${k.val}">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
           <div style="width:26px;height:26px;border-radius:8px;background:${k.color}18;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${k.icon}</div>
           <div style="font-size:9px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.2">${k.label}</div>
@@ -2579,22 +2621,57 @@ function renderAnalisisRango(){
     </div>
     <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">📞 Llamadas: aún no disponible — se agregará cuando conectes esa fuente de datos.</div>
 
-    <!-- 4. TENDENCIA / EVOLUCIÓN + distribución por estatus -->
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">📈 Evolución semanal</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos · desde ${REP_SEMANA_MIN}</span></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-estatus-chart"></canvas></div></div>
+    <!-- SEMÁFORO SLA — como gráfica -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área</span></div>
+      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
+        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
+        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
       </div>
     </div>
 
-    <!-- 5. GRÁFICOS: productividad por agente + alertas automáticas -->
+    <!-- Por estatus + canal de atención -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card">
-        <div class="card-head"><div class="card-title">👤 Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana anterior: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
+        <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">☎️ Canal de atención</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart"></canvas></div></div>
+      </div>
+    </div>
+
+    ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
+    <div class="card">
+      <div class="card-head"><div class="card-title">Recibidos vs. resueltos</div><span style="font-size:10px;color:var(--txt3)">todas las semanas desde ${REP_SEMANA_MIN}</span></div>
+      <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
+    </div>
+
+    ${seccion('🕐 Patrones de esta semana ('+rangoLabel+')')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Tickets por hora</div><span style="font-size:10px;color:var(--txt3)">hora de creación</span></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Tickets por día de la semana</div></div>
+        <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart"></canvas></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div></div>
+      <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span></div>
+      <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart"></canvas></div></div>
+    </div>
+
+    ${seccion('👤 Equipo')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
         <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
       </div>
       <div class="card">
@@ -2603,12 +2680,7 @@ function renderAnalisisRango(){
       </div>
     </div>
 
-    <!-- Canal de atención -->
-    <div class="card">
-      <div class="card-head"><div class="card-title">☎️ Canal de atención</div><span style="font-size:10px;color:var(--txt3)">${rangoLabel}</span></div>
-      <div style="padding:12px 16px">${canalPills||'<span style="font-size:11px;color:var(--txt3)">Sin datos</span>'}</div>
-    </div>
-
+    ${seccion('📋 Detalle')}
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
       <div class="card">
         <div class="card-head"><div class="card-title">⏳ Tickets aún sin resolver (a hoy)</div></div>
@@ -2651,6 +2723,56 @@ function renderAnalisisRango(){
       </div>
       <div style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--txt2)">${resumenInteligente(stA,rangoLabel)}</div>
     </div>`;
+}
+
+function mostrarExportarPanel(){
+  let modal=document.getElementById('export-panel-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='export-panel-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center';
+    modal.onclick=function(e){if(e.target===modal)modal.remove();};
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML=`<div style="background:var(--sur);border-radius:var(--rl);padding:22px;max-width:340px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.15)">
+    <div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">Exportar panel de Reportes</div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:14px">Se exporta todo lo que ves en pantalla para la semana seleccionada</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <button onclick="document.getElementById('export-panel-modal').remove();exportarPanelReportes('png')" style="padding:10px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);cursor:pointer;text-align:left;font-size:13px;font-weight:600;color:var(--txt);font-family:var(--font)">🖼 Imagen (PNG)</button>
+      <button onclick="document.getElementById('export-panel-modal').remove();exportarPanelReportes('pdf')" style="padding:10px 14px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);cursor:pointer;text-align:left;font-size:13px;font-weight:600;color:var(--txt);font-family:var(--font)">📄 PDF</button>
+    </div>
+    <button onclick="document.getElementById('export-panel-modal').remove()" style="width:100%;padding:7px;border-radius:var(--r);border:1px solid var(--bdr);background:none;cursor:pointer;font-size:12px;color:var(--txt3);font-family:var(--font)">Cancelar</button>
+  </div>`;
+}
+
+function exportarPanelReportes(formato){
+  const area=document.getElementById('reportes-export-area');
+  if(!area){showToast('No se encontró el panel','#dc2626');return;}
+  if(typeof html2canvas==='undefined'){showToast('No se pudo cargar la herramienta de exportación','#dc2626');return;}
+  showToast('Generando '+formato.toUpperCase()+'…','#2563eb');
+  html2canvas(area,{backgroundColor:'#ffffff',scale:2,useCORS:true}).then(canvas=>{
+    const nombre='reporte_semanal_'+(REP_INI||new Date().toISOString().split('T')[0]);
+    if(formato==='png'){
+      const a=document.createElement('a');
+      a.href=canvas.toDataURL('image/png');
+      a.download=nombre+'.png';
+      a.click();
+      showToast('✓ Imagen descargada','#16a34a');
+    } else {
+      try{
+        const{jsPDF}=window.jspdf;
+        const imgData=canvas.toDataURL('image/png');
+        const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:[canvas.width,canvas.height]});
+        pdf.addImage(imgData,'PNG',0,0,canvas.width,canvas.height);
+        pdf.save(nombre+'.pdf');
+        showToast('✓ PDF descargado','#16a34a');
+      }catch(e){
+        showToast('✗ Error al generar PDF: '+e.message,'#dc2626');
+      }
+    }
+  }).catch(err=>{
+    showToast('✗ Error al exportar: '+err.message,'#dc2626');
+  });
 }
 
 function buildReportesCharts(){
@@ -2707,6 +2829,103 @@ function buildReportesCharts(){
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
+      }
+    });
+  }
+
+  // SLA — doughnuts verde/amarillo/rojo
+  function miniDonutSLA(id,sla){
+    if(CH[id])CH[id].destroy();
+    const ctx=el(id);if(!ctx||!sla.total)return;
+    CH[id]=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels:['Verde','Amarillo','Rojo'],datasets:[{data:[sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo],backgroundColor:['#16a34a','#eab308','#dc2626'],borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+    });
+  }
+  miniDonutSLA('rep-sla-soporte-chart',stA.slaSoporte);
+  miniDonutSLA('rep-sla-desarrollo-chart',stA.slaDesarrollo);
+
+  // Canal de atención
+  if(CH['rep-canal-chart'])CH['rep-canal-chart'].destroy();
+  const canalCtx=el('rep-canal-chart');
+  if(canalCtx){
+    const CANAL_COL={'Llamada':'#2563eb','Ticket':'#6b7280','Sin dato':'#d1d5db'};
+    CH['rep-canal-chart']=new Chart(canalCtx,{
+      type:'doughnut',
+      data:{labels:stA.canalBreakdown.map(c=>c.canal),datasets:[{data:stA.canalBreakdown.map(c=>c.total),backgroundColor:stA.canalBreakdown.map(c=>CANAL_COL[c.canal]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+    });
+  }
+
+  // Tickets por hora
+  if(CH['rep-hora-chart'])CH['rep-hora-chart'].destroy();
+  const horaCtx=el('rep-hora-chart');
+  if(horaCtx){
+    CH['rep-hora-chart']=new Chart(horaCtx,{
+      type:'bar',
+      data:{labels:stA.porHora.map(h=>h.hora+'h'),datasets:[{data:stA.porHora.map(h=>h.total),backgroundColor:'#2563eb',borderRadius:4}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
+      }
+    });
+  }
+
+  // Tickets por día de la semana
+  if(CH['rep-diasem-chart'])CH['rep-diasem-chart'].destroy();
+  const diasemCtx=el('rep-diasem-chart');
+  if(diasemCtx){
+    CH['rep-diasem-chart']=new Chart(diasemCtx,{
+      type:'bar',
+      data:{labels:stA.porDiaSemana.map(d=>d.dia),datasets:[{data:stA.porDiaSemana.map(d=>d.total),backgroundColor:'#0891b2',borderRadius:4}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
+      }
+    });
+  }
+
+  // Tickets por fecha — creados vs resueltos
+  if(CH['rep-diario-chart'])CH['rep-diario-chart'].destroy();
+  const diarioCtx=el('rep-diario-chart');
+  if(diarioCtx){
+    CH['rep-diario-chart']=new Chart(diarioCtx,{
+      type:'line',
+      data:{
+        labels:stA.porDia.map(d=>d.fecha.slice(5)),
+        datasets:[
+          {label:'Creados',data:stA.porDia.map(d=>d.creados),borderColor:'#16a34a',backgroundColor:'#16a34a30',tension:.3,fill:true},
+          {label:'Resueltos',data:stA.porDia.map(d=>d.resueltos),borderColor:'#075e54',backgroundColor:'#075e5430',tension:.3,fill:true}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
+      }
+    });
+  }
+
+  // Soporte vs Desarrollo por fecha
+  if(CH['rep-sd-diario-chart'])CH['rep-sd-diario-chart'].destroy();
+  const sdCtx=el('rep-sd-diario-chart');
+  if(sdCtx){
+    CH['rep-sd-diario-chart']=new Chart(sdCtx,{
+      type:'bar',
+      data:{
+        labels:stA.porDia.map(d=>d.fecha.slice(5)),
+        datasets:[
+          {label:'Soporte',data:stA.porDia.map(d=>d.soporte),backgroundColor:'#7c3aed',borderRadius:3,stack:'s'},
+          {label:'Desarrollo',data:stA.porDia.map(d=>d.desarrollo),backgroundColor:'#f97316',borderRadius:3,stack:'s'}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        scales:{x:{stacked:true,ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{stacked:true,ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
   }
