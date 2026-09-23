@@ -1804,6 +1804,10 @@ function esResuelto(row){
   if(['solved','resolved','resuelto','closed','cerrado'].includes(est))return true;
   return!!cv(row,'M').trim();
 }
+// Estricto: SOLO col. J = solved (usado para "resueltos" en gráficas comparativas — no cuenta closed/pending con fecha de M llena)
+function esSolvedJ(row){
+  return cv(row,'J').trim().toLowerCase()==='solved';
+}
 function esDesarrollo(row){
   const v=cv(row,'S').trim().toLowerCase();
   return v==='si'||v==='sí'||v==='yes'||v==='true'||v==='1';
@@ -1902,11 +1906,26 @@ function calcularRango(rows){
   // Responsables
   function porResponsable(letter){
     const m={};
-    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,resueltos:0,categorias:{}};m[a].total++;if(esResuelto(r))m[a].resueltos++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
+    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,resueltos:0,categorias:{}};m[a].total++;if(esSolvedJ(r))m[a].resueltos++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
     return Object.entries(m).map(([a,d])=>{const topCat=Object.entries(d.categorias).sort((x,y)=>y[1]-x[1])[0];return{nombre:a,total:d.total,resueltos:d.resueltos,topCategoria:topCat?topCat[0]:'—'};}).sort((a,b)=>b.total-a.total);
   }
   const porSoporte=porResponsable('O');
   const porDesarrollo=porResponsable('P');
+
+  // ── Productividad de Desarrollo (col. P) — solo tickets con S=SI, + bucket 'sin desarrollador asignado' ──
+  const desRowsSemana=rows.filter(esDesarrollo);
+  const devMap={};
+  let devSinAsignarTotal=0,devSinAsignarResueltos=0;
+  desRowsSemana.forEach(r=>{
+    const resp=cv(r,'P').trim();
+    const resuelto=esSolvedJ(r);
+    if(!resp){devSinAsignarTotal++;if(resuelto)devSinAsignarResueltos++;return;}
+    if(!devMap[resp])devMap[resp]={total:0,resueltos:0};
+    devMap[resp].total++;
+    if(resuelto)devMap[resp].resueltos++;
+  });
+  const productividadDev=Object.entries(devMap).map(([nombre,d])=>({nombre,total:d.total,resueltos:d.resueltos})).sort((a,b)=>b.total-a.total);
+  if(devSinAsignarTotal>0)productividadDev.push({nombre:'⚠️ Sin desarrollador asignado',total:devSinAsignarTotal,resueltos:devSinAsignarResueltos});
 
   // ── Patrones de la semana: hora del día, día de la semana, serie diaria ──
   const DIA_NOMBRE=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1951,7 +1970,7 @@ function calcularRango(rows){
   });
   const oneTouch={count:oneTouchCount,pct:resueltas.length?Math.round(oneTouchCount/resueltas.length*100*10)/10:0};
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2417,7 +2436,7 @@ function cambiarRangoReportes(){
 function getEvolucionSemanal(semanas){
   return semanas.map(s=>{
     const rows=ticketsPorSemanaIds(new Set([s.id]));
-    return{id:s.id,total:rows.length,resueltos:rows.filter(esResuelto).length};
+    return{id:s.id,total:rows.length,resueltos:rows.filter(esSolvedJ).length};
   });
 }
 
@@ -2544,9 +2563,9 @@ function renderAnalisisRango(){
     </div>`;
   }
 
-  const empresasRows=stA.empresas.slice(0,10).map(e=>{
+  const empresasRows=stA.empresas.map(e=>{
     const col=e.total>=3?'#dc2626':'#2563eb';
-    return`<tr>
+    return`<tr onclick="toggleEmpresaDetalle('${e.org.replace(/'/g,"\\'")}')" style="cursor:pointer">
       <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-weight:600">${e.org}${e.total>=3?' <span style="font-size:9px;background:#fef2f2;color:#dc2626;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px">REINCIDENTE</span>':''}</td>
       <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);font-weight:700;color:${col}">${e.total}</td>
       <td style="padding:6px 14px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${e.topCategoria}</td>
@@ -2705,6 +2724,10 @@ function renderAnalisisRango(){
         <div style="max-height:340px;overflow-y:auto">${alertasHtml}</div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos · por D-Responsable (col. P) · solo tickets de Desarrollo</span></div>
+      <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
+    </div>
 
     ${seccion('📋 Detalle')}
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
@@ -2713,8 +2736,8 @@ function renderAnalisisRango(){
         <div style="padding:10px 14px">${bucketRows||'<div style="font-size:11px;color:var(--txt3)">Sin tickets abiertos en esta semana</div>'}</div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">🏢 Empresas en la semana</div><span style="font-size:10px;color:var(--txt3)">${stA.empresas.length} empresas · ${stA.reincidentes.length} reincidentes</span></div>
-        <div style="overflow-x:auto">
+        <div class="card-head"><div class="card-title">🏢 Empresas en la semana</div><span style="font-size:10px;color:var(--txt3)">${stA.empresas.length} empresas · ${stA.reincidentes.length} reincidentes · clic en una fila para ver sus tickets</span></div>
+        <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr style="background:var(--sur2)">${['Empresa','Tickets','Categoría principal','Llamadas'].map(h=>`<th style="padding:6px 14px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
             <tbody>${empresasRows||'<tr><td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--txt3)">Sin datos en esta semana</td></tr>'}</tbody>
@@ -2722,6 +2745,7 @@ function renderAnalisisRango(){
         </div>
       </div>
     </div>
+    <div id="empresa-detalle" style="display:none"></div>
 
     <div class="card">
       <div class="card-head"><div class="card-title">📂 Desglose</div><span style="font-size:10px;color:var(--txt3)">categoría · módulo · causa del reporte · función</span></div>
@@ -2856,6 +2880,29 @@ function buildReportesCharts(){
     });
   }
 
+  if(CH['rep-dev-chart'])CH['rep-dev-chart'].destroy();
+  const devCtx=el('rep-dev-chart');
+  if(devCtx&&stA.productividadDev.length){
+    const datosDev=stA.productividadDev;
+    const colRecibidos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#dc2626':'#7c3aed');
+    const colResueltos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#f87171':'#16a34a');
+    CH['rep-dev-chart']=new Chart(devCtx,{
+      type:'bar',
+      data:{
+        labels:datosDev.map(a=>a.nombre),
+        datasets:[
+          {label:'Recibidos',data:datosDev.map(a=>a.total),backgroundColor:colRecibidos,borderRadius:4},
+          {label:'Resueltos',data:datosDev.map(a=>a.resueltos),backgroundColor:colResueltos,borderRadius:4}
+        ]
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
+      }
+    });
+  }
+
   // SLA — doughnuts verde/amarillo/rojo, clicables para ver detalle de rangos
   function miniDonutSLA(id,sla,tipo){
     if(CH[id])CH[id].destroy();
@@ -2962,6 +3009,39 @@ function buildReportesCharts(){
 }
 
 // ── Drill-down del semáforo SLA: rangos de horas/días al dar clic ──
+// ── Detalle de tickets por empresa en la semana seleccionada (al dar clic en la fila) ──
+function toggleEmpresaDetalle(orgName){
+  const cont=el('empresa-detalle');
+  if(!cont)return;
+  if(cont.dataset.open===orgName){cont.style.display='none';cont.dataset.open='';return;}
+  cont.dataset.open=orgName;
+  cont.style.display='block';
+  const semanaSel=window._repSemanaSel;
+  if(!semanaSel){cont.innerHTML='';return;}
+  const rows=ticketsPorSemanaIds(new Set([semanaSel])).filter(r=>cv(r,'K').trim()===orgName);
+  const filas=rows.map(r=>{
+    const resuelto=cv(r,'J').trim().toLowerCase()==='solved';
+    return`<tr>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono);font-weight:700;color:var(--acc)">${cv(r,'I')||'—'}</td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr)"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${resuelto?'#f0fdf4':'#fffbeb'};color:${resuelto?'#16a34a':'#d97706'}">${cv(r,'J')||'—'}</span></td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2);white-space:nowrap">${cv(r,'L')||'—'}</td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2);white-space:nowrap">${cv(r,'M')||'—'}</td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${cv(r,'T')||'—'}</td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${cv(r,'O')||'—'}</td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML=`<div class="card" style="border:1.5px solid var(--acc3)">
+    <div class="card-head"><div class="card-title">🏢 Tickets de ${orgName}</div><span style="font-size:10px;color:var(--txt3)">${rows.length} tickets · ${semanaSel} · clic en la empresa de nuevo para cerrar</span></div>
+    <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--sur2)">${['ID','Estado','Solicitado','Resuelto','Categoría','Agente'].map(h=>`<th style="padding:6px 12px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
+        <tbody>${filas||'<tr><td colspan="6" style="padding:10px 12px;font-size:11px;color:var(--txt3)">Sin tickets</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+  cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
 function toggleSlaRango(tipo){
   const cont=el('sla-rango-detalle');
   if(!cont)return;
