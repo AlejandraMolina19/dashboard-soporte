@@ -1842,16 +1842,21 @@ function calcularRango(rows){
   // Desarrollo (col. S = SI): verde ≤5d · amarillo ≤7d · rojo >7d
   const resSoporte=resueltas.filter(r=>!esDesarrollo(r));
   const resDesarrollo=resueltas.filter(r=>esDesarrollo(r));
-  function calcularSLA(list,unidad,vMax,aMax){
+  function calcularSLA(list,unidad,vMax,aMax,rangosDef){
     const tiempos=list.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0).map(d=>unidad==='horas'?d*24:d);
     const buckets={verde:0,amarillo:0,rojo:0};
     tiempos.forEach(t=>{if(t<=vMax)buckets.verde++;else if(t<=aMax)buckets.amarillo++;else buckets.rojo++;});
     const promedio=tiempos.length?tiempos.reduce((a,b)=>a+b,0)/tiempos.length:null;
     const color=promedio==null?null:promedio<=vMax?'verde':promedio<=aMax?'amarillo':'rojo';
-    return{unidad,vMax,aMax,total:tiempos.length,buckets,promedio,color};
+    const rangos=rangosDef.map(rd=>({label:rd.label,total:tiempos.filter(t=>t>=rd.min&&t<rd.max).length}));
+    return{unidad,vMax,aMax,total:tiempos.length,buckets,promedio,color,rangos};
   }
-  const slaSoporte=calcularSLA(resSoporte,'horas',5,24);
-  const slaDesarrollo=calcularSLA(resDesarrollo,'días',5,7);
+  const slaSoporte=calcularSLA(resSoporte,'horas',5,24,[
+    {label:'0-5h',min:0,max:5},{label:'5-24h',min:5,max:24},{label:'24-48h',min:24,max:48},{label:'48h+',min:48,max:Infinity}
+  ]);
+  const slaDesarrollo=calcularSLA(resDesarrollo,'días',5,7,[
+    {label:'0-5d',min:0,max:5},{label:'5-7d',min:5,max:7},{label:'7-14d',min:7,max:14},{label:'14d+',min:14,max:Infinity}
+  ]);
 
   // Antigüedad de las que siguen abiertas
   const hoy=new Date();
@@ -2419,6 +2424,27 @@ function getEvolucionSemanal(semanas){
 const ESTATUS_LABEL={open:'Open',pending:'Pending',solved:'Solved',closed:'Closed'};
 const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',closed:'#6b7280'};
 
+// Tooltip reutilizable: muestra valor + % del total del dataset (para todas las gráficas de Reportes)
+function tooltipConPct(context){
+  const ds=context.dataset;
+  const val=context.parsed.y!=null?context.parsed.y:(context.parsed.x!=null?context.parsed.x:context.parsed);
+  const total=(ds.data||[]).reduce((a,b)=>a+(typeof b==='number'?b:0),0);
+  const pct=total?Math.round(val/total*1000)/10:0;
+  const nombre=ds.label||context.label||'';
+  return`${nombre}: ${val} (${pct}% del total)`;
+}
+
+function topList(arr,color){
+  if(!arr.length)return`<div style="font-size:11px;color:var(--txt3);padding:6px 0">Sin datos</div>`;
+  const max=arr[0][1];
+  const suma=arr.reduce((a,[,v])=>a+v,0);
+  return arr.map(([k,v])=>{
+    const pct=Math.round(v/max*100);
+    const pctTotal=suma?Math.round(v/suma*1000)/10:0;
+    return`<div class="ag-bar-row" style="margin-bottom:6px" title="${k}: ${v} ticket${v===1?'':'s'} (${pctTotal}% del total)"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${color}">${v}</span></div>`;
+  }).join('');
+}
+
 function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
   if(stA.slaSoporte&&stA.slaSoporte.color==='rojo'){
@@ -2511,14 +2537,6 @@ function renderAnalisisRango(){
     return`<div class="ag-bar-row" style="margin-bottom:6px" title="${k}: ${v} ticket${v===1?'':'s'}"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${col};height:100%"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${col}">${v}</span></div>`;
   }).join('');
 
-  function topList(arr,color){
-    if(!arr.length)return`<div style="font-size:11px;color:var(--txt3);padding:6px 0">Sin datos</div>`;
-    const max=arr[0][1];
-    return arr.map(([k,v])=>{
-      const pct=Math.round(v/max*100);
-      return`<div class="ag-bar-row" style="margin-bottom:6px" title="${k}: ${v} ticket${v===1?'':'s'}"><span class="ag-bar-lbl" style="font-size:11px">${k}</span><div class="ag-bar-track" style="height:14px"><div class="ag-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="ag-bar-val" style="font-size:11px;font-weight:700;color:${color}">${v}</span></div>`;
-    }).join('');
-  }
   function seccion(titulo){
     return`<div style="display:flex;align-items:center;gap:10px;margin:6px 0 -4px;padding:0 4px">
       <span style="font-size:13px;font-weight:800;color:var(--txt);white-space:nowrap">${titulo}</span>
@@ -2577,13 +2595,20 @@ function renderAnalisisRango(){
       </div>
     </div>`;
   }
-  const alertasHtml=alertas.map((a,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px${i<alertas.length-1?';border-bottom:0.5px solid var(--bdr)':''}">
+  const alertasHtml=alertas.map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:0.5px solid var(--bdr)">
     <span style="font-size:14px;flex-shrink:0">${a.icon}</span>
     <div style="flex:1;min-width:0">
       <div style="font-size:11.5px;font-weight:700;color:var(--txt)">${a.titulo}</div>
       <div style="font-size:10.5px;color:var(--txt3);margin-top:2px;line-height:1.4">${a.detalle}</div>
     </div>
-  </div>`).join('');
+  </div>`).join('')
+  +`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;background:#eff4ff">
+    <span style="font-size:14px;flex-shrink:0">🧠</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11.5px;font-weight:700;color:#2563eb">Resumen inteligente</div>
+      <div style="font-size:10.5px;color:var(--txt2);margin-top:2px;line-height:1.5">${resumenInteligente(stA,rangoLabel)}</div>
+    </div>
+  </div>`;
 
   return`
     <!-- 1. TÍTULO Y PERIODO -->
@@ -2623,12 +2648,13 @@ function renderAnalisisRango(){
 
     <!-- SEMÁFORO SLA — como gráfica -->
     <div class="card">
-      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área</span></div>
+      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área · clic en la dona para ver detalle</span></div>
       <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
         ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
         ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
       </div>
     </div>
+    <div id="sla-rango-detalle" style="display:none"></div>
 
     <!-- Por estatus + canal de atención -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -2675,8 +2701,8 @@ function renderAnalisisRango(){
         <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">🔔 Alertas de la semana</div><span style="font-size:10px;color:var(--txt3)">generadas de tus datos</span></div>
-        <div>${alertasHtml}</div>
+        <div class="card-head"><div class="card-title">🔔 Alertas de la semana</div><span style="font-size:10px;color:var(--txt3)">generadas de tus datos + resumen inteligente</span></div>
+        <div style="max-height:340px;overflow-y:auto">${alertasHtml}</div>
       </div>
     </div>
 
@@ -2697,32 +2723,27 @@ function renderAnalisisRango(){
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">🏷 Top categoría</div></div>
-        <div style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">📂 Desglose</div><span style="font-size:10px;color:var(--txt3)">categoría · módulo · causa del reporte · función</span></div>
+      <div id="desglose-tabs" style="display:flex;gap:6px;padding:10px 16px;flex-wrap:wrap;border-bottom:1px solid var(--bdr)">
+        <button class="area-btn on" onclick="mostrarDesglose('cat',this)">🏷 Categoría</button>
+        <button class="area-btn" onclick="mostrarDesglose('mod',this)">🧩 Módulo</button>
+        <button class="area-btn" onclick="mostrarDesglose('causa',this)">❔ Causa del reporte</button>
+        <button class="area-btn" onclick="mostrarDesglose('fn',this)">⚙️ Función</button>
       </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">🧩 Top módulo</div></div>
-        <div style="padding:10px 14px">${topList(stA.topModulos,'#16a34a')}</div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">❔ Top causa del reporte</div></div>
-        <div style="padding:10px 14px">${topList(stA.topCausas,'#e11d48')}</div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">⚙️ Top función</div></div>
-        <div style="padding:10px 14px">${topList(stA.topFunciones,'#d97706')}</div>
-      </div>
-    </div>
-
-    <div class="card" style="border:1.5px solid #dbeafe">
-      <div class="card-head" style="background:#eff4ff">
-        <div class="card-title" style="color:#2563eb">🧠 Resumen inteligente</div>
-        <span style="font-size:10px;color:#2563eb">${rangoLabel}</span>
-      </div>
-      <div style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--txt2)">${resumenInteligente(stA,rangoLabel)}</div>
+      <div id="desglose-content" style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
     </div>`;
+}
+
+function mostrarDesglose(tipo,btn){
+  const stA=window._repStatsActual;if(!stA)return;
+  const map={cat:['topCategorias','#2563eb'],mod:['topModulos','#16a34a'],causa:['topCausas','#e11d48'],fn:['topFunciones','#d97706']};
+  const par=map[tipo];if(!par)return;
+  const cont=el('desglose-content');
+  if(cont)cont.innerHTML=topList(stA[par[0]],par[1]);
+  const tabs=el('desglose-tabs');
+  if(tabs)tabs.querySelectorAll('.area-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
 }
 
 function mostrarExportarPanel(){
@@ -2775,6 +2796,8 @@ function exportarPanelReportes(formato){
   });
 }
 
+const TT_DEFAULT={backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8,callbacks:{label:tooltipConPct}};
+
 function buildReportesCharts(){
   const stA=window._repStatsActual;const evolucion=window._repEvolucion;
   if(!stA||!evolucion)return;
@@ -2787,13 +2810,13 @@ function buildReportesCharts(){
       data:{
         labels:evolucion.map(e=>e.id.replace('A2026_','')),
         datasets:[
-          {label:'Recibidos',data:evolucion.map(e=>e.total),borderColor:'#2563eb',backgroundColor:'#2563eb20',tension:.3,fill:true},
-          {label:'Resueltos',data:evolucion.map(e=>e.resueltos),borderColor:'#16a34a',backgroundColor:'#16a34a20',tension:.3,fill:true}
+          {label:'Recibidos',data:evolucion.map(e=>e.total),borderColor:'#2563eb',backgroundColor:'#2563eb25',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#2563eb',tension:.3,fill:true},
+          {label:'Resueltos',data:evolucion.map(e=>e.resueltos),borderColor:'#16a34a',backgroundColor:'#16a34a55',borderWidth:3,pointRadius:3,pointBackgroundColor:'#16a34a',tension:.3,fill:true}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
@@ -2808,7 +2831,7 @@ function buildReportesCharts(){
         labels:stA.estatusBreakdown.map(e=>ESTATUS_LABEL[e.estatus]||e.estatus),
         datasets:[{data:stA.estatusBreakdown.map(e=>e.total),backgroundColor:stA.estatusBreakdown.map(e=>ESTATUS_COLOR_REP[e.estatus]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]
       },
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
     });
   }
 
@@ -2827,24 +2850,29 @@ function buildReportesCharts(){
       },
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
       }
     });
   }
 
-  // SLA — doughnuts verde/amarillo/rojo
-  function miniDonutSLA(id,sla){
+  // SLA — doughnuts verde/amarillo/rojo, clicables para ver detalle de rangos
+  function miniDonutSLA(id,sla,tipo){
     if(CH[id])CH[id].destroy();
     const ctx=el(id);if(!ctx||!sla.total)return;
     CH[id]=new Chart(ctx,{
       type:'doughnut',
-      data:{labels:['Verde','Amarillo','Rojo'],datasets:[{data:[sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo],backgroundColor:['#16a34a','#eab308','#dc2626'],borderWidth:2,borderColor:'#fff'}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+      data:{labels:['Verde (en meta)','Amarillo','Rojo (fuera de SLA)'],datasets:[{data:[sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo],backgroundColor:['#16a34a','#eab308','#dc2626'],borderWidth:2,borderColor:'#fff'}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'60%',
+        onClick:()=>toggleSlaRango(tipo),
+        onHover:(evt,els)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor='pointer';},
+        plugins:{legend:{display:false},tooltip:TT_DEFAULT}
+      }
     });
   }
-  miniDonutSLA('rep-sla-soporte-chart',stA.slaSoporte);
-  miniDonutSLA('rep-sla-desarrollo-chart',stA.slaDesarrollo);
+  miniDonutSLA('rep-sla-soporte-chart',stA.slaSoporte,'soporte');
+  miniDonutSLA('rep-sla-desarrollo-chart',stA.slaDesarrollo,'desarrollo');
 
   // Canal de atención
   if(CH['rep-canal-chart'])CH['rep-canal-chart'].destroy();
@@ -2854,7 +2882,7 @@ function buildReportesCharts(){
     CH['rep-canal-chart']=new Chart(canalCtx,{
       type:'doughnut',
       data:{labels:stA.canalBreakdown.map(c=>c.canal),datasets:[{data:stA.canalBreakdown.map(c=>c.total),backgroundColor:stA.canalBreakdown.map(c=>CANAL_COL[c.canal]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}}}
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
     });
   }
 
@@ -2867,7 +2895,7 @@ function buildReportesCharts(){
       data:{labels:stA.porHora.map(h=>h.hora+'h'),datasets:[{data:stA.porHora.map(h=>h.total),backgroundColor:'#2563eb',borderRadius:4}]},
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:false},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
@@ -2882,7 +2910,7 @@ function buildReportesCharts(){
       data:{labels:stA.porDiaSemana.map(d=>d.dia),datasets:[{data:stA.porDiaSemana.map(d=>d.total),backgroundColor:'#0891b2',borderRadius:4}]},
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:false},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
@@ -2897,38 +2925,78 @@ function buildReportesCharts(){
       data:{
         labels:stA.porDia.map(d=>d.fecha.slice(5)),
         datasets:[
-          {label:'Creados',data:stA.porDia.map(d=>d.creados),borderColor:'#16a34a',backgroundColor:'#16a34a30',tension:.3,fill:true},
-          {label:'Resueltos',data:stA.porDia.map(d=>d.resueltos),borderColor:'#075e54',backgroundColor:'#075e5430',tension:.3,fill:true}
+          {label:'Creados',data:stA.porDia.map(d=>d.creados),borderColor:'#16a34a',backgroundColor:'#16a34a30',borderWidth:2.5,pointRadius:3,tension:.3,fill:true},
+          {label:'Resueltos',data:stA.porDia.map(d=>d.resueltos),borderColor:'#075e54',backgroundColor:'#075e5450',borderWidth:2.5,pointRadius:3,tension:.3,fill:true}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
   }
 
-  // Soporte vs Desarrollo por fecha
+  // Soporte vs Desarrollo por fecha — área apilada (no barras)
   if(CH['rep-sd-diario-chart'])CH['rep-sd-diario-chart'].destroy();
   const sdCtx=el('rep-sd-diario-chart');
   if(sdCtx){
     CH['rep-sd-diario-chart']=new Chart(sdCtx,{
-      type:'bar',
+      type:'line',
       data:{
         labels:stA.porDia.map(d=>d.fecha.slice(5)),
         datasets:[
-          {label:'Soporte',data:stA.porDia.map(d=>d.soporte),backgroundColor:'#7c3aed',borderRadius:3,stack:'s'},
-          {label:'Desarrollo',data:stA.porDia.map(d=>d.desarrollo),backgroundColor:'#f97316',borderRadius:3,stack:'s'}
+          {label:'Soporte',data:stA.porDia.map(d=>d.soporte),borderColor:'#7c3aed',backgroundColor:'#7c3aed55',borderWidth:2,pointRadius:2,tension:.3,fill:true},
+          {label:'Desarrollo',data:stA.porDia.map(d=>d.desarrollo),borderColor:'#f97316',backgroundColor:'#f9731655',borderWidth:2,pointRadius:2,tension:.3,fill:true}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8}},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
         scales:{x:{stacked:true,ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{stacked:true,ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
   }
+
+  buildSlaRangoChartIfOpen();
+}
+
+// ── Drill-down del semáforo SLA: rangos de horas/días al dar clic ──
+function toggleSlaRango(tipo){
+  const cont=el('sla-rango-detalle');
+  if(!cont)return;
+  if(cont.dataset.open===tipo){cont.style.display='none';cont.dataset.open='';return;}
+  cont.dataset.open=tipo;
+  cont.style.display='block';
+  const stA=window._repStatsActual;if(!stA)return;
+  const sla=tipo==='soporte'?stA.slaSoporte:stA.slaDesarrollo;
+  cont.innerHTML=`<div class="card" style="border:1.5px solid var(--acc3)">
+    <div class="card-head"><div class="card-title">🚦 Detalle de tiempos — ${tipo==='soporte'?'Soporte':'Desarrollo'}</div><span style="font-size:10px;color:var(--txt3)">distribución por rango · clic en la dona para cerrar</span></div>
+    <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sla-rango-chart"></canvas></div></div>
+  </div>`;
+  buildSlaRangoChart(sla);
+  cont.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function buildSlaRangoChartIfOpen(){
+  const cont=el('sla-rango-detalle');
+  if(!cont||cont.dataset.open!=='soporte'&&cont.dataset.open!=='desarrollo')return;
+  const stA=window._repStatsActual;if(!stA)return;
+  const sla=cont.dataset.open==='soporte'?stA.slaSoporte:stA.slaDesarrollo;
+  if(el('rep-sla-rango-chart'))buildSlaRangoChart(sla);
+}
+function buildSlaRangoChart(sla){
+  if(CH['rep-sla-rango-chart'])CH['rep-sla-rango-chart'].destroy();
+  const ctx=el('rep-sla-rango-chart');if(!ctx)return;
+  const RANGO_COL=['#16a34a','#eab308','#f97316','#dc2626'];
+  CH['rep-sla-rango-chart']=new Chart(ctx,{
+    type:'bar',
+    data:{labels:sla.rangos.map(r=>r.label),datasets:[{data:sla.rangos.map(r=>r.total),backgroundColor:RANGO_COL,borderRadius:4}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:TT_DEFAULT},
+      scales:{x:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
+    }
+  });
 }
 
 function conectarBDReportes(){
