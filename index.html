@@ -1835,6 +1835,22 @@ function calcularRango(rows){
   const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
   const desarrollo=rows.filter(esDesarrollo).length;
 
+  // ── SLA de resolución con semáforo (meta) ──
+  // Soporte (col. S = NO/vacío): verde ≤5h · amarillo ≤24h · rojo >24h
+  // Desarrollo (col. S = SI): verde ≤5d · amarillo ≤7d · rojo >7d
+  const resSoporte=resueltas.filter(r=>!esDesarrollo(r));
+  const resDesarrollo=resueltas.filter(r=>esDesarrollo(r));
+  function calcularSLA(list,unidad,vMax,aMax){
+    const tiempos=list.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0).map(d=>unidad==='horas'?d*24:d);
+    const buckets={verde:0,amarillo:0,rojo:0};
+    tiempos.forEach(t=>{if(t<=vMax)buckets.verde++;else if(t<=aMax)buckets.amarillo++;else buckets.rojo++;});
+    const promedio=tiempos.length?tiempos.reduce((a,b)=>a+b,0)/tiempos.length:null;
+    const color=promedio==null?null:promedio<=vMax?'verde':promedio<=aMax?'amarillo':'rojo';
+    return{unidad,vMax,aMax,total:tiempos.length,buckets,promedio,color};
+  }
+  const slaSoporte=calcularSLA(resSoporte,'horas',5,24);
+  const slaDesarrollo=calcularSLA(resDesarrollo,'días',5,7);
+
   // Antigüedad de las que siguen abiertas
   const hoy=new Date();
   const buckets={'0-3 días':0,'4-7 días':0,'8-15 días':0,'15+ días':0};
@@ -1885,7 +1901,7 @@ function calcularRango(rows){
   const porSoporte=porResponsable('O');
   const porDesarrollo=porResponsable('P');
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,estatusBreakdown,solved};
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,estatusBreakdown,solved,slaSoporte,slaDesarrollo};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2355,6 +2371,12 @@ const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',close
 
 function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
+  if(stA.slaSoporte&&stA.slaSoporte.color==='rojo'){
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'SLA de Soporte fuera de meta',detalle:`Promedio de ${stA.slaSoporte.promedio.toFixed(1)}h para resolver (meta: ≤5h). ${stA.slaSoporte.buckets.rojo} ticket${stA.slaSoporte.buckets.rojo===1?'':'s'} tardó más de 24h.`});
+  }
+  if(stA.slaDesarrollo&&stA.slaDesarrollo.color==='rojo'){
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver (meta: ≤5d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} tardó más de 7 días.`});
+  }
   if(evolucion&&evolucion.length>=3){
     const idx=evolucion.findIndex(e=>e.id===semanaSelId);
     if(idx>=2){
@@ -2473,6 +2495,40 @@ function renderAnalisisRango(){
     return`<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${col}18;color:${col};margin-right:6px;display:inline-block;margin-bottom:6px">${icon} ${c.canal}: ${c.total}</span>`;
   }).join('');
   const alertas=generarAlertasSemana(stA,stP,evolucion,REP_INI);
+
+  const SEM_COLOR={verde:'#16a34a',amarillo:'#eab308',rojo:'#dc2626'};
+  const SEM_LABEL={verde:'En meta',amarillo:'Requiere seguimiento',rojo:'Fuera de SLA'};
+  const SEM_DOT={verde:'🟢',amarillo:'🟡',rojo:'🔴'};
+  function slaBlockHtml(sla,nombre,metaTxt){
+    if(!sla.total){
+      return`<div style="flex:1;padding:14px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">${nombre}</div>
+        <div style="font-size:12px;color:var(--txt3)">Sin tickets resueltos esta semana</div>
+      </div>`;
+    }
+    const col=SEM_COLOR[sla.color]||'#9ca3af';
+    const promTxt=sla.unidad==='horas'?sla.promedio.toFixed(1)+'h':sla.promedio.toFixed(1)+'d';
+    const maxB=Math.max(sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo,1);
+    return`<div style="flex:1;padding:14px;border-radius:var(--rl);background:${col}0d;border:1px solid ${col}30">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">${nombre} <span style="font-weight:500;color:var(--txt3);text-transform:none">· meta ${metaTxt}</span></div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+        <span style="font-size:22px">${SEM_DOT[sla.color]}</span>
+        <span style="font-size:26px;font-weight:800;color:${col}">${promTxt}</span>
+        <span style="font-size:11px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}</span>
+      </div>
+      <div style="font-size:10px;color:var(--txt3);margin-bottom:8px">promedio sobre ${sla.total} ticket${sla.total===1?'':'s'} resuelto${sla.total===1?'':'s'} esta semana</div>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:28px;margin-bottom:4px">
+        <div style="flex:1;background:${SEM_COLOR.verde}25;border-radius:3px;height:${Math.max(6,sla.buckets.verde/maxB*28)}px" title="${sla.buckets.verde} en verde"></div>
+        <div style="flex:1;background:${SEM_COLOR.amarillo}25;border-radius:3px;height:${Math.max(6,sla.buckets.amarillo/maxB*28)}px" title="${sla.buckets.amarillo} en amarillo"></div>
+        <div style="flex:1;background:${SEM_COLOR.rojo}25;border-radius:3px;height:${Math.max(6,sla.buckets.rojo/maxB*28)}px" title="${sla.buckets.rojo} en rojo"></div>
+      </div>
+      <div style="display:flex;gap:4px;font-size:9px;color:var(--txt3);text-align:center">
+        <span style="flex:1">🟢 ${sla.buckets.verde}</span>
+        <span style="flex:1">🟡 ${sla.buckets.amarillo}</span>
+        <span style="flex:1">🔴 ${sla.buckets.rojo}</span>
+      </div>
+    </div>`;
+  }
   const alertasHtml=alertas.map((a,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px${i<alertas.length-1?';border-bottom:0.5px solid var(--bdr)':''}">
     <span style="font-size:14px;flex-shrink:0">${a.icon}</span>
     <div style="flex:1;min-width:0">
@@ -2492,6 +2548,15 @@ function renderAnalisisRango(){
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 16px;text-align:center">
         <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Semana</label>
         <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:18px;font-weight:700;padding:8px 20px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
+      </div>
+    </div>
+
+    <!-- SEMÁFORO SLA — meta de resolución -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área</span></div>
+      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
+        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h')}
+        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d')}
       </div>
     </div>
 
