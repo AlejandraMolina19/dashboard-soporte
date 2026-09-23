@@ -2675,16 +2675,10 @@ function renderAnalisisRango(){
     </div>
     <div id="sla-rango-detalle" style="display:none"></div>
 
-    <!-- Por estatus + canal de atención -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart"></canvas></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">☎️ Canal de atención</div></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart"></canvas></div></div>
-      </div>
+    <!-- Alertas — sube arriba: es lo primero que debe verse, no hasta medio scroll -->
+    <div class="card" style="border:1.5px solid #fca5a5">
+      <div class="card-head" style="background:#fef2f2"><div class="card-title" style="color:#dc2626">🔔 Alertas de la semana</div><span style="font-size:10px;color:#dc2626">generadas de tus datos + resumen inteligente</span></div>
+      <div style="max-height:340px;overflow-y:auto">${alertasHtml}</div>
     </div>
 
     ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
@@ -2693,70 +2687,107 @@ function renderAnalisisRango(){
       <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
     </div>
 
-    ${seccion('🕐 Patrones de esta semana ('+rangoLabel+')')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">Tickets por hora</div><span style="font-size:10px;color:var(--txt3)">hora de creación</span></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart"></canvas></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">Tickets por día de la semana</div></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart"></canvas></div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div></div>
-      <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart"></canvas></div></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span></div>
-      <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart"></canvas></div></div>
-    </div>
-
-    ${seccion('👤 Equipo')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
-        <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">🔔 Alertas de la semana</div><span style="font-size:10px;color:var(--txt3)">generadas de tus datos + resumen inteligente</span></div>
-        <div style="max-height:340px;overflow-y:auto">${alertasHtml}</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos · por D-Responsable (col. P) · solo tickets de Desarrollo</span></div>
-      <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
-    </div>
-
-    ${seccion('📋 Detalle')}
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">⏳ Tickets aún sin resolver (a hoy)</div></div>
-        <div style="padding:10px 14px">${bucketRows||'<div style="font-size:11px;color:var(--txt3)">Sin tickets abiertos en esta semana</div>'}</div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">🏢 Empresas en la semana</div><span style="font-size:10px;color:var(--txt3)">${stA.empresas.length} empresas · ${stA.reincidentes.length} reincidentes · clic en una fila para ver sus tickets</span></div>
-        <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
-          <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="background:var(--sur2)">${['Empresa','Tickets','Categoría principal','Llamadas'].map(h=>`<th style="padding:6px 14px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
-            <tbody>${empresasRows||'<tr><td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--txt3)">Sin datos en esta semana</td></tr>'}</tbody>
-          </table>
+    ${seccionColapsable('rep-sec-patrones','🔍 Patrones y distribuciones de esta semana ('+rangoLabel+')',`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">☎️ Canal de atención</div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart"></canvas></div></div>
         </div>
       </div>
-    </div>
-    <div id="empresa-detalle" style="display:none"></div>
-
-    <div class="card">
-      <div class="card-head"><div class="card-title">📂 Desglose</div><span style="font-size:10px;color:var(--txt3)">categoría · módulo · causa del reporte · función</span></div>
-      <div id="desglose-tabs" style="display:flex;gap:6px;padding:10px 16px;flex-wrap:wrap;border-bottom:1px solid var(--bdr)">
-        <button class="area-btn on" onclick="mostrarDesglose('cat',this)">🏷 Categoría</button>
-        <button class="area-btn" onclick="mostrarDesglose('mod',this)">🧩 Módulo</button>
-        <button class="area-btn" onclick="mostrarDesglose('causa',this)">❔ Causa del reporte</button>
-        <button class="area-btn" onclick="mostrarDesglose('fn',this)">⚙️ Función</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Tickets por hora</div><span style="font-size:10px;color:var(--txt3)">hora de creación</span></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Tickets por día de la semana</div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart"></canvas></div></div>
+        </div>
       </div>
-      <div id="desglose-content" style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
-    </div>`;
+      <div style="padding:0 10px 10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart"></canvas></div></div>
+        </div>
+      </div>
+      <div style="padding:0 10px 10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart"></canvas></div></div>
+        </div>
+      </div>
+    `,['rep-estatus-chart','rep-canal-chart','rep-hora-chart','rep-diasem-chart','rep-diario-chart','rep-sd-diario-chart'])}
+
+    ${seccionColapsable('rep-sec-equipo','👤 Equipo',`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><span style="font-size:10px;color:var(--txt3)">por D-Responsable (col. P)</span></div>
+          <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
+        </div>
+      </div>
+    `,['rep-agente-chart','rep-dev-chart'])}
+
+    ${seccionColapsable('rep-sec-detalle','📋 Detalle (antigüedad, empresas, desglose)',`
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;padding:10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">⏳ Tickets aún sin resolver (a hoy)</div></div>
+          <div style="padding:10px 14px">${bucketRows||'<div style="font-size:11px;color:var(--txt3)">Sin tickets abiertos en esta semana</div>'}</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">🏢 Empresas en la semana</div><span style="font-size:10px;color:var(--txt3)">${stA.empresas.length} empresas · ${stA.reincidentes.length} reincidentes · clic en una fila para ver sus tickets</span></div>
+          <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr style="background:var(--sur2)">${['Empresa','Tickets','Categoría principal','Llamadas'].map(h=>`<th style="padding:6px 14px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
+              <tbody>${empresasRows||'<tr><td colspan="4" style="padding:10px 14px;font-size:11px;color:var(--txt3)">Sin datos en esta semana</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="empresa-detalle" style="display:none;padding:0 10px"></div>
+      <div style="padding:0 10px 10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">📂 Desglose</div><span style="font-size:10px;color:var(--txt3)">categoría · módulo · causa del reporte · función</span></div>
+          <div id="desglose-tabs" style="display:flex;gap:6px;padding:10px 16px;flex-wrap:wrap;border-bottom:1px solid var(--bdr)">
+            <button class="area-btn on" onclick="mostrarDesglose('cat',this)">🏷 Categoría</button>
+            <button class="area-btn" onclick="mostrarDesglose('mod',this)">🧩 Módulo</button>
+            <button class="area-btn" onclick="mostrarDesglose('causa',this)">❔ Causa del reporte</button>
+            <button class="area-btn" onclick="mostrarDesglose('fn',this)">⚙️ Función</button>
+          </div>
+          <div id="desglose-content" style="padding:10px 14px">${topList(stA.topCategorias,'#2563eb')}</div>
+        </div>
+      </div>
+    `,[])}`;
+}
+
+// ── Sección colapsable reutilizable (cerrada por default). chartIds: canvases que hay que redimensionar al abrir ──
+function seccionColapsable(id,titulo,contenidoHtml,chartIds){
+  window['_repChartIds_'+id]=chartIds||[];
+  return`<div class="card">
+    <div class="card-head" style="cursor:pointer" onclick="toggleSeccionRep('${id}')">
+      <div class="card-title">${titulo}</div>
+      <span id="${id}-arrow" style="font-size:10px;color:var(--acc);font-weight:700">▼ ver detalle</span>
+    </div>
+    <div id="${id}" style="display:none">${contenidoHtml}</div>
+  </div>`;
+}
+function toggleSeccionRep(id){
+  const cont=el(id);const arrow=el(id+'-arrow');
+  if(!cont)return;
+  const abierto=cont.style.display!=='none';
+  cont.style.display=abierto?'none':'block';
+  if(arrow)arrow.textContent=abierto?'▼ ver detalle':'▲ ocultar';
+  if(!abierto){
+    const ids=window['_repChartIds_'+id]||[];
+    setTimeout(()=>{ids.forEach(cid=>{if(CH[cid])CH[cid].resize();});},60);
+  }
 }
 
 function mostrarDesglose(tipo,btn){
