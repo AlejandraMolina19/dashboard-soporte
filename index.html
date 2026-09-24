@@ -1841,6 +1841,11 @@ function calcularRango(rows){
   const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
   const desarrollo=rows.filter(esDesarrollo).length;
 
+  // ── Soporte: solo tickets de por asignar / Alejandra / Ivette / Karina (col. O) ──
+  const SOPORTE_AGENTES=['por asignar','alejandra','ivette','karina'];
+  const soporteTotal=rows.filter(r=>SOPORTE_AGENTES.includes(cv(r,'O').trim().toLowerCase())).length;
+  const pctSoporte=total?Math.round(soporteTotal/total*100):0;
+
   // ── SLA de resolución con semáforo (meta) ──
   // Soporte (col. S = NO/vacío): verde ≤5h · amarillo ≤24h · rojo >24h
   // Desarrollo (col. S = SI): verde ≤5d · amarillo ≤7d · rojo >7d
@@ -1970,7 +1975,7 @@ function calcularRango(rows){
   });
   const oneTouch={count:oneTouchCount,pct:resueltas.length?Math.round(oneTouchCount/resueltas.length*100*10)/10:0};
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2653,6 +2658,7 @@ function renderAnalisisRango(){
         {icon:'🎯',color:'#0d9488',label:'One-touch',val:stA.oneTouch.pct+'%',sub:stA.oneTouch.count+' de '+stA.resueltas+' resueltos',big:false},
         {icon:'⏱',color:'#d97706',label:'Tiempo prom. resolución',val:stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—',sub:stP&&stP.tiempoProm!=null?'ant.: '+stP.tiempoProm.toFixed(1)+'d':'días promedio',big:false},
         {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'empresas distintas',big:false},
+        {icon:'🎧',color:'#0284c7',label:'Soporte',val:stA.soporteTotal,sub:stA.pctSoporte+'% del total · por asignar/Alejandra/Ivette/Karina',big:false},
         {icon:'🛠',color:'#7c3aed',label:'Desarrollo',val:stA.desarrollo,sub:stA.pctDesarrollo+'% del total',big:false},
       ].map(k=>`<div class="mini-kpi" style="padding:12px" title="${k.label}: ${k.val}">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
@@ -2684,40 +2690,40 @@ function renderAnalisisRango(){
     ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
     <div class="card">
       <div class="card-head"><div class="card-title">Recibidos vs. resueltos</div><span style="font-size:10px;color:var(--txt3)">todas las semanas desde ${REP_SEMANA_MIN}</span></div>
-      <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart"></canvas></div></div>
+      <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart" ondblclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div><div style="font-size:9px;color:var(--txt3);text-align:right;padding-top:4px">doble clic para ver detalle</div></div>
     </div>
 
     ${seccionColapsable('rep-sec-patrones','🔍 Patrones y distribuciones de esta semana ('+rangoLabel+')',`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
         <div class="card">
           <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart" ondblclick="mostrarDetalleChart('rep-estatus-chart','Tickets por estatus')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
           <div class="card-head"><div class="card-title">☎️ Canal de atención</div></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart" ondblclick="mostrarDetalleChart('rep-canal-chart','Canal de atención')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px">
         <div class="card">
           <div class="card-head"><div class="card-title">Tickets por hora</div><span style="font-size:10px;color:var(--txt3)">hora de creación</span></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart" ondblclick="mostrarDetalleChart('rep-hora-chart','Tickets por hora')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
           <div class="card-head"><div class="card-title">Tickets por día de la semana</div></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart" ondblclick="mostrarDetalleChart('rep-diasem-chart','Tickets por día de la semana')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="padding:0 10px 10px">
         <div class="card">
           <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart" ondblclick="mostrarDetalleChart('rep-diario-chart','Tickets por fecha — creados vs. resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="padding:0 10px 10px">
         <div class="card">
           <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart" ondblclick="mostrarDetalleChart('rep-sd-diario-chart','Soporte vs. Desarrollo por fecha')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
     `,['rep-estatus-chart','rep-canal-chart','rep-hora-chart','rep-diasem-chart','rep-diario-chart','rep-sd-diario-chart'])}
@@ -2726,11 +2732,11 @@ function renderAnalisisRango(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
         <div class="card">
           <div class="card-head"><div class="card-title">Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart"></canvas></div></div>
+          <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart" ondblclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
           <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><span style="font-size:10px;color:var(--txt3)">por D-Responsable (col. P)</span></div>
-          <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
+          <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart" ondblclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
         </div>
       </div>
     `,['rep-agente-chart','rep-dev-chart'])}
@@ -2852,6 +2858,66 @@ function exportarPanelReportes(formato){
 }
 
 const TT_DEFAULT={backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8,callbacks:{label:tooltipConPct}};
+
+// ── Doble clic en cualquier gráfica de Reportes → modal con los datos en tabla + exportar CSV ──
+function mostrarDetalleChart(chartId,titulo){
+  const chart=CH[chartId];
+  if(!chart){showToast('Sin datos para mostrar','#d97706');return;}
+  const labels=chart.data.labels||[];
+  const datasets=chart.data.datasets||[];
+  const headerCols=datasets.map(ds=>ds.label||'Valor');
+  const filas=labels.map((lab,i)=>({label:String(lab),cols:datasets.map(ds=>ds.data[i]!=null?ds.data[i]:0)}));
+  const totalPrincipal=filas.reduce((a,f)=>a+(f.cols[0]||0),0);
+  window._chartDetalleData={titulo,headerCols,filas};
+
+  let modal=document.getElementById('chart-detalle-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='chart-detalle-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.onclick=function(e){if(e.target===modal)modal.remove();};
+    document.body.appendChild(modal);
+  }
+  const filasHtml=filas.map(f=>{
+    const principal=f.cols[0]||0;
+    const pct=totalPrincipal?Math.round(principal/totalPrincipal*1000)/10:0;
+    return`<tr>
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-weight:600">${f.label}</td>
+      ${f.cols.map(c=>`<td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:right;font-family:var(--mono)">${c}</td>`).join('')}
+      <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);text-align:right;font-family:var(--mono);color:var(--txt3)">${pct}%</td>
+    </tr>`;
+  }).join('');
+  modal.innerHTML=`<div style="background:var(--sur);border-radius:var(--rl);padding:20px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.25)" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--txt)">📊 ${titulo}</div>
+      <button onclick="document.getElementById('chart-detalle-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3);line-height:1">×</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--sur2)">
+          <th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">Categoría</th>
+          ${headerCols.map(h=>`<th style="padding:6px 12px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">${h}</th>`).join('')}
+          <th style="padding:6px 12px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">% del total</th>
+        </tr></thead>
+        <tbody>${filasHtml||'<tr><td colspan="10" style="padding:10px;color:var(--txt3);font-size:11px">Sin datos</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="exportarDetalleChartCSV()" style="flex:1;padding:9px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);cursor:pointer;font-size:12px;font-weight:600;color:var(--txt);font-family:var(--font)">⬇ Exportar CSV</button>
+      <button onclick="document.getElementById('chart-detalle-modal').remove()" style="padding:9px 18px;border-radius:var(--r);border:1px solid var(--bdr);background:none;cursor:pointer;font-size:12px;color:var(--txt3);font-family:var(--font)">Cerrar</button>
+    </div>
+  </div>`;
+}
+function exportarDetalleChartCSV(){
+  const d=window._chartDetalleData;if(!d){showToast('Sin datos para exportar','#dc2626');return;}
+  const csvRows=[['Categoría',...d.headerCols]];
+  d.filas.forEach(f=>csvRows.push([f.label,...f.cols]));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csvRows.map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='detalle_'+(d.titulo||'grafica').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.csv';
+  a.click();
+  showToast('✓ CSV exportado','#16a34a');
+}
 
 function buildReportesCharts(){
   const stA=window._repStatsActual;const evolucion=window._repEvolucion;
