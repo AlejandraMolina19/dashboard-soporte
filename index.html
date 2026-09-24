@@ -1966,14 +1966,15 @@ function calcularRango(rows){
   });
   const porDia=Object.entries(diaFechaMap).sort((a,b)=>a[0].localeCompare(b[0])).map(([fecha,d])=>({fecha,...d}));
 
-  // One-touch: creado y resuelto en la misma fecha+hora
+  // One-touch: creado y resuelto en la misma fecha+hora — SOLO sobre resueltos estrictos (J=solved)
+  const resueltasSolved=rows.filter(esSolvedJ);
   let oneTouchCount=0;
-  resueltas.forEach(r=>{
+  resueltasSolved.forEach(r=>{
     const dL=new Date(cv(r,'L')),dM=new Date(cv(r,'M'));
     if(isNaN(dL)||isNaN(dM))return;
     if(dL.getFullYear()===dM.getFullYear()&&dL.getMonth()===dM.getMonth()&&dL.getDate()===dM.getDate()&&dL.getHours()===dM.getHours())oneTouchCount++;
   });
-  const oneTouch={count:oneTouchCount,pct:resueltas.length?Math.round(oneTouchCount/resueltas.length*100*10)/10:0};
+  const oneTouch={count:oneTouchCount,pct:resueltasSolved.length?Math.round(oneTouchCount/resueltasSolved.length*100*10)/10:0};
 
   return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
 }
@@ -2655,7 +2656,7 @@ function renderAnalisisRango(){
       ${[
         {icon:'📥',color:'#2563eb',label:'Recibidos',val:stA.total,sub:stP?delta2(stA.total,stP.total)+' vs. semana ant.':'sin comparación',big:true},
         {icon:'✅',color:'#16a34a',label:'Resueltos',val:stA.solved,sub:pctResueltos+'% del total',big:true},
-        {icon:'🎯',color:'#0d9488',label:'One-touch',val:stA.oneTouch.pct+'%',sub:stA.oneTouch.count+' de '+stA.resueltas+' resueltos',big:false},
+        {icon:'🎯',color:'#0d9488',label:'One-touch',val:stA.oneTouch.pct+'%',sub:stA.oneTouch.count+' de '+stA.solved+' resueltos',big:false},
         {icon:'⏱',color:'#d97706',label:'Tiempo prom. resolución',val:stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—',sub:stP&&stP.tiempoProm!=null?'ant.: '+stP.tiempoProm.toFixed(1)+'d':'días promedio',big:false},
         {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'empresas distintas',big:false},
         {icon:'🎧',color:'#0284c7',label:'Soporte',val:stA.soporteTotal,sub:stA.pctSoporte+'% del total · por asignar/Alejandra/Ivette/Karina',big:false},
