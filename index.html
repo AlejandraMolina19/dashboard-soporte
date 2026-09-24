@@ -2600,24 +2600,25 @@ function renderAnalisisRango(){
   const SEM_DOT={verde:'🟢',amarillo:'🟡',rojo:'🔴'};
   function slaBlockHtml(sla,nombre,metaTxt,canvasId){
     if(!sla.total){
-      return`<div style="flex:1;min-width:200px;padding:14px;text-align:center">
+      return`<div style="flex:1;min-width:260px;padding:14px;text-align:center">
         <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">${nombre}</div>
         <div style="font-size:12px;color:var(--txt3)">Sin tickets resueltos esta semana</div>
       </div>`;
     }
     const col=SEM_COLOR[sla.color]||'#9ca3af';
     const promTxt=sla.unidad==='horas'?sla.promedio.toFixed(1)+'h':sla.promedio.toFixed(1)+'d';
-    return`<div style="flex:1;min-width:230px;padding:14px;border-radius:var(--rl);background:${col}0d;border:1px solid ${col}30;display:flex;gap:12px;align-items:center">
-      <div style="width:84px;height:84px;flex-shrink:0;position:relative"><canvas id="${canvasId}"></canvas></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:10.5px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">${nombre} <span style="font-weight:500;color:var(--txt3);text-transform:none">· meta ${metaTxt}</span></div>
-        <div style="display:flex;align-items:baseline;gap:6px">
-          <span style="font-size:18px">${SEM_DOT[sla.color]}</span>
-          <span style="font-size:22px;font-weight:800;color:${col}">${promTxt}</span>
+    const veces=sla.vMax?Math.round(sla.promedio/sla.vMax*10)/10:0;
+    return`<div style="flex:1;min-width:280px;padding:14px;border-radius:var(--rl);background:${col}0d;border:1px solid ${col}30">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        <div style="font-size:10.5px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em">${nombre} <span style="font-weight:500;color:var(--txt3);text-transform:none">· meta ${metaTxt}</span></div>
+        <div style="display:flex;align-items:baseline;gap:5px">
+          <span style="font-size:15px">${SEM_DOT[sla.color]}</span>
+          <span style="font-size:19px;font-weight:800;color:${col}">${promTxt}</span>
+          <span style="font-size:9.5px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}${veces>1?' · '+veces+'× la meta':''}</span>
         </div>
-        <div style="font-size:10px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}</div>
-        <div style="font-size:9.5px;color:var(--txt3);margin-top:3px">${sla.total} resuelto${sla.total===1?'':'s'} esta semana</div>
       </div>
+      <div style="position:relative;height:66px"><canvas id="${canvasId}"></canvas></div>
+      <div style="font-size:9.5px;color:var(--txt3);margin-top:6px">${sla.total} resuelto${sla.total===1?'':'s'} esta semana · clic en la barra para ver el detalle de rangos</div>
     </div>`;
   }
   const alertasHtml=alertas.map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:0.5px solid var(--bdr)">
@@ -2672,16 +2673,6 @@ function renderAnalisisRango(){
     </div>
     <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">📞 Llamadas: aún no disponible — se agregará cuando conectes esa fuente de datos.</div>
 
-    <!-- SEMÁFORO SLA — como gráfica -->
-    <div class="card">
-      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área · clic en la dona para ver detalle</span></div>
-      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
-        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
-        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
-      </div>
-    </div>
-    <div id="sla-rango-detalle" style="display:none"></div>
-
     <!-- Alertas — sube arriba: es lo primero que debe verse, no hasta medio scroll -->
     <div class="card" style="border:1.5px solid #fca5a5">
       <div class="card-head" style="background:#fef2f2"><div class="card-title" style="color:#dc2626">🔔 Alertas de la semana</div><span style="font-size:10px;color:#dc2626">generadas de tus datos + resumen inteligente</span></div>
@@ -2690,40 +2681,50 @@ function renderAnalisisRango(){
 
     ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
     <div class="card">
-      <div class="card-head"><div class="card-title">Recibidos vs. resueltos</div><span style="font-size:10px;color:var(--txt3)">todas las semanas desde ${REP_SEMANA_MIN}</span></div>
+      <div class="card-head"><div class="card-title">Recibidos vs. resueltos</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">todas las semanas desde ${REP_SEMANA_MIN}</span><button onclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇ Ver/exportar</button></div></div>
       <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart" ondblclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div><div style="font-size:9px;color:var(--txt3);text-align:right;padding-top:4px">doble clic para ver detalle</div></div>
     </div>
+
+    ${seccion('🚦 Calidad — SLA de resolución')}
+    <div class="card">
+      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área · clic en la barra para ver detalle</span></div>
+      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
+        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
+        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
+      </div>
+    </div>
+    <div id="sla-rango-detalle" style="display:none"></div>
 
     ${seccionColapsable('rep-sec-patrones','🔍 Patrones y distribuciones de esta semana ('+rangoLabel+')',`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">🎯 Por estatus</div></div>
+          <div class="card-head"><div class="card-title">🎯 Por estatus</div><button onclick="mostrarDetalleChart('rep-estatus-chart','Tickets por estatus')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div>
           <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-estatus-chart" ondblclick="mostrarDetalleChart('rep-estatus-chart','Tickets por estatus')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
-          <div class="card-head"><div class="card-title">☎️ Canal de atención</div></div>
+          <div class="card-head"><div class="card-title">☎️ Canal de atención</div><button onclick="mostrarDetalleChart('rep-canal-chart','Canal de atención')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div>
           <div style="padding:12px 16px"><div style="position:relative;height:190px"><canvas id="rep-canal-chart" ondblclick="mostrarDetalleChart('rep-canal-chart','Canal de atención')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 10px 10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Tickets por hora</div><span style="font-size:10px;color:var(--txt3)">hora de creación</span></div>
+          <div class="card-head"><div class="card-title">Tickets por hora</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">hora de creación</span><button onclick="mostrarDetalleChart('rep-hora-chart','Tickets por hora')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
           <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-hora-chart" ondblclick="mostrarDetalleChart('rep-hora-chart','Tickets por hora')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
-          <div class="card-head"><div class="card-title">Tickets por día de la semana</div></div>
+          <div class="card-head"><div class="card-title">Tickets por día de la semana</div><button onclick="mostrarDetalleChart('rep-diasem-chart','Tickets por día de la semana')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div>
           <div style="padding:12px 16px"><div style="position:relative;height:180px"><canvas id="rep-diasem-chart" ondblclick="mostrarDetalleChart('rep-diasem-chart','Tickets por día de la semana')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="padding:0 10px 10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div></div>
+          <div class="card-head"><div class="card-title">Tickets por fecha — creados vs. resueltos</div><button onclick="mostrarDetalleChart('rep-diario-chart','Tickets por fecha — creados vs. resueltos')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div>
           <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-diario-chart" ondblclick="mostrarDetalleChart('rep-diario-chart','Tickets por fecha — creados vs. resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
       <div style="padding:0 10px 10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span></div>
+          <div class="card-head"><div class="card-title">Soporte vs. Desarrollo por fecha</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">tickets creados cada día, por área</span><button onclick="mostrarDetalleChart('rep-sd-diario-chart','Soporte vs. Desarrollo por fecha')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
           <div style="padding:12px 16px"><div style="position:relative;height:200px"><canvas id="rep-sd-diario-chart" ondblclick="mostrarDetalleChart('rep-sd-diario-chart','Soporte vs. Desarrollo por fecha')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
       </div>
@@ -2732,11 +2733,11 @@ function renderAnalisisRango(){
     ${seccionColapsable('rep-sec-equipo','👤 Equipo',`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Productividad por agente</div><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span></div>
+          <div class="card-head"><div class="card-title">Productividad por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span><button onclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
           <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart" ondblclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
-          <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><span style="font-size:10px;color:var(--txt3)">por D-Responsable (col. P)</span></div>
+          <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">por D-Responsable (col. P)</span><button onclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
           <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart" ondblclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
         </div>
       </div>
@@ -3001,23 +3002,26 @@ function buildReportesCharts(){
     });
   }
 
-  // SLA — doughnuts verde/amarillo/rojo, clicables para ver detalle de rangos
-  function miniDonutSLA(id,sla,tipo){
+  // SLA — barra 'Tu promedio vs. Meta' (más objetiva que una dona cuando casi todo cae en rojo), clicable para ver detalle de rangos
+  function miniBarSLA(id,sla,tipo){
     if(CH[id])CH[id].destroy();
     const ctx=el(id);if(!ctx||!sla.total)return;
+    const col=SEM_COLOR[sla.color]||'#9ca3af';
+    const suf=sla.unidad==='horas'?'h':'d';
     CH[id]=new Chart(ctx,{
-      type:'doughnut',
-      data:{labels:['Verde (en meta)','Amarillo','Rojo (fuera de SLA)'],datasets:[{data:[sla.buckets.verde,sla.buckets.amarillo,sla.buckets.rojo],backgroundColor:['#16a34a','#eab308','#dc2626'],borderWidth:2,borderColor:'#fff'}]},
+      type:'bar',
+      data:{labels:['Tu promedio','Meta'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax],backgroundColor:[col,'#9ca3af'],borderRadius:4}]},
       options:{
-        responsive:true,maintainAspectRatio:false,cutout:'60%',
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
         onClick:()=>toggleSlaRango(tipo),
-        onHover:(evt,els)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor='pointer';},
-        plugins:{legend:{display:false},tooltip:TT_DEFAULT}
+        onHover:(evt)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor='pointer';},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8,callbacks:{label:c=>c.label+': '+c.parsed.x+suf}}},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#374151',font:{size:10,weight:'600'}},grid:{display:false}}}
       }
     });
   }
-  miniDonutSLA('rep-sla-soporte-chart',stA.slaSoporte,'soporte');
-  miniDonutSLA('rep-sla-desarrollo-chart',stA.slaDesarrollo,'desarrollo');
+  miniBarSLA('rep-sla-soporte-chart',stA.slaSoporte,'soporte');
+  miniBarSLA('rep-sla-desarrollo-chart',stA.slaDesarrollo,'desarrollo');
 
   // Canal de atención
   if(CH['rep-canal-chart'])CH['rep-canal-chart'].destroy();
@@ -3125,15 +3129,32 @@ function toggleEmpresaDetalle(orgName){
       <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2);white-space:nowrap">${cv(r,'L')||'—'}</td>
       <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2);white-space:nowrap">${cv(r,'M')||'—'}</td>
       <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${cv(r,'T')||'—'}</td>
+      <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${cv(r,'AF')||'—'}</td>
       <td style="padding:6px 12px;border-bottom:0.5px solid var(--bdr);font-size:11px;color:var(--txt2)">${cv(r,'O')||'—'}</td>
     </tr>`;
   }).join('');
+
+  // De qué son sus tickets: top funciones y módulos de esta empresa
+  function topLocal(letter,n){
+    const m={};
+    rows.forEach(r=>{const v=cv(r,letter).trim();if(v)m[v]=(m[v]||0)+1;});
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n||3);
+  }
+  const topFn=topLocal('AF',3),topMod=topLocal('U',3);
+  const pillsHtml=(arr,color)=>arr.map(([k,v])=>`<span style="font-size:9.5px;font-weight:700;padding:2px 9px;border-radius:10px;background:${color}18;color:${color};margin-right:6px;display:inline-block;margin-bottom:4px" title="${k}: ${v} ticket${v===1?'':'s'}">${k} · ${v}</span>`).join('')||'<span style="font-size:10px;color:var(--txt3)">Sin datos</span>';
+
   cont.innerHTML=`<div class="card" style="border:1.5px solid var(--acc3)">
     <div class="card-head"><div class="card-title">🏢 Tickets de ${orgName}</div><span style="font-size:10px;color:var(--txt3)">${rows.length} tickets · ${semanaSel} · clic en la empresa de nuevo para cerrar</span></div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--bdr);background:var(--sur2)">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);margin-bottom:4px">¿De qué son estos tickets? — top función</div>
+      <div style="margin-bottom:6px">${pillsHtml(topFn,'#d97706')}</div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);margin-bottom:4px">Top módulo</div>
+      <div>${pillsHtml(topMod,'#16a34a')}</div>
+    </div>
     <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
       <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="background:var(--sur2)">${['ID','Estado','Solicitado','Resuelto','Categoría','Agente'].map(h=>`<th style="padding:6px 12px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
-        <tbody>${filas||'<tr><td colspan="6" style="padding:10px 12px;font-size:11px;color:var(--txt3)">Sin tickets</td></tr>'}</tbody>
+        <thead><tr style="background:var(--sur2)">${['ID','Estado','Solicitado','Resuelto','Categoría','Función','Agente'].map(h=>`<th style="padding:6px 12px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left">${h}</th>`).join('')}</tr></thead>
+        <tbody>${filas||'<tr><td colspan="7" style="padding:10px 12px;font-size:11px;color:var(--txt3)">Sin tickets</td></tr>'}</tbody>
       </table>
     </div>
   </div>`;
