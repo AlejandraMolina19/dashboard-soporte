@@ -2412,6 +2412,7 @@ function renderReportes(){
         <div class="greeting-sub">${BD_DATA.length?'BD: '+BD_DATA.length+' tickets históricos conectados · todo el contenido de abajo depende de la semana (ID_SEMANA) que elijas':'Conecta la BD histórica (Tickets BD) para ver el reporte por semana'}</div>
       </div>
       <div style="display:flex;gap:8px">
+        ${BD_DATA.length?`<button onclick="exportarTodoReportesCSV()" title="Descarga en un solo CSV las tablas de todas las gráficas de esta semana, para registrar" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid #bbf7d0;background:#f0fdf4;color:#15803d;cursor:pointer;font-family:var(--font);font-weight:600">⬇ Exportar todo (CSV)</button>`:''}
         ${BD_DATA.length?`<button onclick="mostrarExportarPanel()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--acc3);background:var(--acc2);color:var(--acc);cursor:pointer;font-family:var(--font);font-weight:600">⬇ Exportar panel</button>`:''}
         <button onclick="conectarBDReportes()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid ${BD_DATA.length?'#bbf7d0':'var(--bdr)'};background:${BD_DATA.length?'#f0fdf4':'none'};color:${BD_DATA.length?'#15803d':'var(--txt2)'};cursor:pointer;font-family:var(--font);font-weight:600">
           ${BD_DATA.length?'✓ BD conectada':'⚙ Conectar BD histórica'}
@@ -2919,6 +2920,51 @@ function exportarDetalleChartCSV(){
   a.download='detalle_'+(d.titulo||'grafica').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.csv';
   a.click();
   showToast('✓ CSV exportado','#16a34a');
+}
+
+// ── Exporta en UN SOLO CSV las tablas de TODAS las gráficas de Reportes de la semana seleccionada (para registrar) ──
+function exportarTodoReportesCSV(){
+  const stA=window._repStatsActual;
+  if(!stA){showToast('Sin datos para exportar','#dc2626');return;}
+  const charts=[
+    ['rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos'],
+    ['rep-sla-soporte-chart','SLA — Soporte (Tu promedio vs. Meta)'],
+    ['rep-sla-desarrollo-chart','SLA — Desarrollo (Tu promedio vs. Meta)'],
+    ['rep-estatus-chart','Tickets por estatus'],
+    ['rep-canal-chart','Canal de atención'],
+    ['rep-hora-chart','Tickets por hora'],
+    ['rep-diasem-chart','Tickets por día de la semana'],
+    ['rep-diario-chart','Tickets por fecha — creados vs. resueltos'],
+    ['rep-sd-diario-chart','Soporte vs. Desarrollo por fecha'],
+    ['rep-agente-chart','Productividad por agente'],
+    ['rep-dev-chart','Productividad de Desarrollo']
+  ];
+  const bloques=[];
+  let incluidas=0;
+  charts.forEach(([id,titulo])=>{
+    const chart=CH[id];
+    if(!chart)return;
+    const labels=chart.data.labels||[];
+    const datasets=chart.data.datasets||[];
+    if(!labels.length)return;
+    incluidas++;
+    const headers=['Categoría',...datasets.map((ds,i)=>ds.label||(datasets.length>1?'Serie '+(i+1):'Valor'))];
+    bloques.push('## '+titulo);
+    bloques.push(headers.map(h=>'"'+String(h).replace(/"/g,'""')+'"').join(','));
+    labels.forEach((lab,i)=>{
+      const fila=[String(lab).replace(/,/g,';'),...datasets.map(ds=>ds.data[i]!=null?ds.data[i]:0)];
+      bloques.push(fila.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','));
+    });
+    bloques.push('');
+  });
+  if(!incluidas){showToast('Sin gráficas visibles para exportar — abre las secciones primero','#d97706');return;}
+  const semLabel=(REP_INI||'reporte').toString().replace(/[^a-z0-9]/gi,'_');
+  const csv='﻿'+bloques.join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='reportes_'+semLabel+'.csv';
+  a.click();
+  showToast('✓ CSV con las '+incluidas+' gráficas exportado','#16a34a');
 }
 
 function buildReportesCharts(){
