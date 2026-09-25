@@ -2379,24 +2379,31 @@ const LLAMADAS_STATUS_OK=['completeagent','completecaller'];
 let LL_DATA=[];let LL_HEADERS=[];let LL_LOADED=false;
 function llColKey(letter){return LL_HEADERS[colIdxFromLetter(letter)]||'';}
 function llv(row,letter){const k=llColKey(letter);return k?(row[k]||''):'';}
+let LL_LAST_ERROR='';
 async function ensureLlamadas(){
   if(LL_DATA.length)return true;
+  const delay=ms=>new Promise(res=>setTimeout(res,ms));
+  const base=BD_URL_BASE+'?gid='+BD_GID_LLAMADAS+'&single=true&output=csv';
   const urls=[
-    BD_URL_BASE+'?gid='+BD_GID_LLAMADAS+'&single=true&output=csv',
-    'https://docs.google.com/spreadsheets/d/'+BD_SHEET_ID+'/pub?gid='+BD_GID_LLAMADAS+'&single=true&output=csv'
+    base,
+    'https://docs.google.com/spreadsheets/d/'+BD_SHEET_ID+'/pub?gid='+BD_GID_LLAMADAS+'&single=true&output=csv',
+    base+'&t='+Date.now() // cache-busting: por si el CSV se publicó hace muy poco y aún no propaga
   ];
-  for(const url of urls){
+  let lastErr='';
+  for(let i=0;i<urls.length;i++){
     try{
-      const r=await fetch(url,{cache:'no-store'});
-      if(!r.ok)continue;
+      if(i>0)await delay(700);
+      const r=await fetch(urls[i],{cache:'no-store'});
+      if(!r.ok){lastErr='HTTP '+r.status;continue;}
       const txt=await r.text();
-      if(!txt||txt.length<50)continue;
+      if(!txt||txt.length<50){lastErr='respuesta vacía o muy corta';continue;}
       const{rows,headers}=parseCSV(txt);
-      if(!rows.length)continue;
-      LL_DATA=rows;LL_HEADERS=headers;LL_LOADED=true;
+      if(!rows.length){lastErr='CSV sin filas (encabezados: '+(headers.slice(0,5).join(', ')||'ninguno')+')';continue;}
+      LL_DATA=rows;LL_HEADERS=headers;LL_LOADED=true;LL_LAST_ERROR='';
       return true;
-    }catch(e){continue;}
+    }catch(e){lastErr=e.message||'error de red';continue;}
   }
+  LL_LAST_ERROR=lastErr;
   return false;
 }
 function hmsToSec(v){
@@ -2813,7 +2820,7 @@ function renderAnalisisRango(){
         <div style="font-size:9.5px;color:var(--txt3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.sub}</div>
       </div>`).join('')}
     </div>
-    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">${LL_DATA.length?'📞 Llamadas: '+(llStats?llStats.totalValidas:0)+' completadas de Alejandra/Ivette/Karina en este periodo — ver detalle en la sección Equipo, abajo.':'📞 Llamadas: no se pudo conectar la BD de llamadas — revisa que la pestaña "LLamadas BD" siga publicada.'}</div>
+    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">${LL_DATA.length?'📞 Llamadas: '+(llStats?llStats.totalValidas:0)+' completadas de Alejandra/Ivette/Karina en este periodo — ver detalle en la sección Equipo, abajo.':'📞 Llamadas: no se pudo conectar'+(LL_LAST_ERROR?' ('+LL_LAST_ERROR+')':'')+' — si acabas de publicar "LLamadas BD", espera 1-2 min y reintenta abajo en Equipo.'}</div>
 
     <!-- Alertas — sube arriba: es lo primero que debe verse, no hasta medio scroll -->
     <div class="card" style="border:1.5px solid #fca5a5">
@@ -2906,7 +2913,7 @@ function renderAnalisisRango(){
         <div class="card">
           <div class="card-head"><div class="card-title">📞 Llamadas por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">${LL_DATA.length?'completadas (COMPLETEAGENT/COMPLETECALLER) · Alejandra, Ivette, Karina':'sin conectar'}</span>${LL_DATA.length&&llStats&&llStats.porAgente.length?`<button onclick="mostrarDetalleChart('rep-llamadas-chart','Llamadas por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button>`:''}</div></div>
           <div style="padding:12px 16px">${
-            !LL_DATA.length?`<div style="font-size:11px;color:var(--txt3);text-align:center;padding:14px 0">No se pudo conectar a la BD de llamadas. <button onclick="LL_LOADED=false;ensureLlamadas().then(ok=>{if(ok)renderReportes();})" style="font-size:10px;color:var(--acc);background:none;border:none;cursor:pointer;text-decoration:underline">Reintentar</button></div>`
+            !LL_DATA.length?`<div style="font-size:11px;color:var(--txt3);text-align:center;padding:14px 0">No se pudo conectar a la BD de llamadas${LL_LAST_ERROR?' ('+LL_LAST_ERROR+')':''}. Si acabas de publicar la pestaña "LLamadas BD", dale 1-2 minutos y reintenta. <button onclick="LL_LOADED=false;ensureLlamadas().then(ok=>{if(ok)renderReportes();else renderReportes()})" style="font-size:10px;color:var(--acc);background:none;border:none;cursor:pointer;text-decoration:underline">Reintentar</button></div>`
             :(!llStats||!llStats.porAgente.length)?`<div style="font-size:11px;color:var(--txt3);text-align:center;padding:14px 0">Sin llamadas completadas de Alejandra, Ivette o Karina en este periodo.</div>`
             :`<div style="position:relative;height:${Math.max(120,llStats.porAgente.length*38)}px"><canvas id="rep-llamadas-chart" ondblclick="mostrarDetalleChart('rep-llamadas-chart','Llamadas por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>
               <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:11px">
