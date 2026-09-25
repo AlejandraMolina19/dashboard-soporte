@@ -2371,6 +2371,72 @@ const BD_URL_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBfaRcodg7K
 const BD_GID_TICKETS='1776545593';
 let BD_LOADED=false;
 
+// ── BD de Llamadas (pestaña "LLamadas BD" del mismo Sheets publicado) ──
+// col. E = ID_semana (mismo formato que col. H en Tickets BD) · col. H = agente · col. J = estatus de la llamada
+const BD_GID_LLAMADAS='1760821607';
+const LLAMADAS_AGENTES=['alejandra','ivette','karina'];
+const LLAMADAS_STATUS_OK=['completeagent','completecaller'];
+let LL_DATA=[];let LL_HEADERS=[];let LL_LOADED=false;
+function llColKey(letter){return LL_HEADERS[colIdxFromLetter(letter)]||'';}
+function llv(row,letter){const k=llColKey(letter);return k?(row[k]||''):'';}
+async function ensureLlamadas(){
+  if(LL_DATA.length)return true;
+  const urls=[
+    BD_URL_BASE+'?gid='+BD_GID_LLAMADAS+'&single=true&output=csv',
+    'https://docs.google.com/spreadsheets/d/'+BD_SHEET_ID+'/pub?gid='+BD_GID_LLAMADAS+'&single=true&output=csv'
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{cache:'no-store'});
+      if(!r.ok)continue;
+      const txt=await r.text();
+      if(!txt||txt.length<50)continue;
+      const{rows,headers}=parseCSV(txt);
+      if(!rows.length)continue;
+      LL_DATA=rows;LL_HEADERS=headers;LL_LOADED=true;
+      return true;
+    }catch(e){continue;}
+  }
+  return false;
+}
+function hmsToSec(v){
+  const s=String(v||'').trim();if(!s)return null;
+  const p=s.split(':').map(Number);
+  if(p.some(isNaN))return null;
+  if(p.length===3)return p[0]*3600+p[1]*60+p[2];
+  if(p.length===2)return p[0]*60+p[1];
+  return isNaN(+s)?null:+s;
+}
+function secToHms(s){
+  if(s==null||isNaN(s))return'—';
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
+  return(h>0?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+// Cuenta llamadas COMPLETADAS (COMPLETEAGENT/COMPLETECALLER, col. J) de Alejandra/Ivette/Karina (col. H),
+// para el conjunto de ID_semana (col. E) que le pases — mismo idsSet que usas para filtrar Tickets BD.
+function calcularLlamadasRango(idsSet){
+  if(!LL_DATA.length)return null;
+  const kE=llColKey('E');if(!kE)return null;
+  const filas=LL_DATA.filter(r=>idsSet.has(r[kE]));
+  const porAgente={};
+  filas.forEach(r=>{
+    const agRaw=llv(r,'H').trim().toLowerCase();
+    if(!LLAMADAS_AGENTES.includes(agRaw))return; // descarta "Agente/102" y similares — solo nombres exactos
+    const st=llv(r,'J').trim().toLowerCase().replace(/[^a-z]/g,'');
+    if(!LLAMADAS_STATUS_OK.includes(st))return;
+    if(!porAgente[agRaw])porAgente[agRaw]={nombre:agRaw.charAt(0).toUpperCase()+agRaw.slice(1),total:0,espera:[],habla:[]};
+    porAgente[agRaw].total++;
+    const esp=hmsToSec(llv(r,'K'));if(esp!=null)porAgente[agRaw].espera.push(esp);
+    const hab=hmsToSec(llv(r,'L'));if(hab!=null)porAgente[agRaw].habla.push(hab);
+  });
+  const porAgenteArr=Object.values(porAgente).map(a=>({
+    nombre:a.nombre,total:a.total,
+    esperaProm:a.espera.length?Math.round(a.espera.reduce((x,y)=>x+y,0)/a.espera.length):null,
+    hablaProm:a.habla.length?Math.round(a.habla.reduce((x,y)=>x+y,0)/a.habla.length):null
+  })).sort((x,y)=>y.total-x.total);
+  return{totalFilasSemana:filas.length,totalValidas:porAgenteArr.reduce((a,b)=>a+b.total,0),porAgente:porAgenteArr};
+}
+
 async function ensureBD(){
   if(BD_DATA.length)return true;
   const savedUrl=localStorage.getItem('bd_pub_url')||'';
@@ -2403,6 +2469,11 @@ function renderReportes(){
     BD_LOADED=true; // evitar loops
     ensureBD().then(ok=>{if(ok)renderReportes();});
   }
+  // Auto-cargar BD de llamadas (pestaña "LLamadas BD", ya publicada junto con Tickets BD)
+  if(!LL_DATA.length&&!LL_LOADED){
+    LL_LOADED=true; // evitar loops
+    ensureLlamadas().then(ok=>{if(ok)renderReportes();});
+  }
 
   v.innerHTML=`
     <!-- Cabecera -->
@@ -2429,14 +2500,19 @@ function renderReportes(){
   if(BD_DATA.length){
     const si=el('rep-sem-ini');
     if(si&&REP_INI)si.value=REP_INI;
+    const sf=el('rep-sem-fin');
+    if(sf&&REP_FIN)sf.value=REP_FIN;
     buildReportesCharts();
   }
 }
 
 function cambiarRangoReportes(){
-  const ini=el('rep-sem-ini');
-  if(ini)REP_INI=ini.value;
-  REP_FIN=REP_INI;
+  const iniSel=el('rep-sem-ini'),finSel=el('rep-sem-fin');
+  let ini=iniSel?iniSel.value:REP_INI;
+  let fin=finSel?finSel.value:ini;
+  const pi=parseSemanaId(ini),pf=parseSemanaId(fin);
+  if(pi&&pf&&pf.key<pi.key){const t=ini;ini=fin;fin=t;} // normaliza si "Hasta" quedó antes que "Desde"
+  REP_INI=ini;REP_FIN=fin;
   renderReportes();
 }
 
@@ -2472,13 +2548,41 @@ function topList(arr,color){
   }).join('');
 }
 
+// Categorías de alerta, para poder agruparlas en la UI y que no se revuelvan
+const ALERTA_CAT_LABEL={sla:'🚦 Calidad / SLA',tendencia:'📈 Volumen',productividad:'👤 Productividad',clientes:'🏢 Clientes',patrones:'🧭 Patrones detectados',ok:'✅ Estado general'};
+
+// Detecta huecos de baja demanda (hora del día / día de la semana) para sugerir cuándo agendar tareas de fondo
+function detectarHorasValle(stA){
+  if(!stA.porHora||!stA.porHora.length||stA.total<8)return null;
+  const horasNegocio=stA.porHora.filter(h=>h.hora>=8&&h.hora<=19);
+  if(horasNegocio.length<3)return null;
+  const avgHora=horasNegocio.reduce((a,b)=>a+b.total,0)/horasNegocio.length;
+  const valleHora=horasNegocio.reduce((min,h)=>h.total<min.total?h:min,horasNegocio[0]);
+  if(!avgHora||valleHora.total>=avgHora*0.7)return null; // no hay un valle claro
+  const pctBajoHora=Math.round((1-valleHora.total/avgHora)*100);
+  let detalle=`Alrededor de las ${valleHora.hora}:00h entran ~${pctBajoHora}% menos tickets que el promedio del horario laboral (${valleHora.total} vs. ~${avgHora.toFixed(1)}). Buen momento para tareas de fondo, mantenimiento o capacitación del equipo.`;
+  if(stA.porDiaSemana&&stA.porDiaSemana.length){
+    const diasConDatos=stA.porDiaSemana.filter(d=>d.total>0);
+    if(diasConDatos.length>=3){
+      const avgDia=diasConDatos.reduce((a,b)=>a+b.total,0)/diasConDatos.length;
+      const valleDia=diasConDatos.reduce((min,d)=>d.total<min.total?d:min,diasConDatos[0]);
+      if(valleDia.total<avgDia*0.8)detalle+=` ${valleDia.dia} suele ser, en promedio, el día con menos tickets.`;
+    }
+  }
+  return{icon:'🧭',color:'#7c3aed',bg:'#f5f3ff',categoria:'patrones',titulo:`Hora valle detectada: ~${valleHora.hora}:00h`,detalle};
+}
+
 function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
   if(stA.slaSoporte&&stA.slaSoporte.color==='rojo'){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'SLA de Soporte fuera de meta',detalle:`Promedio de ${stA.slaSoporte.promedio.toFixed(1)}h para resolver (meta: ≤5h). ${stA.slaSoporte.buckets.rojo} ticket${stA.slaSoporte.buckets.rojo===1?'':'s'} tardó más de 24h.`});
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Soporte fuera de meta',detalle:`Promedio de ${stA.slaSoporte.promedio.toFixed(1)}h para resolver (meta: ≤5h). ${stA.slaSoporte.buckets.rojo} ticket${stA.slaSoporte.buckets.rojo===1?'':'s'} tardó más de 24h.`});
   }
   if(stA.slaDesarrollo&&stA.slaDesarrollo.color==='rojo'){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver (meta: ≤5d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} tardó más de 7 días.`});
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver (meta: ≤5d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} tardó más de 7 días.`});
+  }
+  const pctRes=stA.total?Math.round(stA.solved/stA.total*100):0;
+  if(stA.total>0&&pctRes<50){
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'Tasa de resolución baja',detalle:`Solo ${pctRes}% de los tickets de este periodo están en solved (${stA.solved} de ${stA.total}).`});
   }
   if(evolucion&&evolucion.length>=3){
     const idx=evolucion.findIndex(e=>e.id===semanaSelId);
@@ -2487,40 +2591,38 @@ function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
       const subiendo=ultimas[0].total<ultimas[1].total&&ultimas[1].total<ultimas[2].total;
       const bajando=ultimas[0].total>ultimas[1].total&&ultimas[1].total>ultimas[2].total;
       if(subiendo){
-        alertas.push({icon:'📈',color:'#d97706',bg:'#fffbeb',titulo:'Tendencia al alza — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Vale la pena revisar si es estacional o un problema recurrente.`});
+        alertas.push({icon:'📈',color:'#d97706',bg:'#fffbeb',categoria:'tendencia',titulo:'Tendencia al alza — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Vale la pena revisar si es estacional o un problema recurrente.`});
       } else if(bajando){
-        alertas.push({icon:'📉',color:'#16a34a',bg:'#f0fdf4',titulo:'Tendencia a la baja — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Buena señal si viene de mejoras, revisar si es por baja actividad del cliente.`});
+        alertas.push({icon:'📉',color:'#16a34a',bg:'#f0fdf4',categoria:'tendencia',titulo:'Tendencia a la baja — 3 semanas seguidas',detalle:`Tickets recibidos: ${ultimas.map(u=>u.total).join(' → ')}. Buena señal si viene de mejoras, revisar si es por baja actividad del cliente.`});
       }
     }
   }
-  const pctRes=stA.total?Math.round(stA.solved/stA.total*100):0;
-  if(stA.total>0&&pctRes<50){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',titulo:'Tasa de resolución baja',detalle:`Solo ${pctRes}% de los tickets de esta semana están en solved (${stA.solved} de ${stA.total}).`});
-  }
   if(stP&&stP.total>0&&stA.total>stP.total*1.3){
     const pct=Math.round((stA.total-stP.total)/stP.total*100);
-    alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',titulo:'Aumento fuerte de tickets recibidos',detalle:`+${pct}% vs. la semana anterior (${stP.total} → ${stA.total}).`});
+    alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',categoria:'tendencia',titulo:'Aumento fuerte de tickets recibidos',detalle:`+${pct}% vs. el periodo anterior (${stP.total} → ${stA.total}).`});
   }
   if(stA.reincidentes.length>0){
     const top=stA.reincidentes[0];
-    alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',titulo:`${stA.reincidentes.length} empresa${stA.reincidentes.length===1?'':'s'} reincidente${stA.reincidentes.length===1?'':'s'} esta semana`,detalle:`${top.org} lidera con ${top.total} tickets.`});
+    alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',categoria:'clientes',titulo:`${stA.reincidentes.length} empresa${stA.reincidentes.length===1?'':'s'} reincidente${stA.reincidentes.length===1?'':'s'} esta semana`,detalle:`${top.org} lidera con ${top.total} tickets.`});
   }
   if(stA.topCategorias.length&&stA.total>0){
     const[cat,cnt]=stA.topCategorias[0];
     const pct=Math.round(cnt/stA.total*100);
     if(pct>=40){
-      alertas.push({icon:'🟡',color:'#ca8a04',bg:'#fefce8',titulo:`"${cat}" concentra el ${pct}% de los tickets`,detalle:`${cnt} de ${stA.total} tickets esta semana son de esa categoría.`});
+      alertas.push({icon:'🟡',color:'#ca8a04',bg:'#fefce8',categoria:'clientes',titulo:`"${cat}" concentra el ${pct}% de los tickets`,detalle:`${cnt} de ${stA.total} tickets de este periodo son de esa categoría.`});
     }
   }
   if(stA.porSoporte.length){
     const top=stA.porSoporte[0];
     const promedio=stA.porSoporte.reduce((a,b)=>a+b.total,0)/stA.porSoporte.length;
     if(top.total>=promedio*1.8&&top.total>=3){
-      alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',titulo:`${top.nombre} con carga alta`,detalle:`${top.total} tickets esta semana, muy por encima del promedio del equipo (${promedio.toFixed(1)}).`});
+      alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',categoria:'productividad',titulo:`${top.nombre} con carga alta`,detalle:`${top.total} tickets esta semana, muy por encima del promedio del equipo (${promedio.toFixed(1)}).`});
     }
   }
+  const alertaValle=detectarHorasValle(stA);
+  if(alertaValle)alertas.push(alertaValle);
   if(!alertas.length){
-    alertas.push({icon:'✅',color:'#16a34a',bg:'#f0fdf4',titulo:'Sin focos rojos esta semana',detalle:'Los indicadores están dentro de rangos normales.'});
+    alertas.push({icon:'✅',color:'#16a34a',bg:'#f0fdf4',categoria:'ok',titulo:'Sin focos rojos esta semana',detalle:'Los indicadores están dentro de rangos normales.'});
   }
   return alertas;
 }
@@ -2531,22 +2633,40 @@ function renderAnalisisRango(){
     return`<div class="card"><div class="card-head"><div class="card-title">📅 Reporte por semana</div></div><div style="padding:16px;font-size:12px;color:var(--txt3)">No se encontró la columna de ID de semana en la BD conectada, o no hay semanas depuradas desde ${REP_SEMANA_MIN}.</div></div>`;
   }
   if(!REP_INI||!semanas.some(s=>s.id===REP_INI))REP_INI=semanas[semanas.length-1].id;
-  REP_FIN=REP_INI;
-  const iniIdx=semanas.findIndex(s=>s.id===REP_INI);
+  if(!REP_FIN||!semanas.some(s=>s.id===REP_FIN))REP_FIN=REP_INI;
 
-  const rangoActualIds=new Set([REP_INI]);
-  const prevEnd=iniIdx-1;
-  const rangoPrevIds=prevEnd>=0?new Set([semanas[prevEnd].id]):new Set();
+  // ── Rango seleccionado: "Desde" → "Hasta" (comparativa entre semanas cuando abarca más de una) ──
+  const iniK0=parseSemanaId(REP_INI).key,finK0=parseSemanaId(REP_FIN).key;
+  const kMin=Math.min(iniK0,finK0),kMax=Math.max(iniK0,finK0);
+  REP_INI=semanas.find(s=>s.key===kMin).id;
+  REP_FIN=semanas.find(s=>s.key===kMax).id;
+  const semanasEnRango=semanas.filter(s=>s.key>=kMin&&s.key<=kMax);
+  const iniIdx=semanas.findIndex(s=>s.key===kMin);
+  const nSemanas=semanasEnRango.length;
+  const esRango=nSemanas>1;
+
+  const rangoActualIds=new Set(semanasEnRango.map(s=>s.id));
+  const prevWeeks=semanas.slice(Math.max(0,iniIdx-nSemanas),iniIdx);
+  const rangoPrevIds=new Set(prevWeeks.map(s=>s.id));
 
   const ticketsActual=ticketsPorSemanaIds(rangoActualIds);
   const ticketsPrev=rangoPrevIds.size?ticketsPorSemanaIds(rangoPrevIds):[];
   const stA=calcularRango(ticketsActual);
   const stP=rangoPrevIds.size?calcularRango(ticketsPrev):null;
   const evolucion=getEvolucionSemanal(semanas);
+  const llStats=calcularLlamadasRango(rangoActualIds);
+
+  // Comparativa semana a semana dentro del rango elegido (solo si son 2+ semanas)
+  const comparativaRows=esRango?semanasEnRango.map(s=>{
+    const rows=ticketsPorSemanaIds(new Set([s.id]));
+    const st=calcularRango(rows);
+    return{id:s.id,total:st.total,resueltos:st.solved,pctRes:st.total?Math.round(st.solved/st.total*100):0,slaSop:st.slaSoporte.promedio,slaDev:st.slaDesarrollo.promedio,pctDev:st.pctDesarrollo};
+  }):null;
 
   window._repStatsActual=stA;
   window._repEvolucion=evolucion;
   window._repSemanaSel=REP_INI;
+  window._repLlamadas=llStats;
 
   function delta2(a,b){
     if(b==null||!b)return'';
@@ -2581,7 +2701,7 @@ function renderAnalisisRango(){
     </tr>`;
   }).join('');
 
-  const rangoLabel=REP_INI;
+  const rangoLabel=esRango?REP_INI+' → '+REP_FIN:REP_INI;
   const pctResueltos=stA.total?Math.round(stA.solved/stA.total*100):0;
   const topAgente=stA.porSoporte[0]||null;
   const estatusPills=stA.estatusBreakdown.map(e=>{
@@ -2622,13 +2742,26 @@ function renderAnalisisRango(){
       <div style="font-size:9.5px;color:var(--txt3);margin-top:6px">${sla.total} resuelto${sla.total===1?'':'s'} esta semana · clic en la barra para ver el detalle de rangos</div>
     </div>`;
   }
-  const alertasHtml=alertas.map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:0.5px solid var(--bdr)">
-    <span style="font-size:14px;flex-shrink:0">${a.icon}</span>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:11.5px;font-weight:700;color:var(--txt)">${a.titulo}</div>
-      <div style="font-size:10.5px;color:var(--txt3);margin-top:2px;line-height:1.4">${a.detalle}</div>
+  // Agrupa las alertas por categoría (SLA, Volumen, Productividad, Clientes, Patrones…) para que no se revuelvan
+  const alertasPorCat={};
+  const ordenCat=[];
+  alertas.forEach(a=>{
+    const cat=a.categoria||'ok';
+    if(!alertasPorCat[cat]){alertasPorCat[cat]=[];ordenCat.push(cat);}
+    alertasPorCat[cat].push(a);
+  });
+  const alertasHtml=ordenCat.map(cat=>`
+    <div style="padding:7px 16px 4px;background:var(--sur2);position:sticky;top:0">
+      <span style="font-size:9.5px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em">${ALERTA_CAT_LABEL[cat]||cat}</span>
     </div>
-  </div>`).join('')
+    ${alertasPorCat[cat].map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:0.5px solid var(--bdr)">
+      <span style="font-size:14px;flex-shrink:0">${a.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11.5px;font-weight:700;color:var(--txt)">${a.titulo}</div>
+        <div style="font-size:10.5px;color:var(--txt3);margin-top:2px;line-height:1.4">${a.detalle}</div>
+      </div>
+    </div>`).join('')}
+  `).join('')
   +`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;background:#eff4ff">
     <span style="font-size:14px;flex-shrink:0">🧠</span>
     <div style="flex:1;min-width:0">
@@ -2641,14 +2774,22 @@ function renderAnalisisRango(){
     <!-- 1. TÍTULO Y PERIODO -->
     <div class="card" style="border:1.5px solid var(--acc3)">
       <div class="card-head" style="background:var(--acc2)">
-        <div class="card-title" style="color:var(--acc)">📅 Reporte semanal — Tickets BD</div>
-        <span style="font-size:10px;color:var(--acc)">datos depurados desde ${REP_SEMANA_MIN} · ${rangoPrevIds.size?'vs. semana anterior: '+[...rangoPrevIds][0]:'sin semana anterior para comparar'}</span>
+        <div class="card-title" style="color:var(--acc)">📅 Reporte semanal — Tickets BD${esRango?' · comparativa de '+nSemanas+' semanas':''}</div>
+        <span style="font-size:10px;color:var(--acc)">datos depurados desde ${REP_SEMANA_MIN} · ${rangoPrevIds.size?'vs. periodo anterior ('+rangoPrevIds.size+' semana'+(rangoPrevIds.size===1?'':'s')+')':'sin periodo anterior para comparar'}</span>
       </div>
       <!-- 2. FILTROS / SEGMENTADORES -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 16px;text-align:center">
-        <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Semana</label>
-        <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:18px;font-weight:700;padding:8px 20px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
+      <div style="display:flex;align-items:flex-end;justify-content:center;gap:14px;padding:20px 16px;text-align:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Desde</label>
+          <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:16px;font-weight:700;padding:8px 16px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
+        </div>
+        <span style="font-size:13px;color:var(--txt3);padding-bottom:10px">→</span>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <label for="rep-sem-fin" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Hasta <span title="Elige una semana distinta a 'Desde' para ver la comparativa entre varias semanas">ⓘ</span></label>
+          <select id="rep-sem-fin" onchange="cambiarRangoReportes()" style="font-size:16px;font-weight:700;padding:8px 16px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
+        </div>
       </div>
+      <div style="font-size:10px;color:var(--txt3);padding:0 16px 14px;text-align:center">Deja "Desde" y "Hasta" iguales para ver una sola semana, o elige un rango para comparar varias semanas entre sí.</div>
     </div>
 
     ${seccion('📊 Indicadores')}
@@ -2672,13 +2813,32 @@ function renderAnalisisRango(){
         <div style="font-size:9.5px;color:var(--txt3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.sub}</div>
       </div>`).join('')}
     </div>
-    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">📞 Llamadas: aún no disponible — se agregará cuando conectes esa fuente de datos.</div>
+    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">${LL_DATA.length?'📞 Llamadas: '+(llStats?llStats.totalValidas:0)+' completadas de Alejandra/Ivette/Karina en este periodo — ver detalle en la sección Equipo, abajo.':'📞 Llamadas: no se pudo conectar la BD de llamadas — revisa que la pestaña "LLamadas BD" siga publicada.'}</div>
 
     <!-- Alertas — sube arriba: es lo primero que debe verse, no hasta medio scroll -->
     <div class="card" style="border:1.5px solid #fca5a5">
-      <div class="card-head" style="background:#fef2f2"><div class="card-title" style="color:#dc2626">🔔 Alertas de la semana</div><span style="font-size:10px;color:#dc2626">generadas de tus datos + resumen inteligente</span></div>
-      <div style="max-height:340px;overflow-y:auto">${alertasHtml}</div>
+      <div class="card-head" style="background:#fef2f2"><div class="card-title" style="color:#dc2626">🔔 Alertas de la semana</div><span style="font-size:10px;color:#dc2626">agrupadas por tipo · generadas de tus datos + resumen inteligente</span></div>
+      <div style="max-height:400px;overflow-y:auto">${alertasHtml}</div>
     </div>
+
+    ${esRango?`${seccion('📊 Comparativa entre semanas ('+nSemanas+')')}
+    <div class="card">
+      <div class="card-head"><div class="card-title">Semana a semana en el rango elegido</div><span style="font-size:10px;color:var(--txt3)">recibidos, resueltos y SLA promedio por semana — para comparar de un vistazo</span></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--sur2)">${['Semana','Recibidos','Resueltos','% resueltos','SLA Soporte prom.','SLA Desarrollo prom.','% Desarrollo'].map(h=>`<th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">${h}</th>`).join('')}</tr></thead>
+          <tbody>${comparativaRows.map(r=>`<tr>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-weight:700;font-family:var(--mono)">${r.id}</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.total}</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.resueltos}</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.pctRes}%</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.slaSop!=null?r.slaSop.toFixed(1)+'h':'—'}</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.slaDev!=null?r.slaDev.toFixed(1)+'d':'—'}</td>
+            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.pctDev}%</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`:''}
 
     ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
     <div class="card">
@@ -2742,7 +2902,26 @@ function renderAnalisisRango(){
           <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart" ondblclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
         </div>
       </div>
-    `,['rep-agente-chart','rep-dev-chart'])}
+      <div style="padding:0 10px 10px">
+        <div class="card">
+          <div class="card-head"><div class="card-title">📞 Llamadas por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">${LL_DATA.length?'completadas (COMPLETEAGENT/COMPLETECALLER) · Alejandra, Ivette, Karina':'sin conectar'}</span>${LL_DATA.length&&llStats&&llStats.porAgente.length?`<button onclick="mostrarDetalleChart('rep-llamadas-chart','Llamadas por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button>`:''}</div></div>
+          <div style="padding:12px 16px">${
+            !LL_DATA.length?`<div style="font-size:11px;color:var(--txt3);text-align:center;padding:14px 0">No se pudo conectar a la BD de llamadas. <button onclick="LL_LOADED=false;ensureLlamadas().then(ok=>{if(ok)renderReportes();})" style="font-size:10px;color:var(--acc);background:none;border:none;cursor:pointer;text-decoration:underline">Reintentar</button></div>`
+            :(!llStats||!llStats.porAgente.length)?`<div style="font-size:11px;color:var(--txt3);text-align:center;padding:14px 0">Sin llamadas completadas de Alejandra, Ivette o Karina en este periodo.</div>`
+            :`<div style="position:relative;height:${Math.max(120,llStats.porAgente.length*38)}px"><canvas id="rep-llamadas-chart" ondblclick="mostrarDetalleChart('rep-llamadas-chart','Llamadas por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>
+              <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:11px">
+                <thead><tr style="background:var(--sur2)">${['Agente','Llamadas','Tiempo espera prom.','Tiempo al habla prom.'].map(h=>`<th style="padding:5px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">${h}</th>`).join('')}</tr></thead>
+                <tbody>${llStats.porAgente.map(a=>`<tr>
+                  <td style="padding:5px 10px;border-bottom:0.5px solid var(--bdr);font-weight:600">${a.nombre}</td>
+                  <td style="padding:5px 10px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${a.total}</td>
+                  <td style="padding:5px 10px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${secToHms(a.esperaProm)}</td>
+                  <td style="padding:5px 10px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${secToHms(a.hablaProm)}</td>
+                </tr>`).join('')}</tbody>
+              </table>`
+          }</div>
+        </div>
+      </div>
+    `,['rep-agente-chart','rep-dev-chart','rep-llamadas-chart'])}
 
     ${seccionColapsable('rep-sec-detalle','📋 Detalle (antigüedad, empresas, desglose)',`
       <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;padding:10px">
@@ -2937,7 +3116,8 @@ function exportarTodoReportesCSV(){
     ['rep-diario-chart','Tickets por fecha — creados vs. resueltos'],
     ['rep-sd-diario-chart','Soporte vs. Desarrollo por fecha'],
     ['rep-agente-chart','Productividad por agente'],
-    ['rep-dev-chart','Productividad de Desarrollo']
+    ['rep-dev-chart','Productividad de Desarrollo'],
+    ['rep-llamadas-chart','Llamadas por agente']
   ];
   const bloques=[];
   let incluidas=0;
@@ -2958,7 +3138,7 @@ function exportarTodoReportesCSV(){
     bloques.push('');
   });
   if(!incluidas){showToast('Sin gráficas visibles para exportar — abre las secciones primero','#d97706');return;}
-  const semLabel=(REP_INI||'reporte').toString().replace(/[^a-z0-9]/gi,'_');
+  const semLabel=(REP_FIN&&REP_FIN!==REP_INI?REP_INI+'_a_'+REP_FIN:(REP_INI||'reporte')).toString().replace(/[^a-z0-9]/gi,'_');
   const csv='﻿'+bloques.join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
@@ -3043,6 +3223,23 @@ function buildReportesCharts(){
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
+        scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
+      }
+    });
+  }
+
+  // Llamadas por agente (BD de llamadas, filtradas a Alejandra/Ivette/Karina + estatus completado)
+  const llamadasStats=window._repLlamadas;
+  if(CH['rep-llamadas-chart'])CH['rep-llamadas-chart'].destroy();
+  const llCtx=el('rep-llamadas-chart');
+  if(llCtx&&llamadasStats&&llamadasStats.porAgente.length){
+    const datosLl=llamadasStats.porAgente;
+    CH['rep-llamadas-chart']=new Chart(llCtx,{
+      type:'bar',
+      data:{labels:datosLl.map(a=>a.nombre),datasets:[{label:'Llamadas completadas',data:datosLl.map(a=>a.total),backgroundColor:'#0ea5e9',borderRadius:4}]},
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:TT_DEFAULT},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#9ca3af',font:{size:10}},grid:{display:false}}}
       }
     });
