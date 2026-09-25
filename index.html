@@ -2449,6 +2449,7 @@ function getEvolucionSemanal(semanas){
 
 const ESTATUS_LABEL={open:'Open',pending:'Pending',solved:'Solved',closed:'Closed'};
 const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',closed:'#6b7280'};
+const SEM_COLOR={verde:'#16a34a',amarillo:'#eab308',rojo:'#dc2626'};
 
 // Tooltip reutilizable: muestra valor + % del total del dataset (para todas las gráficas de Reportes)
 function tooltipConPct(context){
@@ -2596,7 +2597,6 @@ function renderAnalisisRango(){
   }).join('');
   const alertas=generarAlertasSemana(stA,stP,evolucion,REP_INI);
 
-  const SEM_COLOR={verde:'#16a34a',amarillo:'#eab308',rojo:'#dc2626'};
   const SEM_LABEL={verde:'En meta',amarillo:'Requiere seguimiento',rojo:'Fuera de SLA'};
   const SEM_DOT={verde:'🟢',amarillo:'🟡',rojo:'🔴'};
   function slaBlockHtml(sla,nombre,metaTxt,canvasId){
