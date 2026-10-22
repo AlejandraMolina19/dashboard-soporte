@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Dashboard Supervisor — Santi Soluciones v3</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -239,6 +239,58 @@ tbody tr:last-child td{border-bottom:none}
   .ag-chip-a{border-left:3px solid #d97706}
   .cli-table-row:hover td{background:var(--sur2)}
   .cli-table-row td{padding:8px 12px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--txt)}
+
+/* ═════ Reportes · tema estilo Etikto (tarjetas blancas, sombra suave, tipografía IBM Plex Sans) ═════ */
+#v-reportes{--etk-navy:#172b4c;--etk-gray:#7e8fa6;--etk-line:#eef1f6;--etk-sh:0 2px 14px rgba(23,43,76,.06);font-family:'IBM Plex Sans','Plus Jakarta Sans',sans-serif;gap:18px}
+#v-reportes #reportes-export-area{display:flex;flex-direction:column;gap:18px}
+#v-reportes .card,#v-reportes .greeting{border:none!important;border-radius:10px;box-shadow:var(--etk-sh)}
+#v-reportes .card-head{border-bottom:none!important;background:transparent!important;padding:16px 20px 8px}
+#v-reportes .card-title{font-size:16px;font-weight:600;color:var(--etk-navy)!important;gap:8px}
+#v-reportes .greeting-title{font-size:18px;font-weight:600;color:var(--etk-navy)}
+#v-reportes .greeting button,#v-reportes button[onclick^="mostrarDetalleChart"]{background:#fff!important;border:1px solid #dfe3ea!important;color:var(--etk-navy)!important;border-radius:6px!important;padding:5px 12px!important;font-size:11.5px!important;font-weight:500!important;font-family:inherit!important;cursor:pointer;transition:background .15s}
+#v-reportes .greeting button:hover,#v-reportes button[onclick^="mostrarDetalleChart"]:hover{background:#f5f7fb!important}
+#v-reportes table th{background:transparent!important;color:var(--etk-gray)!important;font-weight:600!important;border-bottom:1px solid var(--etk-line)!important}
+#v-reportes table td{border-bottom:1px dashed var(--etk-line)!important}
+#v-reportes .area-btn.on{background:#5470c6;border-color:#5470c6}
+.etk-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#fff;border-radius:10px;box-shadow:var(--etk-sh);padding:16px 20px}
+.etk-h1{font-size:18px;font-weight:600;color:var(--etk-navy)}
+.etk-sub{font-size:12px;color:var(--etk-gray);margin-top:3px}
+.etk-filtros{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.etk-sel{display:flex;flex-direction:column;gap:4px}
+.etk-sel span{font-size:10.5px;font-weight:600;color:var(--etk-gray);text-transform:uppercase;letter-spacing:.06em}
+.etk-sel i{font-style:normal;cursor:help}
+.etk-sel select{font-family:inherit;font-size:13.5px;font-weight:600;color:var(--etk-navy);background:#fff;border:1px solid #dfe3ea;border-radius:6px;padding:7px 12px;cursor:pointer;min-width:160px}
+.etk-sel select:focus{outline:2px solid #5470c633;border-color:#5470c6}
+.etk-arrow{color:var(--etk-gray);padding-bottom:8px}
+.etk-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.etk-kpi{background:#fff;border-radius:10px;box-shadow:var(--etk-sh);padding:18px 20px}
+.etk-kpi-top{display:flex;justify-content:space-between;align-items:center;font-size:14.5px;color:#5b6b84;margin-bottom:10px}
+.etk-dots{color:#a5afc0;font-size:10px;letter-spacing:1px}
+.etk-kpi-val{font-size:30px;font-weight:600;color:var(--etk-navy);line-height:1.1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.etk-delta{font-size:11.5px;font-weight:500}
+.etk-delta.bueno{color:#16a34a}.etk-delta.malo{color:#ee6666}.etk-delta.neutro{color:var(--etk-gray)}
+.etk-kpi-sub{font-size:12px;color:var(--etk-gray);margin-top:10px;line-height:1.4}
+.etk-row{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start}
+.etk-note{font-size:11px;color:var(--etk-gray)}
+.etk-badge{font-size:11px;font-weight:600;background:#ee666618;color:#ee6666;border-radius:10px;padding:1px 8px}
+.etk-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.etk-big{padding:0 20px;font-size:13px;color:var(--etk-gray)}
+.etk-big span{font-size:26px;font-weight:600;color:var(--etk-navy);margin-right:2px}
+.etk-dist{display:grid;grid-template-columns:1fr 1fr}
+.etk-dist-item{display:flex;gap:12px;padding:16px 18px;border-top:1px solid var(--etk-line)}
+.etk-dist-item:nth-child(odd){border-right:1px solid var(--etk-line)}
+.etk-ico{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.etk-dist-lbl{font-size:12.5px;color:var(--etk-gray)}
+.etk-dist-val{font-size:22px;font-weight:600;color:var(--etk-navy);margin:2px 0 4px}
+.etk-dist-sub{font-size:11px;color:var(--etk-gray);margin-top:4px}
+.etk-prog{height:5px;background:#eef1f6;border-radius:3px;overflow:hidden}
+.etk-prog div{height:100%;border-radius:3px}
+.etk-foot{font-size:11px;color:var(--etk-gray);padding:10px 18px 14px}
+.etk-table{width:100%;border-collapse:collapse;font-size:13px}
+.etk-table th{padding:8px 16px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.etk-table td{padding:9px 16px;color:var(--etk-navy)}
+@media(max-width:1100px){.etk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.etk-row{grid-template-columns:1fr}.etk-span2{grid-column:auto}}
+@media(max-width:560px){#v-reportes .greeting{flex-direction:column;align-items:flex-start}#v-reportes .greeting>div:last-child{flex-wrap:wrap}.etk-kpis{grid-template-columns:1fr}.etk-dist{grid-template-columns:1fr}.etk-dist-item:nth-child(odd){border-right:none}}
 </style>
 </head>
 <body>
@@ -1783,13 +1835,14 @@ function parseSemanaId(id){
   const y=+m[1],mo=+m[2],w=+m[3];
   return{id,year:y,month:mo,week:w,key:y*100000+mo*1000+w};
 }
-const REP_SEMANA_MIN='A2026_M5_S20'; // datos depurados a partir de aquí
-const REP_SEMANA_MIN_KEY=parseSemanaId(REP_SEMANA_MIN).key;
+const REP_SEMANA_MIN='A2026_S27'; // datos depurados a partir de aquí (año 2026, semana 27)
+const REP_SEMANA_MIN_ANIO=2026,REP_SEMANA_MIN_NUM=27;
+const REP_SEMANA_MIN_YW=REP_SEMANA_MIN_ANIO*100+REP_SEMANA_MIN_NUM; // se compara por año+semana, sin importar el mes del ID
 function getSemanasUnicas(){
   if(!BD_DATA.length)return[];
   const set=new Set();
   BD_DATA.forEach(r=>{const v=cv(r,'H');if(v)set.add(v);});
-  return[...set].map(parseSemanaId).filter(Boolean).filter(s=>s.key>=REP_SEMANA_MIN_KEY).sort((a,b)=>a.key-b.key);
+  return[...set].map(parseSemanaId).filter(Boolean).filter(s=>s.year*100+s.week>=REP_SEMANA_MIN_YW).sort((a,b)=>a.key-b.key);
 }
 let REP_INI=null,REP_FIN=null;
 
@@ -1808,6 +1861,17 @@ function esResuelto(row){
 function esSolvedJ(row){
   return cv(row,'J').trim().toLowerCase()==='solved';
 }
+// ── Resueltos por SEMANA DE CIERRE ──
+// Un ticket cuenta como resuelto en la semana en que se cerró (col. C = Año_Fin, col. G = Semana_Fin),
+// sin importar en qué semana se creó (puede ser de semanas anteriores, incluso antes de la S27).
+// Estatus válidos (col. J): solved o closed. Pending/open no cuentan aunque tengan col. G llena.
+function esCerradoJ(row){const e=cv(row,'J').trim().toLowerCase();return e==='solved'||e==='closed';}
+function semanaCierreYW(row){const y=parseInt(cv(row,'C'),10),w=parseInt(cv(row,'G'),10);return(y&&w)?y*100+w:null;}
+function resueltosPorCierre(semanasIds){
+  const yws=new Set();
+  semanasIds.forEach(id=>{const p=parseSemanaId(id);if(p)yws.add(p.year*100+p.week);});
+  return BD_DATA.filter(r=>esCerradoJ(r)&&yws.has(semanaCierreYW(r)));
+}
 function esDesarrollo(row){
   const v=cv(row,'S').trim().toLowerCase();
   return v==='si'||v==='sí'||v==='yes'||v==='true'||v==='1';
@@ -1819,6 +1883,34 @@ function diffDias(f1,f2){
   const d1=new Date(f1),d2=new Date(f2);
   if(isNaN(d1)||isNaN(d2))return null;
   return(d2-d1)/86400000;
+}
+
+// ── Oportunidad IA: dudas de cliente que una IA podría resolver ──
+// Regla: col. V (S-CAUSA DEL REPORTE) = "cliente" Y S-CLIENTE empieza con "duda_" o "dudas_".
+// S-CLIENTE se localiza por texto de encabezado (normalizado) porque su letra no está confirmada.
+let _colSClienteCache=null;
+function colSClienteKey(){
+  if(_colSClienteCache!==null&&BD_HEADERS.includes(_colSClienteCache))return _colSClienteCache;
+  const k=BD_HEADERS.find(h=>String(h||'').toLowerCase().replace(/[^a-z]/g,'')==='scliente')||'';
+  _colSClienteCache=k;return k;
+}
+function esCausaCliente(row){return cv(row,'V').trim().toLowerCase()==='cliente';}
+function valorSCliente(row){const k=colSClienteKey();return k?String(row[k]||'').trim().toLowerCase():'';}
+function esDudaIA(row){return esCausaCliente(row)&&/^dudas?_/.test(valorSCliente(row));}
+function calcularDudasIA(rows){
+  const colOk=!!colSClienteKey();
+  const causaCliente=rows.filter(esCausaCliente);
+  const dudas=causaCliente.filter(esDudaIA);
+  const noDudas=causaCliente.filter(r=>!esDudaIA(r));
+  const top=(arr,fn,n)=>{const m={};arr.forEach(r=>{const v=fn(r)||'(vacío)';m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([valor,total])=>({valor,total}));};
+  return{
+    colOk,total:rows.length,causaCliente:causaCliente.length,dudas:dudas.length,
+    pct:rows.length?Math.round(dudas.length/rows.length*1000)/10:0,
+    pctDeCliente:causaCliente.length?Math.round(dudas.length/causaCliente.length*1000)/10:0,
+    dudasConDesarrollo:dudas.filter(esDesarrollo).length,
+    topDudas:top(dudas,valorSCliente,3),
+    topNoDudas:top(noDudas,valorSCliente,3)
+  };
 }
 
 function calcularRango(rows){
@@ -1974,9 +2066,9 @@ function calcularRango(rows){
     if(isNaN(dL)||isNaN(dM))return;
     if(dL.getFullYear()===dM.getFullYear()&&dL.getMonth()===dM.getMonth()&&dL.getDate()===dM.getDate()&&dL.getHours()===dM.getHours())oneTouchCount++;
   });
-  const oneTouch={count:oneTouchCount,pct:resueltasSolved.length?Math.round(oneTouchCount/resueltasSolved.length*100*10)/10:0};
+  const oneTouch={count:oneTouchCount,base:resueltasSolved.length,pct:resueltasSolved.length?Math.round(oneTouchCount/resueltasSolved.length*100*10)/10:0};
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch};
+  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch,dudasIA:calcularDudasIA(rows)};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2380,6 +2472,31 @@ let LL_DATA=[];let LL_HEADERS=[];let LL_LOADED=false;
 function llColKey(letter){return LL_HEADERS[colIdxFromLetter(letter)]||'';}
 function llv(row,letter){const k=llColKey(letter);return k?(row[k]||''):'';}
 let LL_LAST_ERROR='';
+// Lector propio para LLamadas BD: parseCSV es el de Tickets BD (exige columnas "ID" numérica y "Estado"),
+// por eso con esta hoja siempre devolvía 0 filas. Aquí: encabezado = fila con "ID_semana" (o la primera no vacía),
+// claves únicas por columna (las vacías o repetidas se nombran por su letra) y se conservan filas con col. E llena.
+function parseCSVLlamadas(text){
+  const lines=text.split(/\r?\n/);
+  const clean=v=>(v||'').replace(/^"|"$/g,'').trim();
+  const norm=v=>clean(v).toLowerCase().replace(/[^a-z]/g,'');
+  let hi=-1;
+  for(let i=0;i<Math.min(15,lines.length);i++){if(csvLine(lines[i]).some(v=>norm(v)==='idsemana')){hi=i;break;}}
+  if(hi<0)hi=lines.findIndex(l=>l.trim());
+  if(hi<0)return{rows:[],headers:[]};
+  const letra=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;};
+  const vistos=new Set();
+  const headers=csvLine(lines[hi]).map((v,j)=>{let h=clean(v)||('col_'+letra(j));if(vistos.has(h))h=h+'_'+letra(j);vistos.add(h);return h;});
+  const iE=colIdxFromLetter('E');
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const vals=csvLine(lines[i]);
+    if(!clean(vals[iE]))continue;
+    const row={};headers.forEach((h,j)=>{row[h]=clean(vals[j]);});
+    rows.push(row);
+  }
+  return{rows,headers};
+}
 async function ensureLlamadas(){
   if(LL_DATA.length)return true;
   const delay=ms=>new Promise(res=>setTimeout(res,ms));
@@ -2397,7 +2514,7 @@ async function ensureLlamadas(){
       if(!r.ok){lastErr='HTTP '+r.status;continue;}
       const txt=await r.text();
       if(!txt||txt.length<50){lastErr='respuesta vacía o muy corta';continue;}
-      const{rows,headers}=parseCSV(txt);
+      const{rows,headers}=parseCSVLlamadas(txt);
       if(!rows.length){lastErr='CSV sin filas (encabezados: '+(headers.slice(0,5).join(', ')||'ninguno')+')';continue;}
       LL_DATA=rows;LL_HEADERS=headers;LL_LOADED=true;LL_LAST_ERROR='';
       return true;
@@ -2484,7 +2601,7 @@ function renderReportes(){
 
   v.innerHTML=`
     <!-- Cabecera -->
-    <div class="greeting">
+    <div class="greeting etk-greeting">
       <div>
         <div class="greeting-title">📈 Reportes — Dashboard KPI semanal</div>
         <div class="greeting-sub">${BD_DATA.length?'BD: '+BD_DATA.length+' tickets históricos conectados · todo el contenido de abajo depende de la semana (ID_SEMANA) que elijas':'Conecta la BD histórica (Tickets BD) para ver el reporte por semana'}</div>
@@ -2526,12 +2643,12 @@ function cambiarRangoReportes(){
 function getEvolucionSemanal(semanas){
   return semanas.map(s=>{
     const rows=ticketsPorSemanaIds(new Set([s.id]));
-    return{id:s.id,total:rows.length,resueltos:rows.filter(esSolvedJ).length};
+    return{id:s.id,total:rows.length,resueltos:resueltosPorCierre(new Set([s.id])).length}; // resueltos = cerrados EN esa semana (col. G)
   });
 }
 
 const ESTATUS_LABEL={open:'Open',pending:'Pending',solved:'Solved',closed:'Closed'};
-const ESTATUS_COLOR_REP={open:'#2563eb',pending:'#d97706',solved:'#16a34a',closed:'#6b7280'};
+const ESTATUS_COLOR_REP={open:'#5470c6',pending:'#fac858',solved:'#91cc75',closed:'#3ba272'};
 const SEM_COLOR={verde:'#16a34a',amarillo:'#eab308',rojo:'#dc2626'};
 
 // Tooltip reutilizable: muestra valor + % del total del dataset (para todas las gráficas de Reportes)
@@ -2556,7 +2673,7 @@ function topList(arr,color){
 }
 
 // Categorías de alerta, para poder agruparlas en la UI y que no se revuelvan
-const ALERTA_CAT_LABEL={sla:'🚦 Calidad / SLA',tendencia:'📈 Volumen',productividad:'👤 Productividad',clientes:'🏢 Clientes',patrones:'🧭 Patrones detectados',ok:'✅ Estado general'};
+const ALERTA_CAT_LABEL={sla:'🚦 Calidad / SLA',tendencia:'📈 Volumen',productividad:'👤 Productividad',clientes:'🏢 Clientes',patrones:'🧭 Patrones detectados',ia:'🤖 Oportunidad IA',ok:'✅ Estado general'};
 
 // Detecta huecos de baja demanda (hora del día / día de la semana) para sugerir cuándo agendar tareas de fondo
 function detectarHorasValle(stA){
@@ -2579,6 +2696,22 @@ function detectarHorasValle(stA){
   return{icon:'🧭',color:'#7c3aed',bg:'#f5f3ff',categoria:'patrones',titulo:`Hora valle detectada: ~${valleHora.hora}:00h`,detalle};
 }
 
+// Indicador "Oportunidad IA": tickets con causa = cliente y S-CLIENTE = duda_/dudas_
+function generarAlertaDudasIA(stA,stP){
+  const d=stA&&stA.dudasIA;if(!d||!d.total)return null;
+  const base={icon:'🤖',color:'#0891b2',bg:'#ecfeff',categoria:'ia'};
+  if(!d.colOk)return{...base,icon:'⚠️',titulo:'No se encontró la columna S-CLIENTE',detalle:'El indicador de dudas resolubles por IA necesita la columna S-CLIENTE en Tickets BD. Revisa que el encabezado no haya cambiado.'};
+  const fmt=a=>a.map(x=>`${x.valor} (${x.total})`).join(', ');
+  let detalle=`${d.dudas} de ${d.total} tickets son dudas de cliente → ${d.dudas} ÷ ${d.total} = <b>${d.pct}%</b> del periodo. `
+    +`Equivalen al ${d.pctDeCliente}% de los ${d.causaCliente} tickets con causa "cliente" (${d.dudas} ÷ ${d.causaCliente}).`;
+  if(d.topDudas.length)detalle+=`<br>Más frecuentes: ${fmt(d.topDudas)}.`;
+  if(d.dudasConDesarrollo)detalle+=`<br>⚠ ${d.dudasConDesarrollo} de estas dudas sí tocaron Desarrollo (col. S = SI); conviene revisarlas antes de darlas por resolubles con IA.`;
+  if(d.topNoDudas.length)detalle+=`<br>Fuera del indicador (causa "cliente" que no son dudas): ${fmt(d.topNoDudas)}.`;
+  const p=stP&&stP.dudasIA;
+  if(p&&p.colOk&&p.total)detalle+=`<br>Periodo anterior: ${p.dudas} de ${p.total} (${p.pct}%).`;
+  return{...base,titulo:`${d.pct}% de los tickets podrían resolverse con IA`,detalle};
+}
+
 function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
   if(stA.slaSoporte&&stA.slaSoporte.color==='rojo'){
@@ -2587,9 +2720,10 @@ function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   if(stA.slaDesarrollo&&stA.slaDesarrollo.color==='rojo'){
     alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver (meta: ≤5d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} tardó más de 7 días.`});
   }
-  const pctRes=stA.total?Math.round(stA.solved/stA.total*100):0;
+  const resC=stA.resueltosCierre!=null?stA.resueltosCierre:stA.solved;
+  const pctRes=stA.total?Math.round(resC/stA.total*100):0;
   if(stA.total>0&&pctRes<50){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'Tasa de resolución baja',detalle:`Solo ${pctRes}% de los tickets de este periodo están en solved (${stA.solved} de ${stA.total}).`});
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'Se cierra menos de lo que entra',detalle:`Se cerraron ${resC} tickets contra ${stA.total} recibidos → ${resC} ÷ ${stA.total} = ${pctRes}%. El rezago está creciendo.`});
   }
   if(evolucion&&evolucion.length>=3){
     const idx=evolucion.findIndex(e=>e.id===semanaSelId);
@@ -2631,7 +2765,39 @@ function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   if(!alertas.length){
     alertas.push({icon:'✅',color:'#16a34a',bg:'#f0fdf4',categoria:'ok',titulo:'Sin focos rojos esta semana',detalle:'Los indicadores están dentro de rangos normales.'});
   }
+  const alertaIA=generarAlertaDudasIA(stA,stP);
+  if(alertaIA)alertas.push(alertaIA);
   return alertas;
+}
+
+// ── Componentes visuales estilo Etikto (Reportes) ──
+// delta: % de cambio vs. periodo anterior; buenoAlSubir decide si sube = verde o rojo. unidad 'pts' = diferencia en puntos porcentuales
+function etkDelta(a,b,buenoAlSubir,unidad){
+  if(a==null||b==null||isNaN(a)||isNaN(b))return'';
+  let txt,dif;
+  if(unidad==='pts'){dif=Math.round((a-b)*10)/10;txt=(dif>=0?'+':'')+dif+' pts';}
+  else{if(!b)return'';dif=a-b;const pct=Math.round(dif/b*1000)/10;txt=(pct>=0?'+':'')+pct+'%';}
+  if(dif===0)return`<span class="etk-delta neutro">0% ▬</span>`;
+  const bueno=(dif>0)===buenoAlSubir;
+  return`<span class="etk-delta ${bueno?'bueno':'malo'}">${txt} ${dif>0?'▲':'▼'}</span>`;
+}
+function etkKpi(label,valor,delta,sub){
+  return`<div class="etk-kpi" title="${label}: ${valor}">
+    <div class="etk-kpi-top"><span>${label}</span><span class="etk-dots">•••</span></div>
+    <div class="etk-kpi-val">${valor}${delta||''}</div>
+    <div class="etk-kpi-sub">${delta?'vs. periodo anterior · ':''}${sub}</div>
+  </div>`;
+}
+function etkDist(icon,color,label,valor,pctBarra,sub){
+  return`<div class="etk-dist-item">
+    <div class="etk-ico" style="background:${color}22;color:${color}">${icon}</div>
+    <div style="flex:1;min-width:0">
+      <div class="etk-dist-lbl">${label}</div>
+      <div class="etk-dist-val">${valor}</div>
+      ${pctBarra!=null?`<div class="etk-prog"><div style="width:${Math.min(100,pctBarra)}%;background:${color}"></div></div>`:''}
+      <div class="etk-dist-sub">${sub}</div>
+    </div>
+  </div>`;
 }
 
 function renderAnalisisRango(){
@@ -2660,6 +2826,9 @@ function renderAnalisisRango(){
   const ticketsPrev=rangoPrevIds.size?ticketsPorSemanaIds(rangoPrevIds):[];
   const stA=calcularRango(ticketsActual);
   const stP=rangoPrevIds.size?calcularRango(ticketsPrev):null;
+  // Resueltos del periodo = tickets cerrados (solved/closed) cuya semana de cierre (col. G) cae en el periodo, sin importar cuándo se crearon
+  stA.resueltosCierre=resueltosPorCierre(rangoActualIds).length;
+  if(stP)stP.resueltosCierre=resueltosPorCierre(rangoPrevIds).length;
   const evolucion=getEvolucionSemanal(semanas);
   const llStats=calcularLlamadasRango(rangoActualIds);
 
@@ -2667,7 +2836,8 @@ function renderAnalisisRango(){
   const comparativaRows=esRango?semanasEnRango.map(s=>{
     const rows=ticketsPorSemanaIds(new Set([s.id]));
     const st=calcularRango(rows);
-    return{id:s.id,total:st.total,resueltos:st.solved,pctRes:st.total?Math.round(st.solved/st.total*100):0,slaSop:st.slaSoporte.promedio,slaDev:st.slaDesarrollo.promedio,pctDev:st.pctDesarrollo};
+    const resC=resueltosPorCierre(new Set([s.id])).length;
+    return{id:s.id,total:st.total,resueltos:resC,pctRes:st.total?Math.round(resC/st.total*100):0,slaSop:st.slaSoporte.promedio,slaDev:st.slaDesarrollo.promedio,pctDev:st.pctDesarrollo};
   }):null;
 
   window._repStatsActual=stA;
@@ -2716,7 +2886,7 @@ function renderAnalisisRango(){
     const label=ESTATUS_LABEL[e.estatus]||e.estatus;
     return`<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${col}18;color:${col};margin-right:6px;display:inline-block;margin-bottom:6px">${label}: ${e.total}</span>`;
   }).join('');
-  const CANAL_COLOR={'Llamada':'#2563eb','Ticket':'#6b7280','Sin dato':'#d1d5db'};
+  const CANAL_COLOR={'Llamada':'#5470c6','Ticket':'#d4a72c','Sin dato':'#b6bfcf'};
   const canalPills=stA.canalBreakdown.map(c=>{
     const col=CANAL_COLOR[c.canal]||'#9ca3af';
     const icon=c.canal==='Llamada'?'📞':c.canal==='Ticket'?'🎫':'❓';
@@ -2778,87 +2948,73 @@ function renderAnalisisRango(){
   </div>`;
 
   return`
-    <!-- 1. TÍTULO Y PERIODO -->
-    <div class="card" style="border:1.5px solid var(--acc3)">
-      <div class="card-head" style="background:var(--acc2)">
-        <div class="card-title" style="color:var(--acc)">📅 Reporte semanal — Tickets BD${esRango?' · comparativa de '+nSemanas+' semanas':''}</div>
-        <span style="font-size:10px;color:var(--acc)">datos depurados desde ${REP_SEMANA_MIN} · ${rangoPrevIds.size?'vs. periodo anterior ('+rangoPrevIds.size+' semana'+(rangoPrevIds.size===1?'':'s')+')':'sin periodo anterior para comparar'}</span>
+    <!-- Barra de periodo (estilo Etikto) -->
+    <div class="etk-bar">
+      <div>
+        <div class="etk-h1">Reporte semanal${esRango?' · comparativa de '+nSemanas+' semanas':''}</div>
+        <div class="etk-sub">Tickets BD · datos depurados desde la semana ${REP_SEMANA_MIN_NUM} de ${REP_SEMANA_MIN_ANIO} · ${rangoPrevIds.size?(rangoPrevIds.size===1?'comparado con la semana anterior':'comparado con las '+rangoPrevIds.size+' semanas anteriores'):'sin periodo anterior para comparar'}</div>
       </div>
-      <!-- 2. FILTROS / SEGMENTADORES -->
-      <div style="display:flex;align-items:flex-end;justify-content:center;gap:14px;padding:20px 16px;text-align:center;flex-wrap:wrap">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-          <label for="rep-sem-ini" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Desde</label>
-          <select id="rep-sem-ini" onchange="cambiarRangoReportes()" style="font-size:16px;font-weight:700;padding:8px 16px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
-        </div>
-        <span style="font-size:13px;color:var(--txt3);padding-bottom:10px">→</span>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-          <label for="rep-sem-fin" style="font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.08em">Hasta <span title="Elige una semana distinta a 'Desde' para ver la comparativa entre varias semanas">ⓘ</span></label>
-          <select id="rep-sem-fin" onchange="cambiarRangoReportes()" style="font-size:16px;font-weight:700;padding:8px 16px;border-radius:var(--rl);border:2px solid var(--acc3);font-family:var(--mono);color:var(--acc);background:var(--sur);cursor:pointer;text-align:center">${opciones}</select>
-        </div>
+      <div class="etk-filtros">
+        <label class="etk-sel"><span>Desde</span><select id="rep-sem-ini" onchange="cambiarRangoReportes()">${opciones}</select></label>
+        <span class="etk-arrow">→</span>
+        <label class="etk-sel"><span>Hasta <i title="Elige una semana distinta a 'Desde' para comparar varias semanas">ⓘ</i></span><select id="rep-sem-fin" onchange="cambiarRangoReportes()">${opciones}</select></label>
       </div>
-      <div style="font-size:10px;color:var(--txt3);padding:0 16px 14px;text-align:center">Deja "Desde" y "Hasta" iguales para ver una sola semana, o elige un rango para comparar varias semanas entre sí.</div>
     </div>
 
-    ${seccion('📊 Indicadores')}
+    <!-- KPIs principales -->
+    <div class="etk-kpis">
+      ${etkKpi('Tickets recibidos',stA.total,stP?etkDelta(stA.total,stP.total,false):'','creados en el periodo')}
+      ${etkKpi('Tickets resueltos',stA.resueltosCierre,stP?etkDelta(stA.resueltosCierre,stP.resueltosCierre,true):'',`cerrados en el periodo · ${stA.resueltosCierre} ÷ ${stA.total} = ${stA.total?Math.round(stA.resueltosCierre/stA.total*100):0}% de lo recibido`)}
+      ${etkKpi('One-touch',stA.oneTouch.pct+'%',stP?etkDelta(stA.oneTouch.pct,stP.oneTouch.pct,true,'pts'):'',`${stA.oneTouch.count} de ${stA.oneTouch.base} resueltos en la misma hora`)}
+      ${etkKpi('Tiempo prom. resolución',stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+' d':'—',stP&&stP.tiempoProm!=null&&stA.tiempoProm!=null?etkDelta(stA.tiempoProm,stP.tiempoProm,false):'','días entre solicitado y resuelto')}
+    </div>
 
-    <!-- KPI — estilo tarjeta con ícono -->
-    <div class="kpi-grid" style="padding:0">
-      ${[
-        {icon:'📥',color:'#2563eb',label:'Recibidos',val:stA.total,sub:stP?delta2(stA.total,stP.total)+' vs. semana ant.':'sin comparación',big:true},
-        {icon:'✅',color:'#16a34a',label:'Resueltos',val:stA.solved,sub:pctResueltos+'% del total',big:true},
-        {icon:'🎯',color:'#0d9488',label:'One-touch',val:stA.oneTouch.pct+'%',sub:stA.oneTouch.count+' de '+stA.solved+' resueltos',big:false},
-        {icon:'⏱',color:'#d97706',label:'Tiempo prom. resolución',val:stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+'d':'—',sub:stP&&stP.tiempoProm!=null?'ant.: '+stP.tiempoProm.toFixed(1)+'d':'días promedio',big:false},
-        {icon:'🏢',color:'#0891b2',label:'Clientes únicos',val:stA.empresas.length,sub:'empresas distintas',big:false},
-        {icon:'🎧',color:'#0284c7',label:'Soporte',val:stA.soporteTotal,sub:stA.pctSoporte+'% del total · por asignar/Alejandra/Ivette/Karina',big:false},
-        {icon:'🛠',color:'#7c3aed',label:'Desarrollo',val:stA.desarrollo,sub:stA.pctDesarrollo+'% del total',big:false},
-      ].map(k=>`<div class="mini-kpi" style="padding:12px" title="${k.label}: ${k.val}">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
-          <div style="width:26px;height:26px;border-radius:8px;background:${k.color}18;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${k.icon}</div>
-          <div style="font-size:9px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.2">${k.label}</div>
+    <!-- Fila: Alertas + Distribución -->
+    <div class="etk-row">
+      <div class="card etk-span2">
+        <div class="card-head"><div class="card-title"><span class="etk-dot" style="background:#ee6666"></span>Alertas de la semana <span class="etk-badge">${alertas.length}</span></div><span class="etk-note">agrupadas por tipo · generadas de tus datos</span></div>
+        <div style="max-height:400px;overflow-y:auto">${alertasHtml}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Distribución del periodo</div></div>
+        <div class="etk-dist">
+          ${etkDist('🏢','#5470c6','Clientes únicos',stA.empresas.length,null,stA.reincidentes.length+' reincidente'+(stA.reincidentes.length===1?'':'s'))}
+          ${etkDist('🎧','#73c0de','Soporte',stA.soporteTotal,stA.pctSoporte,stA.pctSoporte+'% del total')}
+          ${etkDist('🛠','#9a60b4','Desarrollo',stA.desarrollo,stA.pctDesarrollo,stA.pctDesarrollo+'% del total')}
+          ${etkDist('📞','#91cc75','Llamadas',LL_DATA.length?(llStats?llStats.totalValidas:0):'—',null,LL_DATA.length?'completadas · ver Equipo':'sin conexión'+(LL_LAST_ERROR?' ('+LL_LAST_ERROR+')':''))}
         </div>
-        <div style="font-size:${k.big?'26px':'22px'};font-weight:800;color:${k.color};line-height:1">${k.val}</div>
-        <div style="font-size:9.5px;color:var(--txt3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.sub}</div>
-      </div>`).join('')}
-    </div>
-    <div style="font-size:10.5px;color:var(--txt3);padding:0 4px">${LL_DATA.length?'📞 Llamadas: '+(llStats?llStats.totalValidas:0)+' completadas de Alejandra/Ivette/Karina en este periodo — ver detalle en la sección Equipo, abajo.':'📞 Llamadas: no se pudo conectar'+(LL_LAST_ERROR?' ('+LL_LAST_ERROR+')':'')+' — si acabas de publicar "LLamadas BD", espera 1-2 min y reintenta abajo en Equipo.'}</div>
-
-    <!-- Alertas — sube arriba: es lo primero que debe verse, no hasta medio scroll -->
-    <div class="card" style="border:1.5px solid #fca5a5">
-      <div class="card-head" style="background:#fef2f2"><div class="card-title" style="color:#dc2626">🔔 Alertas de la semana</div><span style="font-size:10px;color:#dc2626">agrupadas por tipo · generadas de tus datos + resumen inteligente</span></div>
-      <div style="max-height:400px;overflow-y:auto">${alertasHtml}</div>
+        <div class="etk-foot">Soporte y Desarrollo se solapan (un ticket puede estar en ambos), por eso pueden sumar más de 100%.</div>
+      </div>
     </div>
 
-    ${esRango?`${seccion('📊 Comparativa entre semanas ('+nSemanas+')')}
-    <div class="card">
-      <div class="card-head"><div class="card-title">Semana a semana en el rango elegido</div><span style="font-size:10px;color:var(--txt3)">recibidos, resueltos y SLA promedio por semana — para comparar de un vistazo</span></div>
+    ${esRango?`<div class="card">
+      <div class="card-head"><div class="card-title">Comparativa semana a semana (${nSemanas})</div><span class="etk-note">resueltos = cerrados en esa semana, sin importar cuándo se crearon</span></div>
       <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:var(--sur2)">${['Semana','Recibidos','Resueltos','% resueltos','SLA Soporte prom.','SLA Desarrollo prom.','% Desarrollo'].map(h=>`<th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);border-bottom:1px solid var(--bdr)">${h}</th>`).join('')}</tr></thead>
+        <table class="etk-table">
+          <thead><tr>${['Semana','Recibidos','Resueltos','Resueltos ÷ recibidos','SLA Soporte prom.','SLA Desarrollo prom.','% Desarrollo'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
           <tbody>${comparativaRows.map(r=>`<tr>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-weight:700;font-family:var(--mono)">${r.id}</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.total}</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.resueltos}</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.pctRes}%</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.slaSop!=null?r.slaSop.toFixed(1)+'h':'—'}</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.slaDev!=null?r.slaDev.toFixed(1)+'d':'—'}</td>
-            <td style="padding:7px 12px;border-bottom:0.5px solid var(--bdr);font-family:var(--mono)">${r.pctDev}%</td>
+            <td style="font-weight:600">${r.id}</td><td>${r.total}</td><td>${r.resueltos}</td>
+            <td>${r.resueltos} ÷ ${r.total} = ${r.pctRes}%</td>
+            <td>${r.slaSop!=null?r.slaSop.toFixed(1)+'h':'—'}</td><td>${r.slaDev!=null?r.slaDev.toFixed(1)+'d':'—'}</td><td>${r.pctDev}%</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
     </div>`:''}
 
-    ${seccion('📈 Evolución semanal (comparativa entre semanas)')}
-    <div class="card">
-      <div class="card-head"><div class="card-title">Recibidos vs. resueltos</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">todas las semanas desde ${REP_SEMANA_MIN}</span><button onclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇ Ver/exportar</button></div></div>
-      <div style="padding:12px 16px"><div style="position:relative;height:220px"><canvas id="rep-evo-chart" ondblclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div><div style="font-size:9px;color:var(--txt3);text-align:right;padding-top:4px">doble clic para ver detalle</div></div>
-    </div>
-
-    ${seccion('🚦 Calidad — SLA de resolución')}
-    <div class="card">
-      <div class="card-head"><div class="card-title">🚦 SLA de resolución</div><span style="font-size:10px;color:var(--txt3)">tiempo entre Solicitado y Resuelto · meta por área · clic en la barra para ver detalle</span></div>
-      <div style="display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap">
-        ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
-        ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
+    <!-- Fila: Evolución + SLA -->
+    <div class="etk-row">
+      <div class="card etk-span2">
+        <div class="card-head"><div class="card-title">Recibidos vs. resueltos por semana</div><button onclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')">⬇ Ver/exportar</button></div>
+        <div class="etk-big"><span>${stA.total}</span> recibidos · <span>${stA.resueltosCierre}</span> resueltos en ${esRango?'el rango':'la semana'}</div>
+        <div style="padding:4px 16px 14px"><div style="position:relative;height:240px"><canvas id="rep-evo-chart" ondblclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>
+        <div class="etk-foot" style="padding:6px 0 0">Resueltos = tickets solved/closed cuya semana de cierre (col. G) es esa semana. Desde la semana ${REP_SEMANA_MIN_NUM}.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">SLA de resolución</div><span class="etk-note">clic en la barra para ver rangos</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:8px 16px 16px">
+          ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
+          ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
+        </div>
       </div>
     </div>
     <div id="sla-rango-detalle" style="display:none"></div>
@@ -2901,7 +3057,7 @@ function renderAnalisisRango(){
     ${seccionColapsable('rep-sec-equipo','👤 Equipo',`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
         <div class="card">
-          <div class="card-head"><div class="card-title">Productividad por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos${stP?' · semana ant.: '+stP.total+' recibidos, '+stP.solved+' resueltos':''}</span><button onclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
+          <div class="card-head"><div class="card-title">Productividad por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos (de lo creado en el periodo)${stP?' · periodo ant.: '+stP.total+' recibidos':''}</span><button onclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
           <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart" ondblclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
         </div>
         <div class="card">
@@ -3154,6 +3310,29 @@ function exportarTodoReportesCSV(){
   showToast('✓ CSV con las '+incluidas+' gráficas exportado','#16a34a');
 }
 
+// Relleno degradado vertical para áreas (estilo Etikto)
+function etkGradiente(c,rgb){
+  const{ctx,chartArea}=c.chart;
+  if(!chartArea)return`rgba(${rgb},.15)`;
+  const g=ctx.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+  g.addColorStop(0,`rgba(${rgb},.38)`);g.addColorStop(1,`rgba(${rgb},.02)`);
+  return g;
+}
+// Tipografía, leyendas y cuadrícula punteada uniformes para las gráficas de Reportes
+function etkTemaChart(ch){
+  if(!ch||!ch.options)return;
+  const F="'IBM Plex Sans','Plus Jakarta Sans',sans-serif";
+  const o=ch.options;
+  if(o.plugins&&o.plugins.legend&&o.plugins.legend.labels){
+    Object.assign(o.plugins.legend.labels,{usePointStyle:true,pointStyle:'rectRounded',boxWidth:10,boxHeight:10,padding:14,color:'#5b6b84',font:{size:11,family:F}});
+  }
+  Object.values(o.scales||{}).forEach(s=>{
+    s.ticks=Object.assign(s.ticks||{},{color:'#8a97ab',font:Object.assign({},(s.ticks&&s.ticks.font)||{},{family:F})});
+    s.border=Object.assign(s.border||{},{display:false,dash:[4,4]});
+    if(!s.grid||s.grid.display!==false)s.grid=Object.assign(s.grid||{},{color:'#e6eaf1'});
+  });
+  ch.update('none');
+}
 function buildReportesCharts(){
   const stA=window._repStatsActual;const evolucion=window._repEvolucion;
   if(!stA||!evolucion)return;
@@ -3166,8 +3345,8 @@ function buildReportesCharts(){
       data:{
         labels:evolucion.map(e=>e.id.replace('A2026_','')),
         datasets:[
-          {label:'Recibidos',data:evolucion.map(e=>e.total),borderColor:'#2563eb',backgroundColor:'#2563eb25',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#2563eb',tension:.3,fill:true},
-          {label:'Resueltos',data:evolucion.map(e=>e.resueltos),borderColor:'#16a34a',backgroundColor:'#16a34a55',borderWidth:3,pointRadius:3,pointBackgroundColor:'#16a34a',tension:.3,fill:true}
+          {label:'Recibidos',data:evolucion.map(e=>e.total),borderColor:'#5470c6',backgroundColor:c=>etkGradiente(c,'84,112,198'),borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointBackgroundColor:'#5470c6',tension:.45,fill:true},
+          {label:'Resueltos',data:evolucion.map(e=>e.resueltos),borderColor:'#3ba272',backgroundColor:c=>etkGradiente(c,'145,204,117'),borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointBackgroundColor:'#3ba272',tension:.45,fill:true}
         ]
       },
       options:{
@@ -3185,9 +3364,9 @@ function buildReportesCharts(){
       type:'doughnut',
       data:{
         labels:stA.estatusBreakdown.map(e=>ESTATUS_LABEL[e.estatus]||e.estatus),
-        datasets:[{data:stA.estatusBreakdown.map(e=>e.total),backgroundColor:stA.estatusBreakdown.map(e=>ESTATUS_COLOR_REP[e.estatus]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]
+        datasets:[{data:stA.estatusBreakdown.map(e=>e.total),backgroundColor:stA.estatusBreakdown.map(e=>ESTATUS_COLOR_REP[e.estatus]||'#9ca3af'),borderWidth:0,borderRadius:8,spacing:4}]
       },
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
+      options:{responsive:true,maintainAspectRatio:false,cutout:'74%',rotation:-90,circumference:180,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
     });
   }
 
@@ -3200,8 +3379,8 @@ function buildReportesCharts(){
       data:{
         labels:datos.map(a=>a.nombre),
         datasets:[
-          {label:'Recibidos',data:datos.map(a=>a.total),backgroundColor:'#2563eb',borderRadius:4},
-          {label:'Resueltos',data:datos.map(a=>a.resueltos),backgroundColor:'#16a34a',borderRadius:4}
+          {label:'Recibidos',data:datos.map(a=>a.total),backgroundColor:'#5470c6',borderRadius:6,maxBarThickness:26},
+          {label:'Resueltos',data:datos.map(a=>a.resueltos),backgroundColor:'#91cc75',borderRadius:6,maxBarThickness:26}
         ]
       },
       options:{
@@ -3216,15 +3395,15 @@ function buildReportesCharts(){
   const devCtx=el('rep-dev-chart');
   if(devCtx&&stA.productividadDev.length){
     const datosDev=stA.productividadDev;
-    const colRecibidos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#dc2626':'#7c3aed');
-    const colResueltos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#f87171':'#16a34a');
+    const colRecibidos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#ee6666':'#9a60b4');
+    const colResueltos=datosDev.map(d=>d.nombre.includes('Sin desarrollador')?'#f4a3a3':'#91cc75');
     CH['rep-dev-chart']=new Chart(devCtx,{
       type:'bar',
       data:{
         labels:datosDev.map(a=>a.nombre),
         datasets:[
-          {label:'Recibidos',data:datosDev.map(a=>a.total),backgroundColor:colRecibidos,borderRadius:4},
-          {label:'Resueltos',data:datosDev.map(a=>a.resueltos),backgroundColor:colResueltos,borderRadius:4}
+          {label:'Recibidos',data:datosDev.map(a=>a.total),backgroundColor:colRecibidos,borderRadius:6,maxBarThickness:26},
+          {label:'Resueltos',data:datosDev.map(a=>a.resueltos),backgroundColor:colResueltos,borderRadius:6,maxBarThickness:26}
         ]
       },
       options:{
@@ -3243,7 +3422,7 @@ function buildReportesCharts(){
     const datosLl=llamadasStats.porAgente;
     CH['rep-llamadas-chart']=new Chart(llCtx,{
       type:'bar',
-      data:{labels:datosLl.map(a=>a.nombre),datasets:[{label:'Llamadas completadas',data:datosLl.map(a=>a.total),backgroundColor:'#0ea5e9',borderRadius:4}]},
+      data:{labels:datosLl.map(a=>a.nombre),datasets:[{label:'Llamadas completadas',data:datosLl.map(a=>a.total),backgroundColor:'#73c0de',borderRadius:6,maxBarThickness:26}]},
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:TT_DEFAULT},
@@ -3260,7 +3439,7 @@ function buildReportesCharts(){
     const suf=sla.unidad==='horas'?'h':'d';
     CH[id]=new Chart(ctx,{
       type:'bar',
-      data:{labels:['Tu promedio','Meta'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax],backgroundColor:[col,'#9ca3af'],borderRadius:4}]},
+      data:{labels:['Tu promedio','Meta'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax],backgroundColor:[col,'#9ca3af'],borderRadius:6,maxBarThickness:26}]},
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         onClick:()=>toggleSlaRango(tipo),
@@ -3277,11 +3456,11 @@ function buildReportesCharts(){
   if(CH['rep-canal-chart'])CH['rep-canal-chart'].destroy();
   const canalCtx=el('rep-canal-chart');
   if(canalCtx){
-    const CANAL_COL={'Llamada':'#2563eb','Ticket':'#6b7280','Sin dato':'#d1d5db'};
+    const CANAL_COL={'Llamada':'#5470c6','Ticket':'#fac858','Sin dato':'#e3e7ee'};
     CH['rep-canal-chart']=new Chart(canalCtx,{
       type:'doughnut',
-      data:{labels:stA.canalBreakdown.map(c=>c.canal),datasets:[{data:stA.canalBreakdown.map(c=>c.total),backgroundColor:stA.canalBreakdown.map(c=>CANAL_COL[c.canal]||'#9ca3af'),borderWidth:2,borderColor:'#fff'}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
+      data:{labels:stA.canalBreakdown.map(c=>c.canal),datasets:[{data:stA.canalBreakdown.map(c=>c.total),backgroundColor:stA.canalBreakdown.map(c=>CANAL_COL[c.canal]||'#9ca3af'),borderWidth:0,borderRadius:8,spacing:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'74%',rotation:-90,circumference:180,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT}}
     });
   }
 
@@ -3291,7 +3470,7 @@ function buildReportesCharts(){
   if(horaCtx){
     CH['rep-hora-chart']=new Chart(horaCtx,{
       type:'bar',
-      data:{labels:stA.porHora.map(h=>h.hora+'h'),datasets:[{data:stA.porHora.map(h=>h.total),backgroundColor:'#2563eb',borderRadius:4}]},
+      data:{labels:stA.porHora.map(h=>h.hora+'h'),datasets:[{data:stA.porHora.map(h=>h.total),backgroundColor:'#5470c6',borderRadius:6,maxBarThickness:26}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:TT_DEFAULT},
@@ -3306,7 +3485,7 @@ function buildReportesCharts(){
   if(diasemCtx){
     CH['rep-diasem-chart']=new Chart(diasemCtx,{
       type:'bar',
-      data:{labels:stA.porDiaSemana.map(d=>d.dia),datasets:[{data:stA.porDiaSemana.map(d=>d.total),backgroundColor:'#0891b2',borderRadius:4}]},
+      data:{labels:stA.porDiaSemana.map(d=>d.dia),datasets:[{data:stA.porDiaSemana.map(d=>d.total),backgroundColor:'#73c0de',borderRadius:6,maxBarThickness:26}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:TT_DEFAULT},
@@ -3324,8 +3503,8 @@ function buildReportesCharts(){
       data:{
         labels:stA.porDia.map(d=>d.fecha.slice(5)),
         datasets:[
-          {label:'Creados',data:stA.porDia.map(d=>d.creados),borderColor:'#16a34a',backgroundColor:'#16a34a30',borderWidth:2.5,pointRadius:3,tension:.3,fill:true},
-          {label:'Resueltos',data:stA.porDia.map(d=>d.resueltos),borderColor:'#075e54',backgroundColor:'#075e5450',borderWidth:2.5,pointRadius:3,tension:.3,fill:true}
+          {label:'Creados',data:stA.porDia.map(d=>d.creados),borderColor:'#91cc75',backgroundColor:'#91cc7530',borderWidth:2.5,pointRadius:3,tension:.3,fill:true},
+          {label:'Resueltos',data:stA.porDia.map(d=>d.resueltos),borderColor:'#3ba272',backgroundColor:'#3ba27240',borderWidth:2.5,pointRadius:3,tension:.3,fill:true}
         ]
       },
       options:{
@@ -3345,8 +3524,8 @@ function buildReportesCharts(){
       data:{
         labels:stA.porDia.map(d=>d.fecha.slice(5)),
         datasets:[
-          {label:'Soporte',data:stA.porDia.map(d=>d.soporte),borderColor:'#7c3aed',backgroundColor:'#7c3aed55',borderWidth:2,pointRadius:2,tension:.3,fill:true},
-          {label:'Desarrollo',data:stA.porDia.map(d=>d.desarrollo),borderColor:'#f97316',backgroundColor:'#f9731655',borderWidth:2,pointRadius:2,tension:.3,fill:true}
+          {label:'Soporte',data:stA.porDia.map(d=>d.soporte),borderColor:'#9a60b4',backgroundColor:'#9a60b455',borderWidth:2,pointRadius:2,tension:.3,fill:true},
+          {label:'Desarrollo',data:stA.porDia.map(d=>d.desarrollo),borderColor:'#fc8452',backgroundColor:'#fc845255',borderWidth:2,pointRadius:2,tension:.3,fill:true}
         ]
       },
       options:{
@@ -3357,6 +3536,7 @@ function buildReportesCharts(){
     });
   }
 
+  Object.keys(CH).filter(k=>k.startsWith('rep-')).forEach(k=>etkTemaChart(CH[k]));
   buildSlaRangoChartIfOpen();
 }
 
