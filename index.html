@@ -287,6 +287,9 @@ tbody tr:last-child td{border-bottom:none}
 .etk-prog div{height:100%;border-radius:3px}
 .etk-foot{font-size:11px;color:var(--etk-gray);padding:10px 18px 14px}
 .etk-table{width:100%;border-collapse:collapse;font-size:13px}
+.etk-conc-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
+.etk-conc-h{font-size:13px;font-weight:600;color:var(--etk-navy);margin:6px 0 6px}
+@media(max-width:1100px){.etk-conc-grid{grid-template-columns:1fr}}
 .etk-table th{padding:8px 16px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
 .etk-table td{padding:9px 16px;color:var(--etk-navy)}
 @media(max-width:1100px){.etk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.etk-row{grid-template-columns:1fr}.etk-span2{grid-column:auto}}
@@ -1872,6 +1875,86 @@ function resueltosPorCierre(semanasIds){
   semanasIds.forEach(id=>{const p=parseSemanaId(id);if(p)yws.add(p.year*100+p.week);});
   return BD_DATA.filter(r=>esCerradoJ(r)&&yws.has(semanaCierreYW(r)));
 }
+// ── Conciliación Recibidos vs. Resueltos ──
+// Clasifica cada ticket CREADO en el periodo según dónde terminó, y separa los resueltos que vienen de antes del periodo.
+function conciliarRecibidosResueltos(semanasIds,creados){
+  const yws=new Set();semanasIds.forEach(id=>{const p=parseSemanaId(id);if(p)yws.add(p.year*100+p.week);});
+  const ywMin=Math.min(...yws),ywMax=Math.max(...yws);
+  const b={dentro:[],despues:[],antes:[],sinSemana:[],abiertos:[],otro:[]};
+  creados.forEach(r=>{
+    const est=cv(r,'J').trim().toLowerCase();
+    if(esCerradoJ(r)){
+      const yw=semanaCierreYW(r);
+      if(yw==null)b.sinSemana.push(r);
+      else if(yws.has(yw))b.dentro.push(r);
+      else if(yw>ywMax)b.despues.push(r);
+      else b.antes.push(r); // cierre antes de su propia semana de creación / del rango: dato a revisar
+    }else if(['open','pending','hold','new','on-hold'].includes(est))b.abiertos.push(r);
+    else b.otro.push(r);
+  });
+  const resueltos=resueltosPorCierre(semanasIds);
+  const kH=colKey('H');
+  const idsCreados=new Set(creados);
+  const deAntes=resueltos.filter(r=>!idsCreados.has(r));
+  const estAbiertos={};b.abiertos.forEach(r=>{const e=cv(r,'J').trim().toLowerCase();estAbiertos[e]=(estAbiertos[e]||0)+1;});
+  const estOtros={};b.otro.forEach(r=>{const e=cv(r,'J').trim().toLowerCase()||'(vacío)';estOtros[e]=(estOtros[e]||0)+1;});
+  return{
+    recibidos:creados.length,resueltos:resueltos.length,
+    dentro:b.dentro.length,despues:b.despues.length,antes:b.antes.length,sinSemana:b.sinSemana.length,
+    abiertos:b.abiertos.length,estAbiertos,otro:b.otro.length,estOtros,
+    deAntes:deAntes.length,
+    deAntesSinId:deAntes.filter(r=>!parseSemanaId(kH?r[kH]:'')).length,
+    filas:{...b,deAntes}
+  };
+}
+// ── HORARIO OPERATIVO ──
+// L-V 9:00–20:00 (11 h) · Sáb 10:00–15:00 (5 h) · Dom no se trabaja · sin días festivos.
+// El reloj solo corre dentro de este horario. 1 día operativo = jornada completa de 11 h.
+const HORARIO_OP={0:null,1:[9,20],2:[9,20],3:[9,20],4:[9,20],5:[9,20],6:[10,15]}; // 0 = domingo
+const HORAS_DIA_OP=11;
+function horasOperativas(f1,f2){
+  const d1=new Date(f1),d2=new Date(f2);
+  if(isNaN(d1)||isNaN(d2)||d2<d1)return null;
+  let ms=0;
+  const dia=new Date(d1.getFullYear(),d1.getMonth(),d1.getDate());
+  while(dia<=d2){
+    const h=HORARIO_OP[dia.getDay()];
+    if(h){
+      const ini=new Date(dia.getFullYear(),dia.getMonth(),dia.getDate(),h[0]);
+      const fin=new Date(dia.getFullYear(),dia.getMonth(),dia.getDate(),h[1]);
+      const a=Math.max(ini,d1),b=Math.min(fin,d2);
+      if(b>a)ms+=b-a;
+    }
+    dia.setDate(dia.getDate()+1);
+  }
+  return ms/3600000;
+}
+function diasOperativos(f1,f2){const h=horasOperativas(f1,f2);return h==null?null:h/HORAS_DIA_OP;}
+
+// ── SLA FIJO ──
+// Semáforo por ticket y por promedio: verde ≤ vMax · amarillo > vMax y < aMax · rojo ≥ aMax
+// Ambos en DÍAS OPERATIVOS (jornada de 11 h). Para cambiar una meta, edita solo esta línea.
+const SLA_FIJO={soporte:{vMax:1,aMax:4},desarrollo:{vMax:3,aMax:6}};
+function tiemposSLA(rows,unidad){
+  return rows.map(r=>horasOperativas(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0).map(h=>unidad==='horas'?h:h/HORAS_DIA_OP);
+}
+function slaLimites(tipo){return{...SLA_FIJO[tipo]};}
+// Distribución de tiempos de solución (en días) para decidir metas con datos reales
+function distribucionTiempos(dias){
+  const RANGOS=[['≤ 1 día',0,1],['1 a 2 días',1,2],['2 a 3 días',2,3],['3 a 5 días',3,5],['5 a 7 días',5,7],['7 a 14 días',7,14],['más de 14 días',14,Infinity]];
+  const n=dias.length,ord=[...dias].sort((x,y)=>x-y);
+  const pct=q=>n?Math.round(ord[Math.min(n-1,Math.ceil(q*n)-1)]*10)/10:null; // percentil por rango más cercano
+  let acum=0;
+  const filas=RANGOS.map(([label,min,max])=>{
+    const c=dias.filter(d=>(min===0?d>=0:d>min)&&d<=max).length;acum+=c;
+    return{label,c,pct:n?Math.round(c/n*1000)/10:0,acum:n?Math.round(acum/n*1000)/10:0};
+  });
+  return{n,filas,p50:pct(.5),p80:pct(.8),p90:pct(.9),prom:n?Math.round(dias.reduce((x,y)=>x+y,0)/n*10)/10:null};
+}
+function slaMetaTxt(tipo){
+  const l=slaLimites(tipo),u='d';
+  return`🟢 ≤${l.vMax}${u} · 🟡 ${l.vMax}–${l.aMax}${u} · 🔴 ≥${l.aMax}${u}`;
+}
 function esDesarrollo(row){
   const v=cv(row,'S').trim().toLowerCase();
   return v==='si'||v==='sí'||v==='yes'||v==='true'||v==='1';
@@ -1929,7 +2012,7 @@ function calcularRango(rows){
   const estatusBreakdown=[...ESTATUS_ORDEN.filter(k=>estatusMap[k]),...Object.keys(estatusMap).filter(k=>!ESTATUS_ORDEN.includes(k))]
     .map(k=>({estatus:k,total:estatusMap[k]}));
   const solved=estatusMap['solved']||0;
-  const resTimes=resueltas.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0);
+  const resTimes=resueltas.map(r=>diasOperativos(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0); // días operativos
   const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
   const desarrollo=rows.filter(esDesarrollo).length;
 
@@ -1939,25 +2022,24 @@ function calcularRango(rows){
   const pctSoporte=total?Math.round(soporteTotal/total*100):0;
 
   // ── SLA de resolución con semáforo (meta) ──
-  // Soporte (col. S = NO/vacío): verde ≤5h · amarillo ≤24h · rojo >24h
-  // Desarrollo (col. S = SI): verde ≤5d · amarillo ≤7d · rojo >7d
+  // Límites FIJOS (ver SLA_FIJO): verde ≤ vMax · amarillo > vMax y < aMax · rojo ≥ aMax
   const resSoporte=resueltas.filter(r=>!esDesarrollo(r));
   const resDesarrollo=resueltas.filter(r=>esDesarrollo(r));
   function calcularSLA(list,unidad,vMax,aMax,rangosDef){
-    const tiempos=list.map(r=>diffDias(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0).map(d=>unidad==='horas'?d*24:d);
+    const tiempos=tiemposSLA(list,unidad); // horario operativo
     const buckets={verde:0,amarillo:0,rojo:0};
-    tiempos.forEach(t=>{if(t<=vMax)buckets.verde++;else if(t<=aMax)buckets.amarillo++;else buckets.rojo++;});
+    tiempos.forEach(t=>{if(t<=vMax)buckets.verde++;else if(t<aMax)buckets.amarillo++;else buckets.rojo++;});
     const promedio=tiempos.length?tiempos.reduce((a,b)=>a+b,0)/tiempos.length:null;
-    const color=promedio==null?null:promedio<=vMax?'verde':promedio<=aMax?'amarillo':'rojo';
+    const color=promedio==null?null:promedio<=vMax?'verde':promedio<aMax?'amarillo':'rojo';
     const rangos=rangosDef.map(rd=>({label:rd.label,total:tiempos.filter(t=>t>=rd.min&&t<rd.max).length}));
     return{unidad,vMax,aMax,total:tiempos.length,buckets,promedio,color,rangos};
   }
-  const slaSoporte=calcularSLA(resSoporte,'horas',5,24,[
-    {label:'0-5h',min:0,max:5},{label:'5-24h',min:5,max:24},{label:'24-48h',min:24,max:48},{label:'48h+',min:48,max:Infinity}
-  ]);
-  const slaDesarrollo=calcularSLA(resDesarrollo,'días',5,7,[
-    {label:'0-5d',min:0,max:5},{label:'5-7d',min:5,max:7},{label:'7-14d',min:7,max:14},{label:'14d+',min:14,max:Infinity}
-  ]);
+  const rangosDe=(l,u)=>[
+    {label:`0–${l.vMax}${u}`,min:0,max:l.vMax+1e-9},{label:`${l.vMax}–${l.aMax}${u}`,min:l.vMax+1e-9,max:l.aMax},
+    {label:`${l.aMax}–${Math.round(l.aMax*20)/10}${u}`,min:l.aMax,max:l.aMax*2},{label:`${Math.round(l.aMax*20)/10}${u}+`,min:l.aMax*2,max:Infinity}];
+  const limSop=slaLimites('soporte'),limDev=slaLimites('desarrollo');
+  const slaSoporte=calcularSLA(resSoporte,'días',limSop.vMax,limSop.aMax,rangosDe(limSop,'d'));
+  const slaDesarrollo=calcularSLA(resDesarrollo,'días',limDev.vMax,limDev.aMax,rangosDe(limDev,'d'));
 
   // Antigüedad de las que siguen abiertas
   const hoy=new Date();
@@ -2081,7 +2163,7 @@ function resumenInteligente(stats,rangoLabel){
     if(e.total>=3)f+=' — cliente reincidente';
     frases.push(f+'.');
   });
-  if(stats.tiempoProm!=null)frases.push(`El tiempo promedio de resolución en el rango fue de ${stats.tiempoProm.toFixed(1)} días.`);
+  if(stats.tiempoProm!=null)frases.push(`El tiempo promedio de resolución en el rango fue de ${stats.tiempoProm.toFixed(1)} días operativos.`);
   if(stats.topCategorias.length)frases.push(`La categoría con más incidencia fue <strong>${stats.topCategorias[0][0]}</strong> (${stats.topCategorias[0][1]} tickets).`);
   return frases.join(' ');
 }
@@ -2715,10 +2797,10 @@ function generarAlertaDudasIA(stA,stP){
 function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
   const alertas=[];
   if(stA.slaSoporte&&stA.slaSoporte.color==='rojo'){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Soporte fuera de meta',detalle:`Promedio de ${stA.slaSoporte.promedio.toFixed(1)}h para resolver (meta: ≤5h). ${stA.slaSoporte.buckets.rojo} ticket${stA.slaSoporte.buckets.rojo===1?'':'s'} tardó más de 24h.`});
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Soporte fuera de meta',detalle:`Promedio de ${stA.slaSoporte.promedio.toFixed(1)} días operativos para resolver; el límite rojo es ≥${stA.slaSoporte.aMax}d (meta verde ≤${stA.slaSoporte.vMax}d). ${stA.slaSoporte.buckets.rojo} ticket${stA.slaSoporte.buckets.rojo===1?'':'s'} llegó a ${stA.slaSoporte.aMax} días operativos o más.`});
   }
   if(stA.slaDesarrollo&&stA.slaDesarrollo.color==='rojo'){
-    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver (meta: ≤5d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} tardó más de 7 días.`});
+    alertas.push({icon:'🔴',color:'#dc2626',bg:'#fef2f2',categoria:'sla',titulo:'SLA de Desarrollo fuera de meta',detalle:`Promedio de ${stA.slaDesarrollo.promedio.toFixed(1)}d para resolver; el límite rojo es ≥${stA.slaDesarrollo.aMax}d (meta verde ≤${stA.slaDesarrollo.vMax}d). ${stA.slaDesarrollo.buckets.rojo} ticket${stA.slaDesarrollo.buckets.rojo===1?'':'s'} llegó a ${stA.slaDesarrollo.aMax} días operativos o más.`});
   }
   const resC=stA.resueltosCierre!=null?stA.resueltosCierre:stA.solved;
   const pctRes=stA.total?Math.round(resC/stA.total*100):0;
@@ -2781,6 +2863,7 @@ function etkDelta(a,b,buenoAlSubir,unidad){
   const bueno=(dif>0)===buenoAlSubir;
   return`<span class="etk-delta ${bueno?'bueno':'malo'}">${txt} ${dif>0?'▲':'▼'}</span>`;
 }
+function slaPunto(tipo,v){const l=slaLimites(tipo);return(v<=l.vMax?'🟢':v<l.aMax?'🟡':'🔴')+' ';}
 function etkKpi(label,valor,delta,sub){
   return`<div class="etk-kpi" title="${label}: ${valor}">
     <div class="etk-kpi-top"><span>${label}</span><span class="etk-dots">•••</span></div>
@@ -2828,6 +2911,8 @@ function renderAnalisisRango(){
   const stP=rangoPrevIds.size?calcularRango(ticketsPrev):null;
   // Resueltos del periodo = tickets cerrados (solved/closed) cuya semana de cierre (col. G) cae en el periodo, sin importar cuándo se crearon
   stA.resueltosCierre=resueltosPorCierre(rangoActualIds).length;
+  const conc=conciliarRecibidosResueltos(rangoActualIds,ticketsActual);
+  window._repConciliacion=conc;
   if(stP)stP.resueltosCierre=resueltosPorCierre(rangoPrevIds).length;
   const evolucion=getEvolucionSemanal(semanas);
   const llStats=calcularLlamadasRango(rangoActualIds);
@@ -2915,7 +3000,7 @@ function renderAnalisisRango(){
           <span style="font-size:9.5px;font-weight:700;color:${col}">${SEM_LABEL[sla.color]}${veces>1?' · '+veces+'× la meta':''}</span>
         </div>
       </div>
-      <div style="position:relative;height:66px"><canvas id="${canvasId}"></canvas></div>
+      <div style="position:relative;height:86px"><canvas id="${canvasId}"></canvas></div>
       <div style="font-size:9.5px;color:var(--txt3);margin-top:6px">${sla.total} resuelto${sla.total===1?'':'s'} esta semana · clic en la barra para ver el detalle de rangos</div>
     </div>`;
   }
@@ -2966,7 +3051,47 @@ function renderAnalisisRango(){
       ${etkKpi('Tickets recibidos',stA.total,stP?etkDelta(stA.total,stP.total,false):'','creados en el periodo')}
       ${etkKpi('Tickets resueltos',stA.resueltosCierre,stP?etkDelta(stA.resueltosCierre,stP.resueltosCierre,true):'',`cerrados en el periodo · ${stA.resueltosCierre} ÷ ${stA.total} = ${stA.total?Math.round(stA.resueltosCierre/stA.total*100):0}% de lo recibido`)}
       ${etkKpi('One-touch',stA.oneTouch.pct+'%',stP?etkDelta(stA.oneTouch.pct,stP.oneTouch.pct,true,'pts'):'',`${stA.oneTouch.count} de ${stA.oneTouch.base} resueltos en la misma hora`)}
-      ${etkKpi('Tiempo prom. resolución',stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+' d':'—',stP&&stP.tiempoProm!=null&&stA.tiempoProm!=null?etkDelta(stA.tiempoProm,stP.tiempoProm,false):'','días entre solicitado y resuelto')}
+      ${etkKpi('Tiempo prom. resolución',stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+' d':'—',stP&&stP.tiempoProm!=null&&stA.tiempoProm!=null?etkDelta(stA.tiempoProm,stP.tiempoProm,false):'','días operativos entre solicitado y resuelto')}
+    </div>
+
+    <!-- Conciliación: dónde quedó cada ticket recibido -->
+    <div class="card">
+      <div class="card-head" style="cursor:pointer" onclick="const c=document.getElementById('rep-conc');const a=document.getElementById('rep-conc-arrow');const ab=c.style.display==='none';c.style.display=ab?'block':'none';a.textContent=ab?'▲ ocultar':'▼ ver desglose';">
+        <div class="card-title">¿Por qué recibidos y resueltos no coinciden?</div>
+        <span class="etk-note">${conc.recibidos} recibidos · ${conc.resueltos} resueltos · <b id="rep-conc-arrow" style="color:#5470c6">▼ ver desglose</b></span>
+      </div>
+      <div id="rep-conc" style="display:none;padding:0 20px 18px">
+        <div class="etk-conc-grid">
+          <div>
+            <div class="etk-conc-h">Los ${conc.recibidos} tickets creados en el periodo, hoy están así:</div>
+            <table class="etk-table">
+              <tbody>
+                ${[
+                  ['✅ Cerrados dentro del periodo',conc.dentro,'cuentan en Resueltos'],
+                  ['⏭ Cerrados después del periodo',conc.despues,'cuentan en la semana en que se cerraron'],
+                  ['⏳ Aún abiertos',conc.abiertos,Object.entries(conc.estAbiertos).map(([k,v])=>k+': '+v).join(' · ')||'—'],
+                  ['⚠ Cerrados sin semana de cierre (col. G/C vacía)',conc.sinSemana,'revisar en Tickets BD'],
+                  ['⚠ Cerrados con semana de cierre anterior al periodo',conc.antes,'dato incongruente: revisar col. G'],
+                  ['❔ Otro estatus',conc.otro,Object.entries(conc.estOtros).map(([k,v])=>k+': '+v).join(' · ')||'—'],
+                ].filter(r=>r[1]||r[0].startsWith('✅')||r[0].startsWith('⏳')).map(r=>`<tr><td>${r[0]}</td><td style="font-weight:600;text-align:right">${r[1]}</td><td class="etk-note">${r[2]}</td></tr>`).join('')}
+                <tr><td style="font-weight:600">Total</td><td style="font-weight:600;text-align:right">${conc.dentro+conc.despues+conc.abiertos+conc.sinSemana+conc.antes+conc.otro}</td><td class="etk-note">${conc.dentro} + ${conc.despues} + ${conc.abiertos} + ${conc.sinSemana} + ${conc.antes} + ${conc.otro} = ${conc.recibidos}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="etk-conc-h">Los ${conc.resueltos} resueltos se forman así:</div>
+            <table class="etk-table">
+              <tbody>
+                <tr><td>Creados dentro del periodo</td><td style="font-weight:600;text-align:right">${conc.dentro}</td></tr>
+                <tr><td>Creados antes del periodo (rezago que se cerró aquí)</td><td style="font-weight:600;text-align:right">${conc.deAntes}</td></tr>
+                <tr><td style="font-weight:600">Total resueltos</td><td style="font-weight:600;text-align:right">${conc.dentro} + ${conc.deAntes} = ${conc.resueltos}</td></tr>
+              </tbody>
+            </table>
+            ${conc.deAntesSinId?`<div class="etk-foot" style="padding:8px 0 0">De esos ${conc.deAntes}, ${conc.deAntesSinId} no tienen ID_semana válido en col. H.</div>`:''}
+            <div class="etk-foot" style="padding:10px 0 0">Diferencia: ${conc.recibidos} − ${conc.resueltos} = ${conc.recibidos-conc.resueltos}. No equivale a "tickets perdidos": Resueltos suma rezago de semanas anteriores y Recibidos incluye tickets que siguen abiertos o se cerraron después.</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Fila: Alertas + Distribución -->
@@ -2995,7 +3120,7 @@ function renderAnalisisRango(){
           <tbody>${comparativaRows.map(r=>`<tr>
             <td style="font-weight:600">${r.id}</td><td>${r.total}</td><td>${r.resueltos}</td>
             <td>${r.resueltos} ÷ ${r.total} = ${r.pctRes}%</td>
-            <td>${r.slaSop!=null?r.slaSop.toFixed(1)+'h':'—'}</td><td>${r.slaDev!=null?r.slaDev.toFixed(1)+'d':'—'}</td><td>${r.pctDev}%</td>
+            <td>${r.slaSop!=null?slaPunto('soporte',r.slaSop)+r.slaSop.toFixed(1)+'d':'—'}</td><td>${r.slaDev!=null?slaPunto('desarrollo',r.slaDev)+r.slaDev.toFixed(1)+'d':'—'}</td><td>${r.pctDev}%</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -3010,14 +3135,32 @@ function renderAnalisisRango(){
         <div class="etk-foot" style="padding:6px 0 0">Resueltos = tickets solved/closed cuya semana de cierre (col. G) es esa semana. Desde la semana ${REP_SEMANA_MIN_NUM}.</div></div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">SLA de resolución</div><span class="etk-note">clic en la barra para ver rangos</span></div>
+        <div class="card-head"><div class="card-title">SLA de resolución</div><span class="etk-note">días operativos (L-V 9–20 h · sáb 10–15 h) · clic en la barra para ver rangos</span></div>
         <div style="display:flex;flex-direction:column;gap:10px;padding:8px 16px 16px">
-          ${slaBlockHtml(stA.slaSoporte,'Soporte','≤5h','rep-sla-soporte-chart')}
-          ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo','≤5d','rep-sla-desarrollo-chart')}
+          ${slaBlockHtml(stA.slaSoporte,'Soporte',slaMetaTxt('soporte'),'rep-sla-soporte-chart')}
+          ${slaBlockHtml(stA.slaDesarrollo,'Desarrollo',slaMetaTxt('desarrollo'),'rep-sla-desarrollo-chart')}
         </div>
+
       </div>
     </div>
     <div id="sla-rango-detalle" style="display:none"></div>
+        ${(()=>{const res=ticketsActual.filter(esResuelto);
+          const dS=distribucionTiempos(tiemposSLA(res.filter(r=>!esDesarrollo(r)),'días'));
+          const dD=distribucionTiempos(tiemposSLA(res.filter(esDesarrollo),'días'));
+          const fila=(i)=>`<tr><td>${dS.filas[i].label}</td><td>${dS.filas[i].c}</td><td>${dS.filas[i].pct}%</td><td style="font-weight:600">${dS.filas[i].acum}%</td><td>${dD.filas[i].c}</td><td>${dD.filas[i].pct}%</td><td style="font-weight:600">${dD.filas[i].acum}%</td></tr>`;
+          return`<div class="card"><div class="etk-foot" style="padding:18px 20px">
+            <div style="font-size:16px;font-weight:600;color:var(--etk-navy);margin-bottom:4px">¿En cuántos días se resuelven los tickets? (${rangoLabel})</div>
+            <div style="margin-bottom:8px">Tickets creados en el periodo y ya resueltos · días OPERATIVOS de Solicitado a Resuelto (L-V 9–20 h, sáb 10–15 h; 1 día = 11 h) · "Acumulado" = % resuelto en ese tiempo o menos.</div>
+            <div style="overflow-x:auto"><table class="etk-table" style="font-size:12px">
+              <thead><tr><th>Tiempo</th><th>Soporte</th><th>%</th><th>Acum.</th><th>Desarrollo</th><th>%</th><th>Acum.</th></tr></thead>
+              <tbody>${dS.filas.map((_,i)=>fila(i)).join('')}
+              <tr><td style="font-weight:600">Total</td><td style="font-weight:600">${dS.n}</td><td></td><td></td><td style="font-weight:600">${dD.n}</td><td></td><td></td></tr></tbody>
+            </table></div>
+            <div style="margin-top:8px;line-height:1.6">
+              <b>Soporte:</b> la mitad se resuelve en ${dS.p50??'—'} días o menos (mediana) · 80% en ≤ ${dS.p80??'—'} d · 90% en ≤ ${dS.p90??'—'} d · promedio ${dS.prom??'—'} d<br>
+              <b>Desarrollo:</b> la mitad se resuelve en ${dD.p50??'—'} días o menos (mediana) · 80% en ≤ ${dD.p80??'—'} d · 90% en ≤ ${dD.p90??'—'} d · promedio ${dD.prom??'—'} d
+            </div>
+          </div></div>`;})()}
 
     ${seccionColapsable('rep-sec-patrones','🔍 Patrones y distribuciones de esta semana ('+rangoLabel+')',`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
@@ -3439,7 +3582,7 @@ function buildReportesCharts(){
     const suf=sla.unidad==='horas'?'h':'d';
     CH[id]=new Chart(ctx,{
       type:'bar',
-      data:{labels:['Tu promedio','Meta'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax],backgroundColor:[col,'#9ca3af'],borderRadius:6,maxBarThickness:26}]},
+      data:{labels:['Tu promedio','Verde ≤','Rojo ≥'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax,sla.aMax],backgroundColor:[col,'#91cc75','#ee6666'],borderRadius:6,maxBarThickness:22}]},
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         onClick:()=>toggleSlaRango(tipo),
