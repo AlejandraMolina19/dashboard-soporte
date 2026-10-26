@@ -1872,10 +1872,23 @@ function getSemanasUnicas(){
 }
 let REP_INI=null,REP_FIN=null;
 
+// ── Reglas de Reportes ──
+// VOLUMEN Y PATRONES (recibidos, resueltos, evolución, conciliación, empresas, hora valle, categorías, dudas IA): TODOS los tickets.
+// SLA, TIEMPOS Y DESEMPEÑO ("universo de desempeño"):
+//   · Soporte = col. O ∈ {Alejandra, Karina, Ivette, por asignar} y sin escalar.
+//   · Desarrollo = TODO ticket escalado (col. S = SI), lo haya enviado quien sea.
+// Quedan fuera solo de SLA/tiempos: tickets de guardias o agente_de_apoyo que NO se escalaron.
+const AGENTES_SOPORTE=['alejandra','karina','ivette'];
+function esUniversoReportes(row){return esAgenteSoporte(row)||esDesarrollo(row);}
+function esAgenteSoporte(row){
+  const raw=cv(row,'O').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/^por[\s_]+asignar/.test(raw))return true; // tickets de Soporte aún sin agente
+  return AGENTES_SOPORTE.includes(raw.split(/[\s_]+/)[0]);
+}
 function ticketsPorSemanaIds(idsSet){
   const kH=colKey('H');
   if(!kH)return[];
-  return BD_DATA.filter(r=>idsSet.has(r[kH]));
+  return BD_DATA.filter(r=>idsSet.has(r[kH])); // volumen: todos los tickets
 }
 
 function esResuelto(row){
@@ -1896,7 +1909,7 @@ function semanaCierreYW(row){const y=parseInt(cv(row,'C'),10),w=parseInt(cv(row,
 function resueltosPorCierre(semanasIds){
   const yws=new Set();
   semanasIds.forEach(id=>{const p=parseSemanaId(id);if(p)yws.add(p.year*100+p.week);});
-  return BD_DATA.filter(r=>esCerradoJ(r)&&yws.has(semanaCierreYW(r)));
+  return BD_DATA.filter(r=>esCerradoJ(r)&&yws.has(semanaCierreYW(r))); // volumen: todos los tickets
 }
 // ── Conciliación Recibidos vs. Resueltos ──
 // Clasifica cada ticket CREADO en el periodo según dónde terminó, y separa los resueltos que vienen de antes del periodo.
@@ -2035,18 +2048,19 @@ function calcularRango(rows){
   const estatusBreakdown=[...ESTATUS_ORDEN.filter(k=>estatusMap[k]),...Object.keys(estatusMap).filter(k=>!ESTATUS_ORDEN.includes(k))]
     .map(k=>({estatus:k,total:estatusMap[k]}));
   const solved=estatusMap['solved']||0;
-  const resTimes=resueltas.map(r=>diasOperativos(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0); // días operativos
+  const resTimes=resueltas.filter(esUniversoReportes).map(r=>diasOperativos(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0); // días operativos · sin guardias/apoyo no escalados
   const tiempoProm=resTimes.length?resTimes.reduce((a,b)=>a+b,0)/resTimes.length:null;
   const desarrollo=rows.filter(esDesarrollo).length;
 
   // ── Soporte: solo tickets de por asignar / Alejandra / Ivette / Karina (col. O) ──
-  const SOPORTE_AGENTES=['por asignar','alejandra','ivette','karina'];
-  const soporteTotal=rows.filter(r=>SOPORTE_AGENTES.includes(cv(r,'O').trim().toLowerCase())).length;
+  // Soporte = tickets de Alejandra/Karina/Ivette que NO pasaron a Desarrollo (el universo ya viene filtrado)
+  const soporteTotal=rows.filter(r=>!esDesarrollo(r)&&esAgenteSoporte(r)).length;
+  const otrosTotal=rows.filter(r=>!esUniversoReportes(r)).length; // guardias / agente_de_apoyo sin escalar
   const pctSoporte=total?Math.round(soporteTotal/total*100):0;
 
   // ── SLA de resolución con semáforo (meta) ──
   // Límites FIJOS (ver SLA_FIJO): verde ≤ vMax · amarillo > vMax y < aMax · rojo ≥ aMax
-  const resSoporte=resueltas.filter(r=>!esDesarrollo(r));
+  const resSoporte=resueltas.filter(r=>!esDesarrollo(r)&&esAgenteSoporte(r)); // solo Alejandra, Karina, Ivette y por asignar
   const resDesarrollo=resueltas.filter(r=>esDesarrollo(r));
   function calcularSLA(list,unidad,vMax,aMax,rangosDef){
     const tiempos=tiemposSLA(list,unidad); // horario operativo
@@ -2106,12 +2120,12 @@ function calcularRango(rows){
   const canalBreakdown=Object.entries(canalMap).map(([canal,total])=>({canal,total})).sort((a,b)=>b.total-a.total);
 
   // Responsables
-  function porResponsable(letter){
+  function porResponsable(letter,base){
     const m={};
-    rows.forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,resueltos:0,categorias:{}};m[a].total++;if(esCerradoJ(r))m[a].resueltos++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
+    (base||rows).forEach(r=>{const a=cv(r,letter).trim();if(!a)return;if(!m[a])m[a]={total:0,resueltos:0,categorias:{}};m[a].total++;if(esCerradoJ(r))m[a].resueltos++;const cat=cv(r,'T').trim()||'Sin categoría';m[a].categorias[cat]=(m[a].categorias[cat]||0)+1;});
     return Object.entries(m).map(([a,d])=>{const topCat=Object.entries(d.categorias).sort((x,y)=>y[1]-x[1])[0];return{nombre:a,total:d.total,resueltos:d.resueltos,topCategoria:topCat?topCat[0]:'—'};}).sort((a,b)=>b.total-a.total);
   }
-  const porSoporte=porResponsable('O');
+  const porSoporte=porResponsable('O',rows.filter(esAgenteSoporte)); // solo Alejandra, Karina, Ivette y por asignar
   const porDesarrollo=porResponsable('P');
 
   // ── Productividad de Desarrollo (col. P) — solo tickets con S=SI, + bucket 'sin desarrollador asignado' ──
@@ -2164,7 +2178,7 @@ function calcularRango(rows){
   const porDia=Object.entries(diaFechaMap).sort((a,b)=>a[0].localeCompare(b[0])).map(([fecha,d])=>({fecha,...d}));
 
   // One-touch: creado y resuelto en la misma fecha+hora — SOLO sobre resueltos estrictos (J=solved)
-  const resueltasSolved=rows.filter(esSolvedJ);
+  const resueltasSolved=rows.filter(esSolvedJ).filter(esUniversoReportes); // sin guardias/apoyo no escalados
   let oneTouchCount=0;
   resueltasSolved.forEach(r=>{
     const dL=new Date(cv(r,'L')),dM=new Date(cv(r,'M'));
@@ -2173,7 +2187,7 @@ function calcularRango(rows){
   });
   const oneTouch={count:oneTouchCount,base:resueltasSolved.length,pct:resueltasSolved.length?Math.round(oneTouchCount/resueltasSolved.length*100*10)/10:0};
 
-  return{total,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch,dudasIA:calcularDudasIA(rows)};
+  return{total,otrosTotal,resueltas:resueltas.length,abiertas:abiertas.length,tiempoProm,desarrollo,pctDesarrollo:total?Math.round(desarrollo/total*100):0,soporteTotal,pctSoporte,buckets,empresas,reincidentes,topCategorias,topModulos,topCausas,topFunciones,canalBreakdown,porSoporte,porDesarrollo,productividadDev,estatusBreakdown,solved,slaSoporte,slaDesarrollo,porHora,porDiaSemana,porDia,oneTouch,dudasIA:calcularDudasIA(rows)};
 }
 
 function resumenInteligente(stats,rangoLabel){
@@ -2858,9 +2872,10 @@ function generarAlertasSemana(stA,stP,evolucion,semanaSelId){
       alertas.push({icon:'🟡',color:'#ca8a04',bg:'#fefce8',categoria:'clientes',titulo:`"${cat}" concentra el ${pct}% de los tickets`,detalle:`${cnt} de ${stA.total} tickets de este periodo son de esa categoría.`});
     }
   }
-  if(stA.porSoporte.length){
-    const top=stA.porSoporte[0];
-    const promedio=stA.porSoporte.reduce((a,b)=>a+b.total,0)/stA.porSoporte.length;
+  const agentesCarga=stA.porSoporte.filter(p=>!/por[\s_]+asignar/i.test(p.nombre));
+  if(agentesCarga.length){
+    const top=agentesCarga[0];
+    const promedio=agentesCarga.reduce((a,b)=>a+b.total,0)/agentesCarga.length;
     if(top.total>=promedio*1.8&&top.total>=3){
       alertas.push({icon:'🟠',color:'#d97706',bg:'#fffbeb',categoria:'productividad',titulo:`${top.nombre} con carga alta`,detalle:`${top.total} tickets esta semana, muy por encima del promedio del equipo (${promedio.toFixed(1)}).`});
     }
@@ -2908,8 +2923,9 @@ function slaMiniHtml(sla,nombre,tipo){
 
 // Tabla "¿En cuántos días se resuelve?" por área
 function distAreaHtml(rows,esDev,nombre,rangoLabel){
-  const d=distribucionTiempos(tiemposSLA(rows.filter(esResuelto).filter(r=>esDesarrollo(r)===esDev),'días'));
+  const d=distribucionTiempos(tiemposSLA(rows.filter(esResuelto).filter(r=>esDev?esDesarrollo(r):(!esDesarrollo(r)&&esAgenteSoporte(r))),'días'));
   const lim=slaLimites(esDev?'desarrollo':'soporte');
+  window._repDist=window._repDist||{};window._repDist[esDev?'desarrollo':'soporte']={d,lim};
   return`<div class="card"><div class="card-head"><div class="card-title">¿En cuántos días se resuelve? — ${nombre}</div><span class="etk-note">${rangoLabel} · días operativos</span></div>
     <div style="padding:0 16px 14px;overflow-x:auto"><table class="etk-table" style="font-size:12.5px">
       <thead><tr><th>Tiempo</th><th>Tickets</th><th>%</th><th>Acumulado</th></tr></thead>
@@ -2939,6 +2955,7 @@ function enriquecerAlerta(a){
 const TAB_NOMBRE={soporte:'Soporte',desarrollo:'Desarrollo',desempeno:'Desempeño',clientes:'Clientes y patrones'};
 function alertasPriorizadasHtml(alertas,resumen){
   const lista=alertas.filter(a=>a.categoria!=='ok').map(enriquecerAlerta);
+  if(resumen)lista.unshift({icon:'🧠',titulo:'En resumen',detalle:resumen,sev:'info',accion:'',tab:''});
   const cols=[['critica','🔴 Atender ahora','#ee6666'],['vigilar','🟡 Vigilar','#e0a526'],['info','🔵 Para tu información','#5470c6']];
   const nUrg=lista.filter(a=>a.sev!=='info').length;
   const item=a=>`<div class="etk-alerta" style="border-left-color:${a.sev==='critica'?'#ee6666':a.sev==='vigilar'?'#fac858':'#5470c6'}">
@@ -2949,7 +2966,6 @@ function alertasPriorizadasHtml(alertas,resumen){
     </div>`;
   return`<div class="card">
     <div class="card-head"><div class="card-title"><span class="etk-dot" style="background:${nUrg?'#ee6666':'#91cc75'}"></span>Alertas del periodo ${nUrg?`<span class="etk-badge">${nUrg} por atender</span>`:''}</div><span class="etk-note">ordenadas por prioridad</span></div>
-    <div class="etk-resumen"><b>🧠 En resumen:</b> ${resumen}</div>
     <div class="etk-alertas">${cols.map(([s,lbl,c])=>{const xs=lista.filter(a=>a.sev===s);return`<div class="etk-alertas-col">
       <div class="etk-alertas-h" style="color:${c}">${lbl} <span>${xs.length}</span></div>
       ${xs.length?xs.map(item).join(''):`<div class="etk-alerta-vacio">${s==='critica'?'✓ Nada urgente en este periodo':'—'}</div>`}
@@ -2961,7 +2977,7 @@ function alertasPriorizadasHtml(alertas,resumen){
 function personasRep(){
   const stA=window._repStatsActual;if(!stA)return[];
   const excl=n=>/por asignar|sin desarrollador/i.test(n);
-  const sop=stA.porSoporte.filter(p=>!excl(p.nombre)).map(p=>({nombre:p.nombre,tipo:'soporte'}));
+  const sop=stA.porSoporte.filter(p=>!excl(p.nombre)&&AGENTES_SOPORTE.includes(p.nombre.toLowerCase().split(/[\s_]+/)[0])).map(p=>({nombre:p.nombre,tipo:'soporte'}));
   const dev=stA.porDesarrollo.filter(p=>!excl(p.nombre)&&!sop.some(s=>s.nombre.toLowerCase()===p.nombre.toLowerCase())).map(p=>({nombre:p.nombre,tipo:'desarrollo'}));
   return[...sop,...dev];
 }
@@ -3212,7 +3228,7 @@ function renderAnalisisRango(){
     <div class="etk-bar">
       <div>
         <div class="etk-h1">Reporte semanal${esRango?' · comparativa de '+nSemanas+' semanas':''}</div>
-        <div class="etk-sub">Tickets BD · datos depurados desde la semana ${REP_SEMANA_MIN_NUM} de ${REP_SEMANA_MIN_ANIO} · ${rangoPrevIds.size?(rangoPrevIds.size===1?'comparado con la semana anterior':'comparado con las '+rangoPrevIds.size+' semanas anteriores'):'sin periodo anterior para comparar'}</div>
+        <div class="etk-sub">Tickets BD · Volumen: todos los tickets · SLA y tiempos: Soporte (Alejandra, Karina, Ivette, por asignar) + todo lo escalado · datos depurados desde la semana ${REP_SEMANA_MIN_NUM} de ${REP_SEMANA_MIN_ANIO} · ${rangoPrevIds.size?(rangoPrevIds.size===1?'comparado con la semana anterior':'comparado con las '+rangoPrevIds.size+' semanas anteriores'):'sin periodo anterior para comparar'}</div>
       </div>
       <div class="etk-filtros">
         <label class="etk-sel"><span>Desde</span><select id="rep-sem-ini" onchange="cambiarRangoReportes()">${opciones}</select></label>
@@ -3231,33 +3247,35 @@ function renderAnalisisRango(){
     <div class="rep-panel" data-panel="resumen" style="${REP_SUBTAB==='resumen'?'':'display:none'}">
     <!-- KPIs principales -->
     <div class="etk-kpis">
-      ${etkKpi('Tickets recibidos',stA.total,stP?etkDelta(stA.total,stP.total,false):'','creados en el periodo')}
+      ${etkKpi('Tickets recibidos',stA.total,stP?etkDelta(stA.total,stP.total,false):'','todos los tickets creados en el periodo')}
       ${etkKpi('Tickets resueltos',stA.resueltosCierre,stP?etkDelta(stA.resueltosCierre,stP.resueltosCierre,true):'',`cerrados en el periodo · ${stA.resueltosCierre} ÷ ${stA.total} = ${stA.total?Math.round(stA.resueltosCierre/stA.total*100):0}% de lo recibido`)}
       ${etkKpi('One-touch',stA.oneTouch.pct+'%',stP?etkDelta(stA.oneTouch.pct,stP.oneTouch.pct,true,'pts'):'',`${stA.oneTouch.count} de ${stA.oneTouch.base} resueltos en la misma hora`)}
-      ${etkKpi('Tiempo prom. resolución',stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+' d':'—',stP&&stP.tiempoProm!=null&&stA.tiempoProm!=null?etkDelta(stA.tiempoProm,stP.tiempoProm,false):'','días operativos entre solicitado y resuelto')}
+      ${etkKpi('Tiempo prom. resolución',stA.tiempoProm!=null?stA.tiempoProm.toFixed(1)+' d':'—',stP&&stP.tiempoProm!=null&&stA.tiempoProm!=null?etkDelta(stA.tiempoProm,stP.tiempoProm,false):'','días operativos (sin guardias no escaladas) entre solicitado y resuelto')}
     </div>
 
+      <div class="etk-row">
       <div class="card">
         <div class="card-head"><div class="card-title">Recibidos vs. resueltos por semana</div><button onclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')">⬇ Ver/exportar</button></div>
         <div class="etk-big"><span>${stA.total}</span> recibidos · <span>${stA.resueltosCierre}</span> resueltos en ${esRango?'el rango':'la semana'}</div>
         <div style="padding:4px 16px 14px"><div style="position:relative;height:240px"><canvas id="rep-evo-chart" ondblclick="mostrarDetalleChart('rep-evo-chart','Evolución semanal — Recibidos vs. Resueltos')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>
         <div class="etk-foot" style="padding:6px 0 0">Resueltos = tickets solved/closed cuya semana de cierre (col. G) es esa semana. Desde la semana ${REP_SEMANA_MIN_NUM}.</div></div>
       </div>
-
-      ${alertasPriorizadasHtml(alertas,resumenInteligente(stA,rangoLabel))}
-      <div class="etk-row3">
-        ${slaMiniHtml(stA.slaSoporte,'Soporte','soporte')}
-        ${slaMiniHtml(stA.slaDesarrollo,'Desarrollo','desarrollo')}
       <div class="card">
         <div class="card-head"><div class="card-title">Distribución del periodo</div></div>
         <div class="etk-dist">
           ${etkDist('🏢','#5470c6','Clientes únicos',stA.empresas.length,null,stA.reincidentes.length+' reincidente'+(stA.reincidentes.length===1?'':'s'))}
-          ${etkDist('🎧','#73c0de','Soporte',stA.soporteTotal,stA.pctSoporte,stA.pctSoporte+'% del total')}
-          ${etkDist('🛠','#9a60b4','Desarrollo',stA.desarrollo,stA.pctDesarrollo,stA.pctDesarrollo+'% del total')}
+          ${etkDist('🎧','#73c0de','Solo Soporte',stA.soporteTotal,stA.pctSoporte,stA.pctSoporte+'% del total')}
+          ${etkDist('🛠','#9a60b4','Escalados a Desarrollo',stA.desarrollo,stA.pctDesarrollo,stA.pctDesarrollo+'% del total')}
           ${etkDist('📞','#91cc75','Llamadas',LL_DATA.length?(llStats?llStats.totalValidas:0):'—',null,LL_DATA.length?'completadas · ver Soporte':'sin conexión'+(LL_LAST_ERROR?' ('+LL_LAST_ERROR+')':''))}
         </div>
-        <div class="etk-foot">Soporte y Desarrollo se solapan (un ticket puede estar en ambos), por eso pueden sumar más de 100%.</div>
+        <div class="etk-foot">Solo Soporte = sin escalar de Alejandra, Karina, Ivette y por asignar · Desarrollo = todo lo escalado (col. S = SI).${stA.otrosTotal?` Otros ${stA.otrosTotal} (${stA.total?Math.round(stA.otrosTotal/stA.total*100):0}%) los atendieron guardias o agente_de_apoyo sin escalar: cuentan en volumen, no en SLA.`:''}</div>
       </div>
+      </div>
+
+      ${alertasPriorizadasHtml(alertas,resumenInteligente(stA,rangoLabel))}
+      <div class="etk-row2">
+        ${slaMiniHtml(stA.slaSoporte,'Soporte','soporte')}
+        ${slaMiniHtml(stA.slaDesarrollo,'Desarrollo','desarrollo')}
       </div>
     ${esRango?`<div class="card">
       <div class="card-head"><div class="card-title">Comparativa semana a semana (${nSemanas})</div><span class="etk-note">resueltos = cerrados en esa semana, sin importar cuándo se crearon</span></div>
@@ -3318,16 +3336,15 @@ function renderAnalisisRango(){
     <!-- ═══ SOPORTE ═══ -->
     <div class="rep-panel" data-panel="soporte" style="${REP_SUBTAB==='soporte'?'':'display:none'}">
       <div class="etk-row2">
+        <div style="display:flex;flex-direction:column;gap:18px">
         <div class="card"><div class="card-head"><div class="card-title">SLA de Soporte</div><span class="etk-note">días operativos · clic en la barra para ver rangos</span></div>
           <div style="padding:8px 16px 16px">${slaBlockHtml(stA.slaSoporte,'Soporte',slaMetaTxt('soporte'),'rep-sla-soporte-chart')}</div></div>
+          <div class="card"><div class="card-head"><div class="card-title">Acumulado — Soporte</div><span class="etk-note">barras = tickets por rango · línea = % resuelto acumulado · pasa el cursor</span></div>
+            <div style="padding:4px 16px 14px"><div style="position:relative;height:230px"><canvas id="rep-acum-soporte-chart" ondblclick="mostrarDetalleChart('rep-acum-soporte-chart','Acumulado — Soporte')" style="cursor:pointer"></canvas></div></div></div>
+        </div>
         ${distAreaHtml(ticketsActual,false,'Soporte',rangoLabel)}
       </div>
       <div id="sla-rango-detalle-soporte" style="display:none"></div>
-      <div class="etk-row2">
-        <div class="card">
-          <div class="card-head"><div class="card-title">Productividad por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">recibidos vs. resueltos (de lo creado en el periodo)${stP?' · periodo ant.: '+stP.total+' recibidos':''}</span><button onclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
-          <div style="padding:12px 16px"><div style="position:relative;height:${Math.max(180,stA.porSoporte.length*32)}px"><canvas id="rep-agente-chart" ondblclick="mostrarDetalleChart('rep-agente-chart','Productividad por agente')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div></div>
-        </div>
         <div class="card">
           <div class="card-head"><div class="card-title">📞 Llamadas por agente</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">${LL_DATA.length?'completadas (COMPLETEAGENT/COMPLETECALLER) · Alejandra, Ivette, Karina':'sin conectar'}</span>${LL_DATA.length&&llStats&&llStats.porAgente.length?`<button onclick="mostrarDetalleChart('rep-llamadas-chart','Llamadas por agente')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button>`:''}</div></div>
           <div style="padding:12px 16px">${
@@ -3345,21 +3362,20 @@ function renderAnalisisRango(){
               </table>`
           }</div>
         </div>
-      </div>
     </div>
 
     <!-- ═══ DESARROLLO ═══ -->
     <div class="rep-panel" data-panel="desarrollo" style="${REP_SUBTAB==='desarrollo'?'':'display:none'}">
       <div class="etk-row2">
+        <div style="display:flex;flex-direction:column;gap:18px">
         <div class="card"><div class="card-head"><div class="card-title">SLA de Desarrollo</div><span class="etk-note">días operativos · clic en la barra para ver rangos</span></div>
           <div style="padding:8px 16px 16px">${slaBlockHtml(stA.slaDesarrollo,'Desarrollo',slaMetaTxt('desarrollo'),'rep-sla-desarrollo-chart')}</div></div>
+          <div class="card"><div class="card-head"><div class="card-title">Acumulado — Desarrollo</div><span class="etk-note">barras = tickets por rango · línea = % resuelto acumulado · pasa el cursor</span></div>
+            <div style="padding:4px 16px 14px"><div style="position:relative;height:230px"><canvas id="rep-acum-desarrollo-chart" ondblclick="mostrarDetalleChart('rep-acum-desarrollo-chart','Acumulado — Desarrollo')" style="cursor:pointer"></canvas></div></div></div>
+        </div>
         ${distAreaHtml(ticketsActual,true,'Desarrollo',rangoLabel)}
       </div>
       <div id="sla-rango-detalle-desarrollo" style="display:none"></div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">Productividad de Desarrollo</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--txt3)">por D-Responsable (col. P)</span><button onclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="font-size:10px;background:var(--acc2);border:1px solid var(--acc3);color:var(--acc);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--font)">⬇</button></div></div>
-          <div style="padding:12px 16px">${stA.productividadDev.length?`<div style="position:relative;height:${Math.max(180,stA.productividadDev.length*32)}px"><canvas id="rep-dev-chart" ondblclick="mostrarDetalleChart('rep-dev-chart','Productividad de Desarrollo')" style="cursor:pointer" title="Doble clic para ver el detalle"></canvas></div>`:'<div style="font-size:11px;color:var(--txt3);padding:10px 0;text-align:center">Sin tickets de Desarrollo esta semana</div>'}</div>
-        </div>
     </div>
 
     <!-- ═══ DESEMPEÑO POR AGENTE ═══ -->
@@ -3597,8 +3613,8 @@ function exportarTodoReportesCSV(){
     ['rep-diasem-chart','Tickets por día de la semana'],
     ['rep-diario-chart','Tickets por fecha — creados vs. resueltos'],
     ['rep-sd-diario-chart','Soporte vs. Desarrollo por fecha'],
-    ['rep-agente-chart','Productividad por agente'],
-    ['rep-dev-chart','Productividad de Desarrollo'],
+    ['rep-acum-soporte-chart','Acumulado — Soporte'],
+    ['rep-acum-desarrollo-chart','Acumulado — Desarrollo'],
     ['rep-llamadas-chart','Llamadas por agente']
   ];
   const bloques=[];
@@ -3670,7 +3686,14 @@ function buildReportesCharts(){
       },
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},tooltip:TT_DEFAULT},
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,font:{size:9},color:'#6b7280'}},
+          tooltip:{backgroundColor:'#172b4c',bodyColor:'#f9fafb',titleColor:'#fff',cornerRadius:8,padding:10,displayColors:true,
+            callbacks:{
+              title:items=>evolucion[items[0].dataIndex].id,
+              label:c=>' '+c.dataset.label+': '+c.parsed.y+' tickets',
+              footer:items=>{const e=evolucion[items[0].dataIndex];return e.total?`Resueltos ÷ recibidos: ${e.resueltos} ÷ ${e.total} = ${Math.round(e.resueltos/e.total*100)}%`:'';}
+            }}},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#9ca3af',font:{size:10},precision:0},grid:{color:'#f0f2f780'}}}
       }
     });
@@ -3760,10 +3783,17 @@ function buildReportesCharts(){
       type:'bar',
       data:{labels:['Tu promedio','Verde ≤','Rojo ≥'],datasets:[{data:[Math.round(sla.promedio*10)/10,sla.vMax,sla.aMax],backgroundColor:[col,'#91cc75','#ee6666'],borderRadius:6,maxBarThickness:22}]},
       options:{
-        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,interaction:{mode:'y',intersect:false},
         onClick:()=>toggleSlaRango(tipo),
         onHover:(evt)=>{if(evt.native&&evt.native.target)evt.native.target.style.cursor='pointer';},
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',bodyColor:'#f9fafb',cornerRadius:6,padding:8,callbacks:{label:c=>c.label+': '+c.parsed.x+suf}}},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#172b4c',bodyColor:'#f9fafb',titleColor:'#fff',cornerRadius:8,padding:10,displayColors:false,callbacks:{
+          title:items=>({0:'Tu promedio',1:'Meta verde',2:'Límite rojo'})[items[0].dataIndex],
+          label:c=>{
+            const pct=n=>sla.total?Math.round(n/sla.total*100):0;
+            if(c.dataIndex===0)return[`${sla.promedio.toFixed(1)} días operativos en promedio`,`de ${sla.total} tickets resueltos`,`= ${(sla.promedio/sla.vMax).toFixed(1)}× la meta verde (${sla.vMax} d)`];
+            if(c.dataIndex===1)return[`Resolver en ${sla.vMax} día${sla.vMax===1?'':'s'} operativo${sla.vMax===1?'':'s'} o menos`,`🟢 ${sla.buckets.verde} de ${sla.total} tickets lo lograron (${pct(sla.buckets.verde)}%)`,`🟡 ${sla.buckets.amarillo} quedaron entre ${sla.vMax} y ${sla.aMax} d (${pct(sla.buckets.amarillo)}%)`];
+            return[`${sla.aMax} días operativos o más = fuera de SLA`,`🔴 ${sla.buckets.rojo} de ${sla.total} tickets llegaron aquí (${pct(sla.buckets.rojo)}%)`];
+          }}}},
         scales:{x:{ticks:{color:'#9ca3af',font:{size:9}},grid:{color:'#f0f2f780'}},y:{ticks:{color:'#374151',font:{size:10,weight:'600'}},grid:{display:false}}}
       }
     });
@@ -3856,6 +3886,31 @@ function buildReportesCharts(){
   }
 
   Object.keys(CH).filter(k=>k.startsWith('rep-')).forEach(k=>etkTemaChart(CH[k]));
+  // Acumulado: barras = tickets por rango de días (color por semáforo) · línea = % acumulado
+  ['soporte','desarrollo'].forEach(tipo=>{
+    const id='rep-acum-'+tipo+'-chart';
+    if(CH[id])CH[id].destroy();
+    const ctx=el(id);const info=window._repDist&&window._repDist[tipo];
+    if(!ctx||!info)return;
+    const{d,lim}=info;
+    const RANGOS=[[0,1],[1,2],[2,3],[3,5],[5,7],[7,14],[14,Infinity]];
+    const colores=RANGOS.map(([mn,mx])=>mx<=lim.vMax?'#91cc75':mn>=lim.aMax?'#ee6666':'#fac858');
+    CH[id]=new Chart(ctx,{
+      data:{labels:d.filas.map(f=>f.label),datasets:[
+        {type:'line',label:'% acumulado',data:d.filas.map(f=>f.acum),yAxisID:'y2',borderColor:'#5470c6',backgroundColor:'#5470c6',borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:.35},
+        {type:'bar',label:'Tickets',data:d.filas.map(f=>f.c),backgroundColor:colores,borderRadius:6,maxBarThickness:34,yAxisID:'y'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,position:'top'},tooltip:{backgroundColor:'#172b4c',bodyColor:'#f9fafb',titleColor:'#fff',cornerRadius:8,padding:10,displayColors:false,callbacks:{
+          title:items=>'Resueltos en '+d.filas[items[0].dataIndex].label,
+          label:()=>null,
+          afterBody:items=>{const f=d.filas[items[0].dataIndex];return[`${f.c} de ${d.n} tickets (${f.pct}%)`,`Acumulado: ${f.acum}% ya estaba resuelto en este tiempo o menos`];}
+        }}},
+        scales:{y:{position:'left',ticks:{precision:0},title:{display:true,text:'tickets'},grid:{color:'#e6eaf1'}},
+          y2:{position:'right',min:0,max:100,ticks:{callback:v=>v+'%'},grid:{display:false}},x:{grid:{display:false}}}}
+    });
+  });
+  Object.keys(CH).filter(k=>k.startsWith('rep-acum-')).forEach(k=>etkTemaChart(CH[k]));
   buildSlaRangoChartIfOpen();
 }
 
