@@ -317,6 +317,23 @@ tbody tr:last-child td{border-bottom:none}
 .etk-personas{display:flex;gap:6px;flex-wrap:wrap}
 #rep-desempeno-body{display:flex;flex-direction:column;gap:18px}
 @media(max-width:1100px){.etk-row2,.etk-row3,.etk-alertas{grid-template-columns:1fr}}
+.etk-pan{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;padding:4px 20px 12px}
+.etk-pan-l{display:flex;gap:10px;font-size:13px;color:#41516b;line-height:1.55;padding:6px 0;border-bottom:1px dashed var(--etk-line)}
+.etk-pan-l>span{font-size:15px;flex-shrink:0}
+@media(max-width:1100px){.etk-pan{grid-template-columns:1fr}}
+.etk-meta{display:flex;gap:12px;align-items:center;margin:2px 20px 14px;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,#eef2fd,#f6f8fe);border:1px solid #dde4f7}
+.etk-meta>span{font-size:28px}
+.etk-meta-t{font-size:19px;font-weight:700;color:#2f3f8f}
+.etk-meta-s{font-size:12px;color:#5b6b84;margin-top:2px}
+.etk-sla-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 6px}
+.etk-escala-w{position:relative;margin:30px 20px 10px}
+.etk-escala{display:flex;height:12px;border-radius:6px;overflow:hidden}
+.etk-escala-m{position:absolute;top:-28px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;z-index:1}
+.etk-escala-m span{color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.etk-escala-m i{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid}
+.etk-escala-t{position:relative;height:14px;margin-top:4px}
+.etk-escala-t span{position:absolute;transform:translateX(-50%);font-size:11px;color:#5b6b84;font-weight:600;white-space:nowrap}
+.etk-escala-t span:first-child{transform:none}
 </style>
 </head>
 <body>
@@ -2904,20 +2921,33 @@ function seccionAbierta(titulo,contenidoHtml){
   return`<div class="card"><div class="card-head"><div class="card-title">${titulo}</div></div><div>${contenidoHtml}</div></div>`;
 }
 
-// SLA compacto para el Resumen (sin gráfica; el detalle vive en su pestaña)
+// SLA para el Resumen: meta destacada + escala de semáforo con tu promedio + gráfica de acumulado
 function slaMiniHtml(sla,nombre,tipo){
-  if(!sla||!sla.total)return`<div class="card"><div class="card-head"><div class="card-title">SLA ${nombre}</div></div><div class="etk-foot">Sin tickets resueltos en el periodo.</div></div>`;
+  const lim=slaLimites(tipo);
+  const dias=n=>`${n} día${n===1?'':'s'} operativo${n===1?'':'s'}`;
+  const head=`<div class="card-head"><div class="card-title">SLA ${nombre}</div><a class="etk-alerta-l" style="margin:0" href="javascript:void(0)" onclick="cambiarSubtabRep('${tipo}')">ver detalle en ${nombre} →</a></div>
+    <div class="etk-meta"><span>🎯</span><div><div class="etk-meta-t">Meta: resolver en ${lim.vMax} ${lim.vMax===1?'día':'días'} o menos</div><div class="etk-meta-s">Días operativos · fuera de SLA a partir de ${dias(lim.aMax)}</div></div></div>`;
+  if(!sla||!sla.total)return`<div class="card">${head}<div class="etk-foot">Sin tickets resueltos en el periodo.</div></div>`;
   const col=SEM_COLOR[sla.color]||'#9ca3af';
-  const pv=Math.round(sla.buckets.verde/sla.total*100),pa=Math.round(sla.buckets.amarillo/sla.total*100),pr=100-pv-pa;
+  const pv=Math.round(sla.buckets.verde/sla.total*100),pa=Math.round(sla.buckets.amarillo/sla.total*100),pr=Math.max(0,100-pv-pa);
   const dot={verde:'🟢',amarillo:'🟡',rojo:'🔴'}[sla.color]||'';
-  return`<div class="card etk-click" onclick="cambiarSubtabRep('${tipo}')" title="Ver detalle en la pestaña ${nombre}">
-    <div class="card-head"><div class="card-title">SLA ${nombre}</div><span class="etk-note">${slaMetaTxt(tipo)}</span></div>
-    <div style="padding:0 20px 16px">
-      <div class="etk-kpi-val" style="color:${col}">${dot} ${sla.promedio.toFixed(1)} d</div>
-      <div class="etk-kpi-sub" style="margin-top:4px">promedio en días operativos · ${sla.total} resueltos</div>
-      <div class="etk-stack"><div style="width:${pv}%;background:#91cc75"></div><div style="width:${pa}%;background:#fac858"></div><div style="width:${pr}%;background:#ee6666"></div></div>
-      <div class="etk-kpi-sub" style="margin-top:6px">🟢 ${sla.buckets.verde} (${pv}%) · 🟡 ${sla.buckets.amarillo} (${pa}%) · 🔴 ${sla.buckets.rojo} (${pr}%) <span style="color:#5470c6;float:right">ver detalle →</span></div>
+  const est={verde:'Dentro de meta',amarillo:'Requiere seguimiento',rojo:'Fuera de SLA'}[sla.color]||'';
+  // Escala: verde 0–vMax · amarillo vMax–aMax · rojo aMax–máx
+  const max=Math.max(lim.aMax*1.5,sla.promedio*1.1);
+  const w=v=>Math.min(100,v/max*100);
+  const pos=w(sla.promedio);
+  return`<div class="card">${head}
+    <div class="etk-sla-grid">
+      <div><div class="etk-dist-lbl">Promedio actual</div><div class="etk-kpi-val" style="color:${col}">${dot} ${sla.promedio.toFixed(1)} d</div><div class="etk-dist-sub" style="color:${col};font-weight:600">${est}${sla.vMax?` · ${(sla.promedio/sla.vMax).toFixed(1)}× la meta`:''}</div></div>
+      <div><div class="etk-dist-lbl">Tickets dentro de meta</div><div class="etk-kpi-val">${pv}%</div><div class="etk-dist-sub">${sla.buckets.verde} de ${sla.total} resueltos en ≤ ${lim.vMax} d</div></div>
     </div>
+    <div class="etk-escala-w" title="Escala de días operativos: verde hasta la meta, amarillo hasta el límite, rojo después">
+      <div class="etk-escala-m" style="left:${pos}%"><span style="background:${col}">Tu promedio: ${sla.promedio.toFixed(1)} d</span><i style="border-top-color:${col}"></i></div>
+      <div class="etk-escala"><div style="width:${w(lim.vMax)}%;background:#91cc75"></div><div style="width:${w(lim.aMax)-w(lim.vMax)}%;background:#fac858"></div><div style="flex:1;background:#ee6666"></div></div>
+      <div class="etk-escala-t"><span style="left:0">0</span><span style="left:${w(lim.vMax)}%">🎯 ${lim.vMax} d</span><span style="left:${w(lim.aMax)}%">${lim.aMax} d</span></div>
+    </div>
+    <div class="etk-dist-sub" style="padding:0 20px">🟢 ${sla.buckets.verde} (${pv}%) · 🟡 ${sla.buckets.amarillo} (${pa}%) · 🔴 ${sla.buckets.rojo} (${pr}%)</div>
+    <div style="padding:8px 16px 14px"><div class="etk-dist-lbl" style="padding:0 4px 4px">Acumulado: % resuelto según días · pasa el cursor</div><div style="position:relative;height:190px"><canvas id="rep-acum-${tipo}-res-chart" ondblclick="mostrarDetalleChart('rep-acum-${tipo}-res-chart','Acumulado — ${nombre}')" style="cursor:pointer"></canvas></div></div>
   </div>`;
 }
 
@@ -2970,6 +3000,59 @@ function alertasPriorizadasHtml(alertas,resumen){
       <div class="etk-alertas-h" style="color:${c}">${lbl} <span>${xs.length}</span></div>
       ${xs.length?xs.map(item).join(''):`<div class="etk-alerta-vacio">${s==='critica'?'✓ Nada urgente en este periodo':'—'}</div>`}
     </div>`;}).join('')}</div>
+  </div>`;
+}
+
+
+// ═════ Panorama (resumen automático) de Soporte y de Desarrollo ═════
+function panoramaHtml(tipo){
+  const ctx=window._repCtx,stA=window._repStatsActual;if(!ctx||!stA)return'';
+  const all=ctx.ticketsActual,total=all.length;
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+  const top=(rows,letra,n)=>{const m={};rows.forEach(r=>{const v=cv(r,letra).trim();if(v)m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n);};
+  const lista=arr=>arr.map(([k,v])=>`<b>${cap(k)}</b> (${v})`).join(', ');
+  const esSop=tipo==='soporte';
+  const rows=esSop?all.filter(r=>esAgenteSoporte(r)&&!esDesarrollo(r)):all.filter(esDesarrollo);
+  const sla=esSop?stA.slaSoporte:stA.slaDesarrollo;
+  const res=rows.filter(esCerradoJ).length,abiertos=rows.length-res;
+  const d=distribucionTiempos(tiemposSLA(rows.filter(esResuelto),'días')); // propia, no depende del orden de render
+  const dot=sla&&sla.color?{verde:'🟢',amarillo:'🟡',rojo:'🔴'}[sla.color]:'';
+  const L=[];
+  if(!rows.length)return`<div class="card"><div class="card-head"><div class="card-title">Panorama de ${esSop?'Soporte':'Desarrollo'}</div></div><div class="etk-foot">Sin tickets en ${ctx.rangoLabel}.</div></div>`;
+  if(esSop){
+    L.push(['📥',`Soporte atendió <b>${rows.length}</b> tickets sin escalar (${pct(rows.length,total)}% del total): <b>${res}</b> resueltos y <b>${abiertos}</b> siguen abiertos.`]);
+  }else{
+    const deSop=rows.filter(esAgenteSoporte).length,otros=rows.length-deSop;
+    L.push(['📥',`Llegaron <b>${rows.length}</b> tickets a Desarrollo (${pct(rows.length,total)}% del total): <b>${deSop}</b> escalados por Soporte${otros?` y <b>${otros}</b> por guardias o agente de apoyo`:''}. <b>${res}</b> resueltos, <b>${abiertos}</b> abiertos.`]);
+  }
+  if(sla&&sla.total){
+    const pv=pct(sla.buckets.verde,sla.total),pr=pct(sla.buckets.rojo,sla.total);
+    L.push(['⏱',`Tiempo promedio de solución: ${dot} <b>${sla.promedio.toFixed(1)} días operativos</b>${d&&d.p50!=null?` (mediana ${d.p50} d)`:''} contra una meta verde de ≤ ${sla.vMax} d. <b>${pv}%</b> quedó en verde y <b>${pr}%</b> en rojo (≥ ${sla.aMax} d).`]);
+  }
+  if(esSop){
+    const ag=stA.porSoporte.filter(p=>!/por[\s_]+asignar/i.test(p.nombre));
+    const pa=stA.porSoporte.find(p=>/por[\s_]+asignar/i.test(p.nombre));
+    if(ag.length)L.push(['👥',`Carga por agente: ${ag.map(p=>`<b>${cap(p.nombre)}</b> (${p.total})`).join(', ')}${pa?` · por asignar: ${pa.total}`:''}.`]);
+    const esc=all.filter(r=>esAgenteSoporte(r)&&esDesarrollo(r)).length,base=all.filter(esAgenteSoporte).length;
+    if(base)L.push(['🛠',`Se escalaron a Desarrollo <b>${esc}</b> de ${base} tickets de Soporte (${pct(esc,base)}%).`]);
+    const tc=top(rows,'T',2),tm=top(rows,'U',2);
+    if(tc.length||tm.length)L.push(['🏷',`Lo más frecuente: ${tc.length?'categoría '+lista(tc):''}${tc.length&&tm.length?' · ':''}${tm.length?'módulo '+lista(tm):''}.`]);
+    const ia=calcularDudasIA(rows);
+    if(ia.colOk&&ia.dudas)L.push(['🤖',`<b>${ia.dudas}</b> son dudas de cliente (${ia.pct}%) que podría resolver una IA.`]);
+    if(ctx.llStats&&ctx.llStats.totalValidas)L.push(['📞',`<b>${ctx.llStats.totalValidas}</b> llamadas completadas: ${ctx.llStats.porAgente.map(a=>`${a.nombre} (${a.total})`).join(', ')}.`]);
+  }else{
+    const devs=top(rows,'P',4),sin=rows.filter(r=>!cv(r,'P').trim()).length;
+    if(devs.length||sin)L.push(['👥',`Quién atiende: ${devs.length?lista(devs):'—'}${sin?` · <b>${sin}</b> sin desarrollador asignado`:''}.`]);
+    const tm=top(rows,'U',2),tv=top(rows,'V',2);
+    if(tm.length||tv.length)L.push(['🏷',`Lo que más se escala: ${tm.length?'módulo '+lista(tm):''}${tm.length&&tv.length?' · ':''}${tv.length?'causa '+lista(tv):''}.`]);
+    const abiertosRows=rows.filter(r=>!esCerradoJ(r)).map(r=>({r,d:diasOperativos(cv(r,'L'),new Date())})).filter(x=>x.d!=null).sort((a,b)=>b.d-a.d);
+    if(abiertosRows.length){const x=abiertosRows[0];L.push(['⏳',`El ticket abierto más antiguo es <b>#${cv(x.r,'I')}</b> (${cv(x.r,'K')||'sin empresa'}): lleva <b>${x.d.toFixed(1)} días operativos</b>${cv(x.r,'P').trim()?` con ${cap(cv(x.r,'P').trim())}`:' sin desarrollador asignado'}.`]);}
+  }
+  return`<div class="card">
+    <div class="card-head"><div class="card-title">${esSop?'🎧 Panorama de Soporte':'🛠 Panorama de Desarrollo'}</div><span class="etk-note">${ctx.rangoLabel} · resumen automático</span></div>
+    <div class="etk-pan">${L.map(([i,txt])=>`<div class="etk-pan-l"><span>${i}</span><div>${txt}</div></div>`).join('')}</div>
+    <div class="etk-foot" style="padding-top:0">⚠ Los tiempos usan la col. M (Resuelto), que puede incluir cierre automático o actualizaciones posteriores; se corregirán al agregar la fecha de <i>solved</i> de Zendesk.</div>
   </div>`;
 }
 
@@ -3272,11 +3355,11 @@ function renderAnalisisRango(){
       </div>
       </div>
 
-      ${alertasPriorizadasHtml(alertas,resumenInteligente(stA,rangoLabel))}
       <div class="etk-row2">
         ${slaMiniHtml(stA.slaSoporte,'Soporte','soporte')}
         ${slaMiniHtml(stA.slaDesarrollo,'Desarrollo','desarrollo')}
       </div>
+      ${alertasPriorizadasHtml(alertas,resumenInteligente(stA,rangoLabel))}
     ${esRango?`<div class="card">
       <div class="card-head"><div class="card-title">Comparativa semana a semana (${nSemanas})</div><span class="etk-note">resueltos = cerrados en esa semana, sin importar cuándo se crearon</span></div>
       <div style="overflow-x:auto">
@@ -3335,6 +3418,7 @@ function renderAnalisisRango(){
 
     <!-- ═══ SOPORTE ═══ -->
     <div class="rep-panel" data-panel="soporte" style="${REP_SUBTAB==='soporte'?'':'display:none'}">
+      ${panoramaHtml('soporte')}
       <div class="etk-row2">
         <div style="display:flex;flex-direction:column;gap:18px">
         <div class="card"><div class="card-head"><div class="card-title">SLA de Soporte</div><span class="etk-note">días operativos · clic en la barra para ver rangos</span></div>
@@ -3366,6 +3450,7 @@ function renderAnalisisRango(){
 
     <!-- ═══ DESARROLLO ═══ -->
     <div class="rep-panel" data-panel="desarrollo" style="${REP_SUBTAB==='desarrollo'?'':'display:none'}">
+      ${panoramaHtml('desarrollo')}
       <div class="etk-row2">
         <div style="display:flex;flex-direction:column;gap:18px">
         <div class="card"><div class="card-head"><div class="card-title">SLA de Desarrollo</div><span class="etk-note">días operativos · clic en la barra para ver rangos</span></div>
@@ -3887,8 +3972,7 @@ function buildReportesCharts(){
 
   Object.keys(CH).filter(k=>k.startsWith('rep-')).forEach(k=>etkTemaChart(CH[k]));
   // Acumulado: barras = tickets por rango de días (color por semáforo) · línea = % acumulado
-  ['soporte','desarrollo'].forEach(tipo=>{
-    const id='rep-acum-'+tipo+'-chart';
+  [['soporte','rep-acum-soporte-chart'],['desarrollo','rep-acum-desarrollo-chart'],['soporte','rep-acum-soporte-res-chart'],['desarrollo','rep-acum-desarrollo-res-chart']].forEach(([tipo,id])=>{
     if(CH[id])CH[id].destroy();
     const ctx=el(id);const info=window._repDist&&window._repDist[tipo];
     if(!ctx||!info)return;
