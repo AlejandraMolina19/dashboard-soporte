@@ -355,6 +355,7 @@ tbody tr:last-child td{border-bottom:none}
 .etk-resumen-c{max-width:360px;min-width:200px;white-space:normal;font-size:11.5px;color:#41516b;line-height:1.4}
 .etk-tag-bl{font-size:9.5px;background:#f3eafa;color:#9a60b4;padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap}
 .etk-pide{margin:4px 0 0 18px;padding:0}.etk-pide li{margin:2px 0}
+.etk-code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:#f3f6fb;border:1px solid #e3e8f2;border-radius:4px;padding:1px 6px;user-select:all;word-break:break-all}
 </style>
 </head>
 <body>
@@ -3241,7 +3242,8 @@ function desempenoHtml(){
   const desg=s.desglose.filter(x=>x[2]>0);
   return`
   <div class="etk-bar" style="padding:12px 16px">
-    <div><div class="etk-h1">${nombreVis}</div><div class="etk-sub">${esSop?'Soporte · tickets asignados en col. O':'Desarrollo · tickets asignados en col. P'} · ${ctx.rangoLabel} · uso interno para seguimiento 1 a 1</div></div>
+    <div><div class="etk-h1">${nombreVis}</div><div class="etk-sub">${esSop?'Soporte · tickets asignados en col. O':'Desarrollo · tickets asignados en col. P'} · ${ctx.rangoLabel} · uso interno para seguimiento 1 a 1</div>
+      <div class="etk-sub" style="margin-top:4px">Cuenta los tickets con <b>col. ${esSop?'O':'P'} = "${per.nombre}"</b> y <b>col. H</b> en ${ctx.semanasEnRango.length===1?'la semana':'las semanas'} elegida${ctx.semanasEnRango.length===1?'':'s'}. Verificar en el Sheets: <code class="etk-code">${ctx.semanasEnRango.length===1?`=COUNTIFS('Tickets BD'!${esSop?'O':'P'}:${esSop?'O':'P'},"${per.nombre}",'Tickets BD'!H:H,"${ctx.semanasEnRango[0].id}")`:`=SUMPRODUCT(COUNTIFS('Tickets BD'!${esSop?'O':'P'}:${esSop?'O':'P'},"${per.nombre}",'Tickets BD'!H:H,{${ctx.semanasEnRango.map(s=>'"'+s.id+'"').join(',')}}))`}</code></div></div>
     <div class="etk-personas">${personas.map(p=>`<button class="etk-tab${p.nombre===REP_PERSONA?' on':''}" onclick="seleccionarPersonaRep('${p.nombre.replace(/'/g,"\\'")}')">${p.tipo==='soporte'?'🎧':'🛠'} ${cap(p.nombre)}</button>`).join('')}</div>
   </div>
   ${resumen?`<div class="card"><div class="etk-pan" style="grid-template-columns:1fr;padding:12px 20px"><div class="etk-pan-l" style="border:none"><span>🧠</span><div>${resumen}</div></div></div></div>`:''}
@@ -4242,51 +4244,102 @@ function filtrarEmpresasRep(){
   if(exacta&&n===1){const cont=el('empresa-detalle');const org=window._repCtx.ticketsActual.map(r=>cv(r,'K').trim()).find(o=>o.toLowerCase()===q);if(org&&(!cont||cont.dataset.open!==org))toggleEmpresaDetalle(org);}
 }
 function ticketsDeEmpresa(orgName){return(window._repCtx?window._repCtx.ticketsActual:[]).filter(r=>(cv(r,'K').trim()||'Sin clasificar')===orgName);}
+// Tendencia de un cliente: más tickets = malo (más problemas o dependencia de Soporte) · menos = bueno (si sigue activo)
+function tendenciaCliente(porSem,nPrev,hayPrev){
+  const n=porSem.reduce((s,x)=>s+x.n,0),k=porSem.length;
+  const MIN_T=8,MIN_S=4;
+  const res={nivel:'sin',txt:'',det:''};
+  // 1) Dentro del periodo: promedio semanal de la 2ª mitad vs. la 1ª
+  let dentro=null;
+  if(n>=MIN_T&&k>=MIN_S){
+    const m=Math.floor(k/2),a=porSem.slice(0,m).reduce((s,x)=>s+x.n,0)/m,b=porSem.slice(m).reduce((s,x)=>s+x.n,0)/(k-m);
+    dentro={a,b,c:a?Math.round((b-a)/a*100):(b?100:0)};
+  }
+  // 2) Contra el periodo anterior (mismo número de semanas)
+  const contra=hayPrev&&(n+nPrev)>=MIN_T?{prev:nPrev,c:nPrev?Math.round((n-nPrev)/nPrev*100):null}:null;
+  const señal=c=>c==null?0:c>25?1:c<-25?-1:0;
+  const s1=dentro?señal(dentro.c):0,s2=contra?señal(contra.c):0;
+  const det=[];
+  if(dentro)det.push(`2ª mitad del periodo ${dentro.b.toFixed(1)}/sem vs. 1ª mitad ${dentro.a.toFixed(1)}/sem (${dentro.c>0?'+':''}${dentro.c}%)`);
+  if(contra)det.push(`este periodo ${n} vs. anterior ${contra.prev}${contra.c!=null?` (${contra.c>0?'+':''}${contra.c}%)`:' (antes no tenía tickets)'}`);
+  res.det=det.join(' · ');
+  if(!dentro&&!contra){res.txt=`volumen bajo (${n} ticket${n===1?'':'s'}): no hay suficientes datos para una tendencia confiable`;return res;}
+  const tot=s1+s2;
+  if(tot>0){res.nivel='malo';res.txt=`<b style="color:#ee6666">al alza</b> — el cliente está generando más tickets${s1>0&&s2>0?' (lo confirman ambas comparaciones)':''}`;}
+  else if(tot<0){res.nivel='bueno';res.txt=`<b style="color:#16a34a">a la baja</b> — menos tickets; es buena señal si el cliente sigue activo${s1<0&&s2<0?' (lo confirman ambas comparaciones)':''}`;}
+  else{res.nivel='estable';res.txt=s1!==s2?'mixta: una comparación sube y otra baja, sin cambio claro':'estable (cambios menores a ±25%)';}
+  return res;
+}
 function resumenEmpresa(orgName,rows){
   const ctx=window._repCtx,stA=window._repStatsActual,n=rows.length;
   const pct=(a,b)=>b?Math.round(a/b*100):0;
   const nSem=ctx.semanasEnRango.length||1;
+  const hoy=new Date();
   const llam=rows.filter(r=>canalDe(r)==='Llamada').length,tick=rows.filter(r=>canalDe(r)==='Ticket').length;
   const cerr=rows.filter(esCerradoJ),ab=rows.filter(r=>!esCerradoJ(r));
   const esc=rows.filter(esDesarrollo).length;
-  const ts=cerr.filter(esUniversoReportes).map(r=>diasOperativos(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0);
-  const prom=ts.length?ts.reduce((a,b)=>a+b,0)/ts.length:null;
-  const top=(l,k)=>{const m={};rows.forEach(r=>{const v=cv(r,l).trim();if(v)m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,k);};
+  const tsDe=rs=>rs.filter(esCerradoJ).map(r=>diasOperativos(cv(r,'L'),cv(r,'M'))).filter(v=>v!=null&&v>=0);
+  const tsSop=tsDe(rows.filter(r=>!esDesarrollo(r)&&esAgenteSoporte(r))),tsDev=tsDe(rows.filter(esDesarrollo));
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const pSop=avg(tsSop),pDev=avg(tsDev);
+  const top=(l,k,rs=rows)=>{const m={};rs.forEach(r=>{const v=cv(r,l).trim();if(v)m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,k);};
   const ia=calcularDudasIA(rows);
   const porSem=ctx.semanasEnRango.map(s=>({id:s.id,n:rows.filter(r=>r[colKey('H')]===s.id).length}));
-  const hoy=new Date();
-  const masViejo=ab.map(r=>({r,d:diffDias(cv(r,'L'),hoy)})).filter(x=>x.d!=null).sort((a,b)=>b.d-a.d)[0];
-  const agentes=top('O',2);
+  const nPrev=(ctx.ticketsPrev||[]).filter(r=>(cv(r,'K').trim()||'Sin clasificar')===orgName).length;
+  const tend=tendenciaCliente(porSem,nPrev,ctx.hayPrev);
+  // Tamaño relativo del cliente frente a los demás del periodo
+  const tot=stA?stA.empresas.map(e=>e.total).sort((a,b)=>b-a):[];
+  const pos=tot.findIndex(v=>v<=n)+1;
+  const pctil=tot.length?Math.round((pos-1)/tot.length*100):null; // 0 = el de más tickets
+  const tam=pctil==null?'':(pctil<=10||pos<=3)?'de los de <b>mayor volumen</b>':pctil<=40?'de volumen <b>medio-alto</b>':pctil<=75?'de volumen <b>medio</b>':'de <b>bajo volumen</b>';
+  // Abiertos: sin asignar, viejos, en Desarrollo
+  const abInfo=ab.map(r=>({r,d:diffDias(cv(r,'L'),hoy)})).filter(x=>x.d!=null).sort((a,b)=>b.d-a.d);
+  const sinAsig=abInfo.filter(x=>/por[\s_]+asignar/i.test(cv(x.r,'O'))||!cv(x.r,'O').trim());
+  const viejos=abInfo.filter(x=>x.d>30);
+  const abDev=abInfo.filter(x=>esDesarrollo(x.r));
+  const lista=xs=>xs.slice(0,3).map(x=>`#${cv(x.r,'I')} (${Math.round(x.d)} d)`).join(', ')+(xs.length>3?` y ${xs.length-3} más`:'');
   const L=[];
-  L.push(`📥 <b>${n}</b> tickets en ${nSem} semana${nSem===1?'':'s'} (≈ <b>${(n/nSem).toFixed(1)}</b> por semana): <b>${llam}</b> por llamada (${pct(llam,n)}%) y <b>${tick}</b> por ticket (${pct(tick,n)}%).`);
-  L.push(`✅ <b>${cerr.length}</b> resueltos y <b>${ab.length}</b> abiertos${masViejo?` · el más antiguo es #${cv(masViejo.r,'I')} con ${Math.round(masViejo.d)} días naturales`:''}.`);
-  if(prom!=null)L.push(`⏱ Tarda en promedio <b>${prom.toFixed(1)} días operativos</b> en resolverse${stA&&stA.tiempoProm!=null?` (general: ${stA.tiempoProm.toFixed(1)} d)`:''}.`);
-  L.push(`🛠 <b>${esc}</b> pasaron a Desarrollo (${pct(esc,n)}%${stA?`; general: ${stA.pctDesarrollo}%`:''}).`);
-  const tc=top('T',3),tm=top('U',3),tf=top('AF',2);
-  if(tc.length)L.push(`🏷 Temas: ${tc.map(([k,v])=>`<b>${k}</b> (${v})`).join(', ')}${tm.length?` · módulos: ${tm.map(([k,v])=>`<b>${k}</b> (${v})`).join(', ')}`:''}${tf.length?` · función: ${tf.map(([k,v])=>`${k} (${v})`).join(', ')}`:''}.`);
-  if(ia.colOk&&ia.dudas)L.push(`🤖 <b>${ia.dudas}</b> son dudas (${ia.pct}%)${ia.topDudas.length?`, sobre todo ${ia.topDudas.slice(0,2).map(d=>d.valor).join(' y ')}`:''}.`);
+  // 1. Situación en una línea
+  L.push(`📌 <b>Situación:</b> cliente ${tam}${pctil!=null?` (lugar ${pos} de ${tot.length})`:''}, tendencia ${tend.nivel==='sin'?'sin datos suficientes':tend.nivel==='malo'?'<b style="color:#ee6666">al alza</b>':tend.nivel==='bueno'?'<b style="color:#16a34a">a la baja</b>':'estable'}, con <b>${ab.length}</b> abierto${ab.length===1?'':'s'}${sinAsig.length?` — <b style="color:#ee6666">${sinAsig.length} sin agente asignado</b>`:''}.`);
+  // 2. Detalle
+  L.push(`📥 <b>${n}</b> tickets en ${nSem} semana${nSem===1?'':'s'} (≈ ${(n/nSem).toFixed(1)} por semana): <b>${llam}</b> por llamada (${pct(llam,n)}%) y <b>${tick}</b> por ticket (${pct(tick,n)}%).`);
+  L.push(`📈 <b>Tendencia:</b> ${tend.txt}.${tend.det?`<br><span class="etk-note">${tend.det}</span>`:''}`);
+  const tiempos=[];
+  if(pSop!=null)tiempos.push(`en Soporte <b>${pSop.toFixed(1)} d</b> (${tsSop.length} ticket${tsSop.length===1?'':'s'}; general ${stA&&stA.slaSoporte&&stA.slaSoporte.promedio!=null?stA.slaSoporte.promedio.toFixed(1)+' d':'—'})`);
+  if(pDev!=null)tiempos.push(`con Desarrollo <b>${pDev.toFixed(1)} d</b> (${tsDev.length}; general ${stA&&stA.slaDesarrollo&&stA.slaDesarrollo.promedio!=null?stA.slaDesarrollo.promedio.toFixed(1)+' d':'—'})`);
+  if(tiempos.length)L.push(`⏱ Tiempo de solución (días operativos): ${tiempos.join(' · ')}.${cerr.length<3?' <span class="etk-note">(pocos tickets: tómalo como referencia)</span>':''}`);
+  L.push(`🛠 <b>${esc}</b> pasaron a Desarrollo (${pct(esc,n)}%${stA?`; general ${stA.pctDesarrollo}%`:''}).`);
+  const tc=top('T',2),tm=top('U',3);
+  if(tc.length||tm.length)L.push(`🏷 <b>Qué consulta:</b> ${tc.map(([k,v])=>`${k} (${v})`).join(', ')}${tm.length?` · módulos <b>${tm.map(([k,v])=>`${k}</b> (${v})`).join(', <b>')}`:''}.`);
+  if(ia.colOk&&ia.dudas)L.push(`🤖 <b>${ia.dudas}</b> de ${n} son dudas (${ia.pct}%)${ia.topDudas.length?`: ${ia.topDudas.slice(0,2).map(d=>`${d.valor} (${d.total})`).join(', ')}`:''}.`);
   if(hayColumnasNuevas(rows)){
     const bl=rows.filter(esRequerimientoBL);
     if(bl.length)L.push(`📋 <b>${bl.length}</b> requerimiento${bl.length===1?'':'s'} con BL levantado${bl.some(idTeam)?` (R-ID Team: ${[...new Set(bl.map(idTeam).filter(Boolean))].slice(0,5).map(escHtml).join(', ')})`:''}.`);
     const res=rows.filter(resumenProblema).slice(0,5);
     if(res.length)L.push(`📝 <b>Lo que pide recientemente:</b><ul class="etk-pide">${res.map(r=>`<li><b>#${cv(r,'I')}</b> ${escHtml(resumenProblema(r))}</li>`).join('')}</ul>`);
   }
-  if(agentes.length)L.push(`👤 Lo atiende principalmente ${agentes.map(([k,v])=>`<b>${k}</b> (${v})`).join(', ')}.`);
-  if(porSem.length>=2){
-    const mitad=Math.floor(porSem.length/2),a=porSem.slice(0,mitad).reduce((s,x)=>s+x.n,0)/mitad,b=porSem.slice(mitad).reduce((s,x)=>s+x.n,0)/(porSem.length-mitad);
-    const cambio=a?Math.round((b-a)/a*100):null;
-    L.push(`📈 Tendencia: ${cambio==null?'sin base para comparar':cambio>15?`<b style="color:#ee6666">al alza</b> (+${cambio}% en la segunda mitad del periodo)`:cambio<-15?`<b style="color:#16a34a">a la baja</b> (${cambio}%)`:'estable'}.`);
-  }
-  // Recomendación
-  const rec=[];
-  if(ia.colOk&&ia.pct>=40)rec.push('muchas de sus consultas son dudas: candidato a <b>capacitación personalizada</b> o a artículos del Help Module sobre sus temas principales');
-  if(pct(esc,n)>=Math.max(30,(stA?stA.pctDesarrollo:0)+10))rec.push('escala a Desarrollo más que el promedio: revisa si son errores reales o necesidades que ya cubre el sistema');
-  if(pct(llam,n)>=60)rec.push('la mayoría llega por llamada: invítalo a levantar ticket para dar seguimiento por escrito');
-  if(masViejo&&masViejo.d>30)rec.push(`tiene un ticket abierto de más de 30 días (#${cv(masViejo.r,'I')}): dale seguimiento`);
-  if(n/nSem>=5&&!rec.length)rec.push('es un cliente de alto volumen: vale la pena una reunión de seguimiento para entender sus necesidades');
-  if(rec.length)L.push(`💡 <b>Sugerencia:</b> ${rec.join('; ')}.`);
+  const ag=top('O',3);
+  if(ag.length)L.push(`👤 Lo atienden: ${ag.map(([k,v])=>`<b>${k}</b> (${v})`).join(', ')}.`);
+  // 3. Alertas
+  const al=[];
+  if(sinAsig.length)al.push(`<b>${sinAsig.length}</b> abierto${sinAsig.length===1?'':'s'} sin agente asignado: ${lista(sinAsig)}`);
+  if(viejos.length)al.push(`<b>${viejos.length}</b> abierto${viejos.length===1?'':'s'} con más de 30 días: ${lista(viejos)}`);
+  if(abDev.length)al.push(`<b>${abDev.length}</b> abierto${abDev.length===1?'':'s'} en Desarrollo: ${lista(abDev)}`);
+  if(pSop!=null&&tsSop.length>=3&&stA&&stA.slaSoporte&&stA.slaSoporte.promedio&&pSop>stA.slaSoporte.promedio*1.5)al.push(`sus tickets de Soporte tardan ${(pSop/stA.slaSoporte.promedio).toFixed(1)}× el promedio general`);
+  if(tend.nivel==='malo')al.push('su volumen de tickets va al alza');
+  if(al.length)L.push(`⚠️ <b>Alertas:</b><ul class="etk-pide">${al.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+  // 4. Siguientes pasos (en orden de prioridad)
+  const pasos=[];
+  if(sinAsig.length)pasos.push(`asignar agente a ${sinAsig.length===1?'su ticket':'sus '+sinAsig.length+' tickets'} sin responsable y contactar al cliente`);
+  if(viejos.length)pasos.push(`dar seguimiento a lo que lleva más de 30 días abierto (${lista(viejos)})`);
+  if(ia.colOk&&ia.pct>=40&&ia.dudas>=3)pasos.push(`ofrecer <b>capacitación personalizada</b> sobre ${ia.topDudas[0]?ia.topDudas[0].valor:'sus dudas principales'}`);
+  if(pct(esc,n)>=Math.max(30,(stA?stA.pctDesarrollo:0)+10)&&esc>=3)pasos.push('revisar si sus escalaciones eran errores reales o necesidades que ya cubre el sistema');
+  if(pct(llam,n)>=60&&n>=5)pasos.push('invitarlo a levantar ticket en lugar de llamar, para dar seguimiento por escrito');
+  if(tend.nivel==='malo'&&n>=8)pasos.push('agendar una llamada de seguimiento para entender por qué aumentaron sus tickets');
+  L.push(`💡 <b>Siguiente paso:</b> ${pasos.length?`<ol class="etk-pide">${pasos.map(x=>`<li>${x}</li>`).join('')}</ol>`:'sin acciones urgentes; mantener el seguimiento normal.'}`);
   return{L,porSem};
 }
+
 function descargarTicketsEmpresa(orgName){
   const rows=ticketsDeEmpresa(orgName);if(!rows.length)return;
   const heads=['Ticket','Semana','Creado','Resuelto','Estado','Canal','Agente Soporte','Desarrollador','Pasó a Desarrollo','Categoría','Módulo','Causa','S-Cliente','Función','Días operativos','Clasificación del ticket','Requerimiento (BL)','R-ID Team','Resumen del problema'];
